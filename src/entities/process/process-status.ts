@@ -1,0 +1,1 @@
+export type ProcessStatus = "running" | "completed" | "failed";
