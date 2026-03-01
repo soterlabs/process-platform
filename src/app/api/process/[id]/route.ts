@@ -3,10 +3,10 @@ import { executionService } from "@/services/execution-service";
 
 export async function GET(
   _request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: { id: string } }
 ) {
   try {
-    const { id } = await params;
+    const { id } = params;
     const result = await executionService.getProcessState(id);
     if (!result) {
       return NextResponse.json(

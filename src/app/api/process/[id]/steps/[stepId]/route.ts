@@ -3,12 +3,12 @@ import { executionService } from "@/services/execution-service";
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string; stepKey: string }> }
+  { params }: { params: { id: string; stepId: string } }
 ) {
   try {
-    const { id, stepKey } = await params;
+    const { id, stepId } = params;
     const payload = (await request.json()) as Record<string, unknown>;
-    const result = await executionService.updateStepState(id, stepKey, payload);
+    const result = await executionService.updateStepById(id, stepId, payload);
     return NextResponse.json(result);
   } catch (err) {
     console.error(err);

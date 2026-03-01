@@ -3,11 +3,24 @@
  * JSON files so state is shared across workers/processes. Replace with your
  * DB-backed implementation for production.
  */
+import { randomUUID } from "crypto";
 import { readFile, writeFile, mkdir } from "fs/promises";
 import { join } from "path";
 import type { Process } from "@/entities/process";
 import type { Template } from "@/entities/template";
 import { exampleTemplate } from "@/templates/example-template";
+
+/** Migrate legacy process state (currentStepKey) to steps array. */
+function migrateProcess(raw: Record<string, unknown>): Process {
+  const p = raw as Process & { currentStepKey?: string | null };
+  if (Array.isArray(p.steps)) return p;
+  const processId = p.processId as string;
+  const steps = p.currentStepKey
+    ? [{ id: randomUUID(), processId, stepKey: p.currentStepKey }]
+    : [];
+  const { currentStepKey: _, ...rest } = p;
+  return { ...rest, steps } as Process;
+}
 
 export type StorageService = {
   getTemplate(key: string): Promise<Template | null>;
@@ -42,7 +55,12 @@ async function writeTemplates(templates: Record<string, Template>): Promise<void
 async function readProcessStates(): Promise<Record<string, Process>> {
   try {
     const raw = await readFile(PROCESS_STATES_FILE, "utf-8");
-    return JSON.parse(raw) as Record<string, Process>;
+    const parsed = JSON.parse(raw) as Record<string, Record<string, unknown>>;
+    const result: Record<string, Process> = {};
+    for (const [id, state] of Object.entries(parsed)) {
+      if (state && typeof state === "object") result[id] = migrateProcess(state);
+    }
+    return result;
   } catch {
     return {};
   }

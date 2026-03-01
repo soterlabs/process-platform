@@ -1,191 +1,188 @@
+import { randomUUID } from "crypto";
 import type { Process } from "@/entities/process";
-import type { Template } from "@/entities/template";
-import type { RequestTemplateStep } from "@/entities/template";
-import { storageService } from "@/services/storage-service";
-import { agentService } from "@/services/agent-service";
+import type {
+  AutomaticTemplateStep,
+  ConditionTemplateStep,
+} from "@/entities/template";
+import { evaluate } from "@/services/expression-service";
 import {
-  getStepByKey,
+  getContextViewForEvaluation,
+  getCurrentProcessStep,
   getNextStepKey,
-  getFirstStepKey,
+  getProcessStepById,
+  getStepByKey,
 } from "@/services/template-helpers";
+import { storageService } from "@/services/storage-service";
 
-function isRequestAgentStep(
-  step: { type: string; requestType?: string }
-): step is RequestTemplateStep {
-  return step.type === "request" && step.requestType === "agent";
+function pushStep(process: Process, stepKey: string): void {
+  process.steps.push({
+    id: randomUUID(),
+    processId: process.processId,
+    stepKey,
+  });
 }
 
-/**
- * Resolves the initial step, skipping through leading conditions.
- */
-function getInitialStepKey(
-  template: Template,
+function runAutomaticStep(
+  step: AutomaticTemplateStep,
+  context: Record<string, unknown>
+): Record<string, unknown> {
+  const value = evaluate(context, step.expression);
+  return { ...context, [step.contextKey]: value };
+}
+
+function runConditionalStep(
+  step: ConditionTemplateStep,
   context: Record<string, unknown>
 ): string | null {
-  let currentKey = getFirstStepKey(template);
-  const visited = new Set<string>();
-  while (currentKey) {
-    if (visited.has(currentKey)) return currentKey;
-    visited.add(currentKey);
-    const step = getStepByKey(template, currentKey);
-    if (!step || step.type !== "condition") return currentKey;
-    currentKey = getNextStepKey(template, currentKey, context);
-  }
-  return null;
+  const value = evaluate(context, step.expression);
+  if (value) return step.thenStepKey;
+  else return step.elseStepKey;
 }
 
-export type ExecutionService = {
-  startProcess(templateKey: string): Promise<{ processId: string; currentStepKey: string | null }>;
-  getProcessState(processId: string): Promise<Process | null>;
-  updateStepState(
-    processId: string,
-    stepKey: string,
-    payload: Record<string, unknown>
-  ): Promise<{ ok: true }>;
-  completeStepAndAdvance(
-    processId: string,
-    stepKey: string,
-    payload: Record<string, unknown>
-  ): Promise<{ nextStepKey: string | null }>;
-};
-
-export const executionService: ExecutionService = {
-  async startProcess(templateKey) {
-    const template = await storageService.getTemplate(templateKey);
-    if (!template) throw new Error(`Template not found: ${templateKey}`);
-    const processId = `proc-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
-    const context: Record<string, unknown> = {};
-    const result: Record<string, unknown> = {};
-    const currentStepKey = getInitialStepKey(template, context);
-    const now = new Date().toISOString();
-    await storageService.saveProcessState({
-      processId,
-      template,
-      status: "running",
-      currentStepKey,
-      context,
-      result,
-      startedAt: now,
-      updatedAt: now,
-    });
-    return { processId, currentStepKey };
-  },
-
-  async getProcessState(processId) {
+export const executionService = {
+  async getProcessState(processId: string): Promise<Process | null> {
     return storageService.getProcessState(processId);
   },
 
-  async updateStepState(processId, stepKey, payload) {
-    const state = await storageService.getProcessState(processId);
-    if (!state) throw new Error(`Process not found: ${processId}`);
-
-    const step = getStepByKey(state.template, stepKey);
-    if (!step) throw new Error(`Step not found: ${stepKey}`);
-
-    const existing = (state.context[stepKey] as Record<string, unknown>) ?? {};
-    const merged = { ...existing, ...payload };
-
-    await storageService.saveProcessState({
-      ...state,
-      context: { ...state.context, [stepKey]: merged },
-      updatedAt: new Date().toISOString(),
-    });
-    return { ok: true as const };
-  },
-
-  async completeStepAndAdvance(processId, stepKey, payload) {
-    const state = await storageService.getProcessState(processId);
-    if (!state) throw new Error(`Process not found: ${processId}`);
-
-    const step = getStepByKey(state.template, stepKey);
-    if (!step) throw new Error(`Step not found: ${stepKey}`);
-
-    if (state.currentStepKey !== stepKey) {
-      throw new Error(`Current step is ${state.currentStepKey ?? "none"}, not ${stepKey}`);
+  async startProcess(templateKey: string): Promise<Process> {
+    const template = await storageService.getTemplate(templateKey);
+    if (!template) {
+      throw new Error(`Template not found: ${templateKey}`);
     }
-
-    const existing = (state.context[stepKey] as Record<string, unknown>) ?? {};
-    const merged = { ...existing, ...payload };
-    const newContext = { ...state.context, [stepKey]: merged };
-
-    const nextStepKey = getNextStepKey(state.template, stepKey, newContext);
-
-    if (nextStepKey === null) {
-      await storageService.saveProcessState({
-        ...state,
-        context: newContext,
-        status: "completed",
-        currentStepKey: null,
-        updatedAt: new Date().toISOString(),
-      });
-      return { nextStepKey: null };
-    }
-
-    await storageService.saveProcessState({
-      ...state,
-      context: newContext,
+    const now = new Date().toISOString();
+    const processId = randomUUID();
+    const process: Process = {
+      processId,
+      template,
       status: "running",
-      currentStepKey: nextStepKey,
-      updatedAt: new Date().toISOString(),
-    });
+      steps: [],
+      context: {},
+      result: {},
+      startedAt: now,
+      updatedAt: now,
+    };
 
-    const nextStep = getStepByKey(state.template, nextStepKey);
-    if (nextStep && isRequestAgentStep(nextStep)) {
-      // Run request/agent steps in the background so the client can show step 2 and poll
-      void runRequestStepsAsync(processId).catch((err) =>
-        console.error("[runRequestStepsAsync]", err)
-      );
-    }
-
-    return { nextStepKey };
+    pushStep(process, template.firstStepKey);
+    await storageService.saveProcessState(process);
+    return process;
   },
-};
 
-async function runRequestStepsAsync(processId: string): Promise<void> {
-  let state = await storageService.getProcessState(processId);
-  if (!state) return;
+  async completeProcess(process: Process): Promise<void> {
+    if (process.status !== "running") {
+      throw new Error(`Process is not running: ${process.status}`);
+    }
+  
+    process.status = "completed";
+    await storageService.saveProcessState(process);
+  },
+  
+  async completeProcessById(processId: string): Promise<Process> {
+    const process = await storageService.getProcessState(processId);
+    if (!process) throw new Error(`Process not found: ${processId}`);
+    await this.completeProcess(process);
 
-  let currentKey = state.currentStepKey;
-  let context = { ...state.context };
-  let result = { ...state.result };
+    return process;
+  },
 
-  while (currentKey) {
-    const step = getStepByKey(state.template, currentKey);
-    if (!step || !isRequestAgentStep(step)) break;
+  async updateStep(
+    process: Process,
+    stepId: string,
+    payload: Record<string, unknown>
+  ): Promise<void> {
+    if (process.status !== "running") {
+      throw new Error(`Process is not running: ${process.status}`);
+    }
+    const existing = (process.context[stepId] as Record<string, unknown>) ?? {};
+    process.context[stepId] = { ...existing, ...payload };
+    await storageService.saveProcessState(process);
+  },
 
-    const systemPrompt = step.prompt ?? "Use the provided context to respond.";
-    const response = await agentService.runAgent({
-      systemPrompt,
-      context,
-    });
-    context = { ...context, [currentKey]: { response } };
-    if (step.result) {
-      result = { ...result, [currentKey]: response };
+  async updateStepById(
+    processId: string,
+    stepId: string,
+    payload: Record<string, unknown>
+  ): Promise<Process> {
+    const process = await storageService.getProcessState(processId);
+    if (!process) throw new Error(`Process not found: ${processId}`);
+    await this.updateStep(process, stepId, payload);
+    return process;
+  },
+
+  async completeStep(
+    process: Process,
+    stepId: string
+  ): Promise<string | null> {
+    if (process.status !== "running") {
+      throw new Error(`Process is not running: ${process.status}`);
+    }
+    const step = getProcessStepById(process.steps, stepId);
+    if (!step) throw new Error(`Step not found: ${stepId}`);
+    const contextView = getContextViewForEvaluation(process);
+    let nextStepKey = getNextStepKey(process.template, step.stepKey, contextView);
+    if (nextStepKey === null) {
+      await this.completeProcess(process);
+      return nextStepKey;
+    }
+    pushStep(process, nextStepKey);
+    await storageService.saveProcessState(process);
+    return nextStepKey;
+  },
+
+  async completeStepById(
+    processId: string,
+    stepId: string
+  ): Promise<{ process: Process; nextStepKey: string | null }> {
+    const process = await storageService.getProcessState(processId);
+    if (!process) throw new Error(`Process not found: ${processId}`);
+    const nextStepKey = await this.completeStep(process, stepId);
+    return { process, nextStepKey };
+  },
+
+  async executeStep(process: Process): Promise<void> {
+    if (process.status !== "running") {
+      throw new Error(`Process is not running: ${process.status}`);
     }
 
-    const followingKey = getNextStepKey(state.template, currentKey, context);
-    if (followingKey === null) {
-      await storageService.saveProcessState({
-        ...state,
-        context,
-        result,
-        status: "completed",
-        currentStepKey: null,
-        updatedAt: new Date().toISOString(),
-      });
+    const contextView = getContextViewForEvaluation(process);
+    const currentStep = getCurrentProcessStep(process.steps);
+    if (!currentStep) return;
+
+    const templateStep = getStepByKey(process.template, currentStep.stepKey);
+    if (!templateStep) return;
+
+    if (templateStep.type === "automatic") {
+      const newContext = runAutomaticStep(
+        templateStep as AutomaticTemplateStep,
+        contextView
+      );
+      const contextKey = (templateStep as AutomaticTemplateStep).contextKey;
+      const value = newContext[contextKey];
+      const existing = (process.context[currentStep.id] as Record<string, unknown>) ?? {};
+      process.context[currentStep.id] = { ...existing, [contextKey]: value };
+      const nextStepKey = templateStep.nextStepKey;
+      if (nextStepKey && getStepByKey(process.template, nextStepKey)) {
+        pushStep(process, nextStepKey);
+      } else {
+        await this.completeProcess(process);
+      }
+      await storageService.saveProcessState(process);
       return;
     }
 
-    await storageService.saveProcessState({
-      ...state,
-      context,
-      result,
-      status: "running",
-      currentStepKey: followingKey,
-      updatedAt: new Date().toISOString(),
-    });
-    state = await storageService.getProcessState(processId);
-    if (!state) return;
-    currentKey = followingKey;
-  }
-}
+    if (templateStep.type === "condition") {
+      const nextKey = runConditionalStep(
+        templateStep as ConditionTemplateStep,
+        contextView
+      );
+      if (nextKey && getStepByKey(process.template, nextKey)) {
+        pushStep(process, nextKey);
+        await storageService.saveProcessState(process);
+      } else {
+        await this.completeProcess(process);
+      }
+      return;
+    }
+
+    // Not automatic or conditional — do nothing
+  },
+};

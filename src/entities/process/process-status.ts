@@ -1,1 +1,1 @@
-export type ProcessStatus = "running" | "completed" | "failed";
+export type ProcessStatus = "running" | "completed";

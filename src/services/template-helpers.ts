@@ -1,4 +1,36 @@
-import type { Template, TemplateStep, ConditionTemplateStep } from "@/entities/template";
+import type { Process, ProcessStep } from "@/entities/process";
+import type {
+  Template,
+  TemplateStep,
+  ConditionTemplateStep,
+} from "@/entities/template";
+import { evaluate } from "@/services/expression-service";
+
+export function getCurrentProcessStep(
+  steps: ProcessStep[]
+): ProcessStep | null {
+  return steps.length > 0 ? steps[steps.length - 1] : null;
+}
+
+export function getProcessStepById(
+  steps: ProcessStep[],
+  stepId: string
+): ProcessStep | null {
+  return steps.find((s) => s.id === stepId) ?? null;
+}
+
+/**
+ * Builds a stepKey -> data view from process context (keyed by stepId).
+ * Latest step instance per stepKey wins. Use for expression evaluation and completion display.
+ */
+export function getContextViewForEvaluation(process: Process): Record<string, unknown> {
+  const view: Record<string, unknown> = {};
+  for (const step of process.steps) {
+    const data = process.context[step.id];
+    if (data !== undefined && data !== null) view[step.stepKey] = data;
+  }
+  return view;
+}
 
 export function getStepByKey(template: Template, stepKey: string): TemplateStep | null {
   const step = template.steps.find((s) => s.key === stepKey);
@@ -14,29 +46,19 @@ export function getStepIndex(template: Template, stepKey: string): number {
   return i >= 0 ? i : -1;
 }
 
-function getByPath(obj: Record<string, unknown>, path: string): unknown {
-  const parts = path.replace(/^context\.?/, "").split(".");
-  let cur: unknown = obj;
-  for (const p of parts) {
-    if (cur == null) return undefined;
-    cur = (cur as Record<string, unknown>)[p];
-  }
-  return cur;
-}
-
-function resolveNextForKey(
+export function getNextStepKey(
   template: Template,
-  stepKey: string,
+  fromStepKey: string,
   context: Record<string, unknown>
 ): string | null {
-  const step = getStepByKey(template, stepKey);
+  const step = getStepByKey(template, fromStepKey);
   if (!step) return null;
 
   let nextKey: string | null = null;
   if (step.type === "condition") {
     const cond = step as ConditionTemplateStep;
     if (cond.expression) {
-      const value = getByPath(context, cond.expression);
+      const value = evaluate(context, cond.expression);
       if (value && cond.thenStepKey && template.steps.some((s) => s.key === cond.thenStepKey)) {
         nextKey = cond.thenStepKey;
       } else if (cond.elseStepKey && template.steps.some((s) => s.key === cond.elseStepKey)) {
@@ -50,26 +72,4 @@ function resolveNextForKey(
     nextKey = step.nextStepKey && template.steps.some((s) => s.key === step.nextStepKey) ? step.nextStepKey : null;
   }
   return nextKey;
-}
-
-/**
- * Returns the next step key after completing the given step.
- * Uses step.nextStepKey; for conditions, resolves thenStepKey/elseStepKey from expression.
- * Skips through chained conditions until a concrete step is reached.
- */
-export function getNextStepKey(
-  template: Template,
-  fromStepKey: string,
-  context: Record<string, unknown>
-): string | null {
-  const visited = new Set<string>();
-  let currentKey: string | null = resolveNextForKey(template, fromStepKey, context);
-  while (currentKey) {
-    if (visited.has(currentKey)) break;
-    visited.add(currentKey);
-    const step = getStepByKey(template, currentKey);
-    if (!step || step.type !== "condition") return currentKey;
-    currentKey = resolveNextForKey(template, currentKey, context);
-  }
-  return null;
 }

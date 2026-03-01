@@ -3,12 +3,16 @@ import { executionService } from "@/services/execution-service";
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string; stepKey: string }> }
+  { params }: { params: { id: string; stepId: string } }
 ) {
   try {
-    const { id, stepKey } = await params;
-    const payload = ((await request.json()) as Record<string, unknown>) ?? {};
-    const result = await executionService.completeStepAndAdvance(id, stepKey, payload);
+    const { id, stepId } = params;
+    const body = await request.json().catch(() => null);
+    const payload = (body as Record<string, unknown> | null) ?? {};
+    if (Object.keys(payload).length > 0) {
+      await executionService.updateStepById(id, stepId, payload);
+    }
+    const result = await executionService.completeStepById(id, stepId);
     return NextResponse.json(result);
   } catch (err) {
     console.error(err);

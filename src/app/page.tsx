@@ -9,10 +9,22 @@ export default function HomePage() {
       </p>
       <nav className="mt-10 flex flex-col gap-3">
         <Link
-          href="/start/risk_flow"
+          href="/start/new-halo"
           className="rounded-lg border border-stone-600 bg-stone-800/50 px-4 py-3 text-stone-200 transition hover:border-stone-500 hover:bg-stone-800"
         >
-          Start risk flow
+          Start halo flow
+        </Link>
+        <Link
+          href="/templates/editor/new-halo"
+          className="rounded-lg border border-stone-600 bg-stone-800/50 px-4 py-3 text-stone-200 transition hover:border-stone-500 hover:bg-stone-800"
+        >
+          Edit halo flow (template editor)
+        </Link>
+        <Link
+          href="/templates/editor/new"
+          className="rounded-lg border border-stone-600 bg-stone-800/50 px-4 py-3 text-stone-200 transition hover:border-stone-500 hover:bg-stone-800"
+        >
+          New template
         </Link>
         <Link
           href="/docs"

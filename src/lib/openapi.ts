@@ -3,7 +3,7 @@
  */
 export const openApiSpec = {
   openapi: "3.0.0",
-  info: { title: "Process Platform API", description: "Process instances with steps identified by string keys", version: "1.0.0" },
+  info: { title: "Process Platform API", description: "Process instances with steps identified by step id (unique per step instance).", version: "1.0.0" },
   servers: [{ url: "/", description: "Current origin" }],
   paths: {
     "/api/process": {
@@ -69,7 +69,17 @@ export const openApiSpec = {
                   type: "object",
                   properties: {
                     processId: { type: "string" },
-                    currentStepKey: { type: "string", nullable: true },
+                    steps: {
+                      type: "array",
+                      items: {
+                        type: "object",
+                        properties: {
+                          id: { type: "string" },
+                          processId: { type: "string" },
+                          stepKey: { type: "string" },
+                        },
+                      },
+                    },
                   },
                 },
               },
@@ -83,7 +93,7 @@ export const openApiSpec = {
     "/api/process/{id}": {
       get: {
         summary: "Get process state",
-        description: "Get complete instance state (template, currentStepKey, context, status).",
+        description: "Get complete instance state (template, steps, context, status). Current step is the last step in steps.",
         parameters: [{ name: "id", in: "path", required: true, schema: { type: "string" } }],
         responses: {
           "200": { description: "Process instance state" },
@@ -92,13 +102,13 @@ export const openApiSpec = {
         },
       },
     },
-    "/api/process/{id}/steps/{stepKey}": {
+    "/api/process/{id}/steps/{stepId}": {
       put: {
         summary: "Update step state",
-        description: "Update a step's state without advancing. Body merged into context[stepKey].",
+        description: "Update a step instance's state without advancing. Body merged into context[stepId].",
         parameters: [
           { name: "id", in: "path", required: true, schema: { type: "string" } },
-          { name: "stepKey", in: "path", required: true, schema: { type: "string" } },
+          { name: "stepId", in: "path", required: true, schema: { type: "string" } },
         ],
         requestBody: {
           content: {
@@ -123,19 +133,59 @@ export const openApiSpec = {
           "500": { description: "Server error" },
         },
       },
+      put: {
+        summary: "Save template",
+        description: "Stores the template in the template store. Body must be a full template; key in body must match path.",
+        parameters: [{ name: "key", in: "path", required: true, schema: { type: "string" } }],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                required: ["key", "firstStepKey", "steps"],
+                properties: {
+                  key: { type: "string" },
+                  name: { type: "string" },
+                  firstStepKey: { type: "string" },
+                  steps: { type: "array", items: { type: "object" } },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          "200": { description: "Template saved" },
+          "400": { description: "Bad request (e.g. key mismatch)" },
+          "500": { description: "Server error" },
+        },
+      },
     },
-    "/api/process/{id}/steps/{stepKey}/complete": {
+    "/api/process/{id}/abandon": {
+      post: {
+        summary: "Complete process (abandon)",
+        description: "Marks a running process as completed. Only processes with status 'running' can be completed.",
+        parameters: [{ name: "id", in: "path", required: true, schema: { type: "string" } }],
+        responses: {
+          "200": { description: "Process completed; returns updated process state" },
+          "400": { description: "Process is not running (e.g. already completed)" },
+          "404": { description: "Process not found" },
+          "500": { description: "Server error" },
+        },
+      },
+    },
+    "/api/process/{id}/steps/{stepId}/complete": {
       post: {
         summary: "Complete step and advance",
-        description: "Update step state and advance to next step. Returns next step key (or null if completed).",
+        description: "Optionally update step state (via body), then complete the step instance and advance. Use step id from process.steps (current step is last in array). Returns next step key (or null if completed).",
         parameters: [
           { name: "id", in: "path", required: true, schema: { type: "string" } },
-          { name: "stepKey", in: "path", required: true, schema: { type: "string" } },
+          { name: "stepId", in: "path", required: true, schema: { type: "string" } },
         ],
         requestBody: {
           content: {
             "application/json": {
-              schema: { type: "object", description: "Step result/state to store; also updates the step before advancing" },
+              schema: { type: "object", description: "Optional step state to persist before advancing; if provided, applied via updateStep then advance" },
             },
           },
         },

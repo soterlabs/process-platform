@@ -3,26 +3,37 @@
 import { useParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
+import type { Process } from "@/entities/process";
+import { getContextViewForEvaluation } from "@/services/template-helpers";
+import { evaluate } from "@/services/expression-service";
 
 type StepInput = {
   key: string;
-  type: "bool" | "string";
+  type: "bool" | "string" | "dropdown";
   title: string;
+  visibleExpression?: string;
+  values?: string[];
+};
+
+type ViewControl = {
+  key: string;
+  title: string;
+  visibleExpression?: string;
 };
 
 type CurrentStep = {
   key: string;
   title: string;
   type: string;
-  user?: boolean;
   inputs?: StepInput[];
+  viewControls?: ViewControl[];
   nextStepKey: string | null;
 };
 
 type ProcessState = {
   processId: string;
   template: { steps: CurrentStep[] };
-  currentStepKey: string | null;
+  steps: { id: string; processId?: string; stepKey: string }[];
   context: Record<string, unknown>;
   result?: Record<string, unknown>;
   status: string;
@@ -30,18 +41,24 @@ type ProcessState = {
 
 const POLL_INTERVAL_MS = 3000;
 
+function getCurrentProcessStepFromState(
+  process: ProcessState
+): { id: string; stepKey: string } | null {
+  if (process.steps.length === 0) return null;
+  const s = process.steps[process.steps.length - 1];
+  return { id: s.id, stepKey: s.stepKey };
+}
+
 function getCurrentStep(process: ProcessState): CurrentStep | null {
-  if (!process.currentStepKey) return null;
-  return (
-    process.template.steps.find((s) => s.key === process.currentStepKey) ?? null
-  );
+  const current = getCurrentProcessStepFromState(process);
+  if (!current) return null;
+  return process.template.steps.find((s) => s.key === current.stepKey) ?? null;
 }
 
 function getCurrentStepIndex(process: ProcessState): number {
-  if (!process.currentStepKey) return -1;
-  const i = process.template.steps.findIndex(
-    (s) => s.key === process.currentStepKey
-  );
+  const current = getCurrentProcessStepFromState(process);
+  if (!current) return -1;
+  const i = process.template.steps.findIndex((s) => s.key === current.stepKey);
   return i >= 0 ? i : -1;
 }
 
@@ -129,12 +146,22 @@ export default function ProcessStepPage() {
         }
         setProcess(result.process);
         const step = getCurrentStep(result.process);
+        const currentProcessStep = getCurrentProcessStepFromState(result.process);
+        const stepContext = currentProcessStep
+          ? (result.process.context[currentProcessStep.id] as Record<string, unknown>)
+          : undefined;
         if (step?.inputs) {
           setFormValues((prev) => {
             const next = { ...prev };
             step.inputs?.forEach((inp) => {
               if (inp.key in next) return;
-              next[inp.key] = inp.type === "bool" ? false : "";
+              const raw = stepContext?.[inp.key];
+              next[inp.key] =
+                raw === undefined || raw === null
+                  ? inp.type === "bool"
+                    ? false
+                    : ""
+                  : (inp.type === "bool" ? Boolean(raw) : String(raw));
             });
             return next;
           });
@@ -153,7 +180,7 @@ export default function ProcessStepPage() {
   const step = process ? getCurrentStep(process) : null;
   useEffect(() => {
     if (loading || error || !process || !step) return;
-    if (step.type === "input" && step.user === true) return;
+    if (step.type === "input") return;
 
     const t = setInterval(async () => {
       const result = await fetchProcess();
@@ -161,11 +188,12 @@ export default function ProcessStepPage() {
       if ("error" in result) setError(result.error ?? null);
     }, POLL_INTERVAL_MS);
     return () => clearInterval(t);
-  }, [loading, error, process?.processId, step?.key, step?.user, processId, fetchProcess]);
+  }, [loading, error, process?.processId, step?.key, processId, fetchProcess]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!step?.inputs?.length || submitting || !process) return;
+    const currentProcessStep = process ? getCurrentProcessStepFromState(process) : null;
+    if (!step?.inputs?.length || submitting || !process || !currentProcessStep) return;
     setSubmitting(true);
     try {
       const payload: Record<string, unknown> = {};
@@ -173,7 +201,7 @@ export default function ProcessStepPage() {
         payload[inp.key] = formValues[inp.key] ?? (inp.type === "bool" ? false : "");
       });
       const res = await fetch(
-        `/api/process/${processId}/steps/${encodeURIComponent(step.key)}/complete`,
+        `/api/process/${processId}/steps/${encodeURIComponent(currentProcessStep.id)}/complete`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -222,7 +250,7 @@ export default function ProcessStepPage() {
     );
   }
 
-  const noCurrentStep = process?.currentStepKey == null;
+  const noCurrentStep = process?.steps.length === 0;
   const currentStepIndex = process ? getCurrentStepIndex(process) : 0;
 
   // While submitting (e.g. right after Continue), show waiting indicator immediately
@@ -250,14 +278,14 @@ export default function ProcessStepPage() {
   }
 
   if (noCurrentStep && process) {
-    // Show result from process.result, or fallback to context step outputs (e.g. request step .response)
+    const contextView = getContextViewForEvaluation(process as Process);
     const resultData =
       process.result && Object.keys(process.result).length > 0
         ? process.result
         : Object.fromEntries(
             process.template.steps
               .filter((s) => s.type === "request")
-              .map((s) => [s.key, process.context[s.key]])
+              .map((s) => [s.key, contextView[s.key]])
               .filter(
                 ([, v]) =>
                   v != null &&
@@ -278,8 +306,12 @@ export default function ProcessStepPage() {
           steps={process.template.steps.map((s) => ({ key: s.key, title: s.title }))}
           currentStepIndex={-1}
         />
-        <h1 className="text-2xl font-semibold text-stone-100">Process completed</h1>
-        <p className="mt-1 text-stone-400">This process has finished.</p>
+        <h1 className="text-2xl font-semibold text-stone-100">
+          Process completed
+        </h1>
+        <p className="mt-1 text-stone-400">
+          This process has finished.
+        </p>
         {hasResult && (
           <section className="mt-8 space-y-4">
             <h2 className="text-sm font-medium uppercase tracking-wider text-stone-500">
@@ -316,7 +348,7 @@ export default function ProcessStepPage() {
     );
   }
 
-  const isUserStep = step?.type === "input" && step?.user === true;
+  const isUserStep = step?.type === "input";
 
   if (!isUserStep && step && process) {
     return (
@@ -353,7 +385,62 @@ export default function ProcessStepPage() {
       )}
       <h1 className="mt-6 text-2xl font-semibold text-stone-100">{step?.title}</h1>
       <form onSubmit={handleSubmit} className="mt-8 space-y-6">
-        {step?.inputs?.map((inp) => (
+        {step?.viewControls
+          ?.filter(
+            (vc) =>
+              !vc.visibleExpression ||
+              Boolean(
+                process &&
+                  evaluate(
+                    getContextViewForEvaluation(process as Process),
+                    vc.visibleExpression
+                  )
+              )
+          )
+          .map((vc) => {
+            const contextView = process
+              ? getContextViewForEvaluation(process as Process)
+              : {};
+            const dot = vc.key.indexOf(".");
+            const stepKey = dot >= 0 ? vc.key.slice(0, dot) : "";
+            const fieldKey = dot >= 0 ? vc.key.slice(dot + 1) : vc.key;
+            const stepData = contextView[stepKey] as Record<string, unknown> | undefined;
+            const value = stepData?.[fieldKey];
+            const display =
+              value === undefined || value === null
+                ? "—"
+                : typeof value === "string"
+                  ? value
+                  : typeof value === "boolean"
+                    ? value
+                      ? "Yes"
+                      : "No"
+                    : JSON.stringify(value);
+            return (
+              <div
+                key={vc.key}
+                className="rounded-xl border border-stone-700 bg-stone-900/50 px-4 py-4"
+              >
+                <div className="text-sm font-medium text-stone-400">{vc.title}</div>
+                <div className="mt-2 text-stone-200" aria-readonly>
+                  {display}
+                </div>
+              </div>
+            );
+          })}
+        {step?.inputs
+          ?.filter(
+            (inp) =>
+              !inp.visibleExpression ||
+              Boolean(
+                process &&
+                  evaluate(
+                    getContextViewForEvaluation(process as Process),
+                    inp.visibleExpression
+                  )
+              )
+          )
+          .map((inp) => (
           <div
             key={inp.key}
             className="rounded-xl border border-stone-700 bg-stone-900/50 px-4 py-4"
@@ -391,6 +478,33 @@ export default function ProcessStepPage() {
                 />
                 </span>
               </label>
+            ) : inp.type === "dropdown" ? (
+              <>
+                <label
+                  htmlFor={inp.key}
+                  className="block text-sm font-medium text-stone-300"
+                >
+                  {inp.title}
+                </label>
+                <select
+                  id={inp.key}
+                  value={String(formValues[inp.key] ?? "")}
+                  onChange={(e) =>
+                    setFormValues((prev) => ({
+                      ...prev,
+                      [inp.key]: e.target.value,
+                    }))
+                  }
+                  className="mt-2 w-full rounded-lg border border-stone-600 bg-stone-900 px-3 py-2.5 text-stone-200 focus:border-stone-500 focus:outline-none focus:ring-1 focus:ring-stone-500"
+                >
+                  <option value="">Select…</option>
+                  {(inp.values ?? []).map((val) => (
+                    <option key={val} value={val}>
+                      {val}
+                    </option>
+                  ))}
+                </select>
+              </>
             ) : (
               <>
                 <label

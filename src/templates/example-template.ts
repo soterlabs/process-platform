@@ -1,31 +1,66 @@
 import type { Template } from "@/entities/template";
 
 export const exampleTemplate: Template = {
-  key: "risk_flow",
-  name: "Example Risk Assessment Flow",
-  firstStepKey: "collect_input",
+  key: "new-halo",
+  name: "New Halo",
+  firstStepKey: "input_description",
   steps: [
     {
-      key: "collect_input",
+      key: "input_description",
       type: "input",
-      title: "Initial Questionnaire",
-      user: true,
-      nextStepKey: "process_input",
+      title: "Provide Description",
+      allowedRoles: ["Prime"],
+      nextStepKey: "review_description",
       inputs: [
-        { key: "market_prices", type: "bool", title: "Q1: Do you have observable market prices from a verifiable source?" },
-        { key: "250_days", type: "bool", title: "Q2: Do you have ≥250 business days of price data(daily or convertible)?" },
-        { key: "rfet", type: "bool", title: "Q3: Do key risk factors pass RFET (or have valid proxy with R² ≥ 0.75)?"},
-        { key: "backtest", type: "bool", title: "Q4: Can you run IMA governance (backtesting + P&L attribution)?"},
+        { key: "description", type: "string", title: "Describe why you need a new Halo" },
+      ],
+      confirmationMessage: "Thank you. A member of the OEA team will be in touch.",
+    },
+    {
+      key: "review_description",
+      type: "input",
+      title: "Review Description",
+      allowedRoles: ["OEA"],
+      nextStepKey: "review_description_condition",
+      viewControls: [
+        { key: "input_description.description", title: "Description from Prime" },
+      ],
+      inputs: [
+        { key: "description_review_ok", type: "bool", title: "Is the potential new Halo viable?" },
+        { key: "description_review", type: "string", title: "Provide feedback for the Prime", visibleExpression: "review_description.description_review_ok === false"},
       ],
     },
     {
-      key: "process_input",
-      type: "request",
-      requestType: "agent",
-      title: "Input Processing",
-      prompt: "Decide which path to use: if any of the answers is false, the SA path should be used. Otherwise, the IMA path can be used. Include a very short summary on why you made that decision.",
+      key: "review_description_condition",
+      type: "condition",
+      title: "Review Description Condition",
+      thenStepKey: "input_risk_model_availability",
+      elseStepKey: "input_description_retry",
+      expression: "review_description.description_review_ok === true",
       nextStepKey: null,
-      result: true,
     },
+    {
+      key: "input_description_retry",
+      type: "input",
+      title: "Amend Description",
+      allowedRoles: ["Prime"],
+      nextStepKey: "review_description",
+      inputs: [
+        { key: "description", type: "string", title: "Describe why you need a new Halo" },
+      ],
+      confirmationMessage: "Thank you. A member of the OEA team will be in touch.",
+    },
+    {
+      key: "input_risk_model_availability",
+      type: "input",
+      title: "Indicate Risk Model Availability",
+      allowedRoles: ["RiskCouncil"],
+      nextStepKey: null,
+      inputs: [
+        { key: "description", type: "dropdown", title: "Is a risk model available?", values: ["Not Available", "Partially Available", "Available"] },
+      ]
+    },
+   
   ],
+  allowedRoles:  ["Prime"],
 };
