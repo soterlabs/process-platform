@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { AuthGuard } from "./auth-guard";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -9,7 +10,9 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <body className="min-h-screen bg-stone-950 text-stone-100 antialiased">{children}</body>
+      <body className="min-h-screen bg-stone-950 text-stone-100 antialiased">
+        <AuthGuard>{children}</AuthGuard>
+      </body>
     </html>
   );
 }

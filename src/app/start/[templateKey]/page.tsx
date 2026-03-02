@@ -3,6 +3,7 @@
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { authFetch } from "@/lib/auth-client";
 
 export default function StartTemplatePage() {
   const params = useParams();
@@ -14,7 +15,7 @@ export default function StartTemplatePage() {
     let cancelled = false;
     async function start() {
       try {
-        const res = await fetch("/api/process", {
+        const res = await authFetch("/api/process", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ templateKey }),

@@ -1,10 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getUserIdFromRequest } from "@/lib/auth-request";
+import { canUserActOnCurrentStep } from "@/services/authorization-service";
 import { executionService } from "@/services/execution-service";
 
 export async function GET(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: { id: string } }
 ) {
+  const userId = getUserIdFromRequest(request)!;
   try {
     const { id } = params;
     const result = await executionService.getProcessState(id);
@@ -14,7 +17,8 @@ export async function GET(
         { status: 404 }
       );
     }
-    return NextResponse.json(result);
+    const canActOnCurrentStep = await canUserActOnCurrentStep(result, userId);
+    return NextResponse.json({ ...result, canActOnCurrentStep });
   } catch (err) {
     console.error(err);
     return NextResponse.json(

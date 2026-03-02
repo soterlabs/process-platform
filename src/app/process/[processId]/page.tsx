@@ -4,6 +4,7 @@ import { useParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import type { Process } from "@/entities/process";
+import { authFetch } from "@/lib/auth-client";
 import { getContextViewForEvaluation } from "@/services/template-helpers";
 import { evaluate } from "@/services/expression-service";
 
@@ -37,6 +38,8 @@ type ProcessState = {
   context: Record<string, unknown>;
   result?: Record<string, unknown>;
   status: string;
+  /** True if the current user may complete/update the current step (from GET). */
+  canActOnCurrentStep?: boolean;
 };
 
 const POLL_INTERVAL_MS = 3000;
@@ -121,7 +124,9 @@ export default function ProcessStepPage() {
   const [submitting, setSubmitting] = useState(false);
 
   const fetchProcess = useCallback(async () => {
-    const res = await fetch(`/api/process/${processId}`, { cache: "no-store" });
+    const res = await authFetch(`/api/process/${processId}`, {
+      cache: "no-store",
+    });
     if (res.status === 404) {
       const data = await res.json().catch(() => ({}));
       return { error: (data.error as string) ?? "Not found" };
@@ -200,7 +205,7 @@ export default function ProcessStepPage() {
       step.inputs.forEach((inp) => {
         payload[inp.key] = formValues[inp.key] ?? (inp.type === "bool" ? false : "");
       });
-      const res = await fetch(
+      const res = await authFetch(
         `/api/process/${processId}/steps/${encodeURIComponent(currentProcessStep.id)}/complete`,
         {
           method: "POST",
@@ -349,6 +354,7 @@ export default function ProcessStepPage() {
   }
 
   const isUserStep = step?.type === "input";
+  const canAct = process?.canActOnCurrentStep ?? false;
 
   if (!isUserStep && step && process) {
     return (
@@ -384,6 +390,11 @@ export default function ProcessStepPage() {
         />
       )}
       <h1 className="mt-6 text-2xl font-semibold text-stone-100">{step?.title}</h1>
+      {isUserStep && !canAct && (
+        <p className="mt-6 rounded-lg border border-amber-800/50 bg-amber-950/30 px-4 py-3 text-amber-200">
+          You don&apos;t have permission to complete this step. Please wait for the process to be moved along.
+        </p>
+      )}
       <form onSubmit={handleSubmit} className="mt-8 space-y-6">
         {step?.viewControls
           ?.filter(
@@ -443,7 +454,7 @@ export default function ProcessStepPage() {
           .map((inp) => (
           <div
             key={inp.key}
-            className="rounded-xl border border-stone-700 bg-stone-900/50 px-4 py-4"
+            className={`rounded-xl border border-stone-700 bg-stone-900/50 px-4 py-4 ${!canAct ? "pointer-events-none opacity-70" : ""}`}
           >
             {inp.type === "bool" ? (
               <label className="flex cursor-pointer items-center justify-between gap-4">
@@ -531,7 +542,7 @@ export default function ProcessStepPage() {
         ))}
         <button
           type="submit"
-          disabled={submitting}
+          disabled={submitting || !canAct}
           className="rounded-lg bg-stone-600 px-4 py-2 text-stone-100 hover:bg-stone-500 disabled:opacity-50"
         >
           {submitting ? "Submitting…" : "Continue"}

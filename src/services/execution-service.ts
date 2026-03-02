@@ -182,7 +182,5 @@ export const executionService = {
       }
       return;
     }
-
-    // Not automatic or conditional — do nothing
   },
 };

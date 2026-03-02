@@ -1,9 +1,13 @@
 import Link from "next/link";
+import { SignOutLink } from "./sign-out-link";
 
 export default function HomePage() {
   return (
     <main className="mx-auto max-w-2xl px-6 py-16">
-      <h1 className="text-3xl font-semibold tracking-tight text-stone-100">Process Platform</h1>
+      <div className="flex items-center justify-between gap-4">
+        <h1 className="text-3xl font-semibold tracking-tight text-stone-100">Process Platform</h1>
+        <SignOutLink />
+      </div>
       <p className="mt-2 text-stone-400">
         JSON-defined processes with state in your DB. Create an instance from a template key, get state, update steps, complete steps.
       </p>

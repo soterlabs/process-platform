@@ -29,6 +29,7 @@ import {
   type FlowNodeData,
 } from "../_lib/template-flow";
 import type { Template } from "@/entities/template";
+import { authFetch } from "@/lib/auth-client";
 
 function AutomaticStepNode({ data }: { data: FlowNodeData }) {
   return (
@@ -122,7 +123,7 @@ function TemplateEditorInner() {
     }
     let cancelled = false;
     setLoadError(null);
-    fetch(`/api/templates/${encodeURIComponent(urlKey)}`)
+    authFetch(`/api/templates/${encodeURIComponent(urlKey)}`)
       .then((r) => {
         if (!r.ok) throw new Error(r.status === 404 ? "Template not found" : "Failed to load");
         return r.json();
@@ -240,7 +241,7 @@ function TemplateEditorInner() {
     setSaveStatus("saving");
     try {
       const template = flowToTemplate(nodes, edges, key, templateName.trim() || undefined);
-      const res = await fetch(`/api/templates/${encodeURIComponent(key)}`, {
+      const res = await authFetch(`/api/templates/${encodeURIComponent(key)}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(template),

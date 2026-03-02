@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { executionService } from "@/services/execution-service";
 import { storageService } from "@/services/storage-service";
 
-export async function GET() {
+export async function GET(_request: NextRequest) {
   try {
     const processes = await storageService.listProcesses();
     return NextResponse.json(processes);

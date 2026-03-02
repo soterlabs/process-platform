@@ -4,3 +4,7 @@ export type GroupMembership = {
   addedAt: string;
   addedById: string;
 };
+
+export function groupMembershipKey(groupId: string, userId: string): string {
+  return `${groupId}:${userId}`;
+}
