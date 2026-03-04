@@ -29,6 +29,7 @@ type CurrentStep = {
   inputs?: StepInput[];
   viewControls?: ViewControl[];
   nextStepKey: string | null;
+  confirmationMessage?: string;
 };
 
 type ProcessState = {
@@ -38,7 +39,6 @@ type ProcessState = {
   context: Record<string, unknown>;
   result?: Record<string, unknown>;
   status: string;
-  /** True if the current user may complete/update the current step (from GET). */
   canActOnCurrentStep?: boolean;
 };
 
@@ -122,6 +122,7 @@ export default function ProcessStepPage() {
   const [error, setError] = useState<string | null>(null);
   const [formValues, setFormValues] = useState<Record<string, boolean | string>>({});
   const [submitting, setSubmitting] = useState(false);
+  const [confirmationMessage, setConfirmationMessage] = useState<string | null>(null);
 
   const fetchProcess = useCallback(async () => {
     const res = await authFetch(`/api/process/${processId}`, {
@@ -219,9 +220,20 @@ export default function ProcessStepPage() {
         return;
       }
       setError(null);
+      const completedStepConfirmation = step.confirmationMessage?.trim();
       const result = await fetchProcess();
-      if ("process" in result) setProcess(result.process ?? null);
-      else if ("error" in result) setError(result.error ?? null);
+      if ("process" in result) {
+        const nextProcess = result.process!;
+        setProcess(nextProcess);
+        if (
+          completedStepConfirmation &&
+          nextProcess.canActOnCurrentStep === false
+        ) {
+          setConfirmationMessage(completedStepConfirmation);
+        }
+      } else if ("error" in result) {
+        setError(result.error ?? null);
+      }
     } finally {
       setSubmitting(false);
     }
@@ -356,7 +368,28 @@ export default function ProcessStepPage() {
   const isUserStep = step?.type === "input";
   const canAct = process?.canActOnCurrentStep ?? false;
 
-  if (!isUserStep && step && process) {
+  if (confirmationMessage && process) {
+    return (
+      <main className="mx-auto max-w-2xl px-6 py-16">
+        <Link href="/" className="text-stone-400 hover:text-stone-300">
+          ← Back to home
+        </Link>
+        <StepProgress
+          steps={process.template.steps.map((s) => ({ key: s.key, title: s.title }))}
+          currentStepIndex={currentStepIndex}
+        />
+        <p className="mt-6 text-stone-200">{confirmationMessage}</p>
+        <Link
+          href="/"
+          className="mt-8 inline-block text-stone-500 hover:text-stone-400"
+        >
+          Back to home
+        </Link>
+      </main>
+    );
+  }
+
+  if ((!isUserStep || !canAct) && step && process) {
     return (
       <main className="mx-auto max-w-2xl px-6 py-16">
         <Link href="/" className="text-stone-400 hover:text-stone-300">
@@ -372,11 +405,24 @@ export default function ProcessStepPage() {
             aria-hidden
           />
           <p className="text-stone-400">Please wait…</p>
-          <p className="text-sm text-stone-500">{step.title}</p>
+          {!isUserStep && (
+            <p className="text-sm text-stone-500">{step.title}</p>
+          )}
         </div>
       </main>
     );
   }
+
+  const evaluationContext = process
+    ? (() => {
+        const view = getContextViewForEvaluation(process as Process);
+        if (step?.key && Object.keys(formValues).length > 0) {
+          const current = (view[step.key] as Record<string, unknown>) ?? {};
+          view[step.key] = { ...current, ...formValues };
+        }
+        return view;
+      })()
+    : {};
 
   return (
     <main className="mx-auto max-w-2xl px-6 py-16">
@@ -390,28 +436,15 @@ export default function ProcessStepPage() {
         />
       )}
       <h1 className="mt-6 text-2xl font-semibold text-stone-100">{step?.title}</h1>
-      {isUserStep && !canAct && (
-        <p className="mt-6 rounded-lg border border-amber-800/50 bg-amber-950/30 px-4 py-3 text-amber-200">
-          You don&apos;t have permission to complete this step. Please wait for the process to be moved along.
-        </p>
-      )}
       <form onSubmit={handleSubmit} className="mt-8 space-y-6">
         {step?.viewControls
           ?.filter(
             (vc) =>
               !vc.visibleExpression ||
-              Boolean(
-                process &&
-                  evaluate(
-                    getContextViewForEvaluation(process as Process),
-                    vc.visibleExpression
-                  )
-              )
+              Boolean(process && evaluate(evaluationContext, vc.visibleExpression))
           )
           .map((vc) => {
-            const contextView = process
-              ? getContextViewForEvaluation(process as Process)
-              : {};
+            const contextView = evaluationContext;
             const dot = vc.key.indexOf(".");
             const stepKey = dot >= 0 ? vc.key.slice(0, dot) : "";
             const fieldKey = dot >= 0 ? vc.key.slice(dot + 1) : vc.key;
@@ -443,18 +476,12 @@ export default function ProcessStepPage() {
           ?.filter(
             (inp) =>
               !inp.visibleExpression ||
-              Boolean(
-                process &&
-                  evaluate(
-                    getContextViewForEvaluation(process as Process),
-                    inp.visibleExpression
-                  )
-              )
+              Boolean(process && evaluate(evaluationContext, inp.visibleExpression))
           )
           .map((inp) => (
           <div
             key={inp.key}
-            className={`rounded-xl border border-stone-700 bg-stone-900/50 px-4 py-4 ${!canAct ? "pointer-events-none opacity-70" : ""}`}
+            className="rounded-xl border border-stone-700 bg-stone-900/50 px-4 py-4"
           >
             {inp.type === "bool" ? (
               <label className="flex cursor-pointer items-center justify-between gap-4">
@@ -542,7 +569,7 @@ export default function ProcessStepPage() {
         ))}
         <button
           type="submit"
-          disabled={submitting || !canAct}
+          disabled={submitting}
           className="rounded-lg bg-stone-600 px-4 py-2 text-stone-100 hover:bg-stone-500 disabled:opacity-50"
         >
           {submitting ? "Submitting…" : "Continue"}

@@ -20,12 +20,12 @@ const initialUsers: Record<string, User> = {
   "prime-user": {
     id: "prime-user",
     type: "user",
-    evmWalletAddress: "0xc1995dffC5e569d13a475E8A2912C042F472A393",
+    evmWalletAddress: "0xF402Db07E1caB5aE2c0f9DE4134c4941a3Aa7507",
   },
   "oea-user": {
     id: "oea-user",
     type: "user",
-    evmWalletAddress: "0xe657150599e96559bAdE5c279Cf5708F5FE230aA",
+    evmWalletAddress: "0x278f04483d4d1bc39A0A27b78C577D0D670033Be",
   },
 };
 
