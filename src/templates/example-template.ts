@@ -45,6 +45,9 @@ export const exampleTemplate: Template = {
       title: "Amend Description",
       allowedRoles: ["Prime"],
       nextStepKey: "review_description",
+      viewControls: [
+        { key: "review_description.description_review", title: "Feedback from OEA" },
+      ],
       inputs: [
         { key: "description", type: "string", title: "Describe why you need a new Halo" },
       ],

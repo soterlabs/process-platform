@@ -50,6 +50,7 @@ const initialGroupMemberships: Record<string, GroupMembership> = (() => {
 export type StorageService = {
   getTemplate(key: string): Promise<Template | null>;
   setTemplate(key: string, template: Template): Promise<void>;
+  listTemplates(): Promise<Template[]>;
   getUser(key: string): Promise<User | null>;
   setUser(key: string, user: User): Promise<void>;
   listUsers(): Promise<User[]>;
@@ -84,7 +85,12 @@ async function readTemplates(): Promise<Record<string, Template>> {
     const raw = await readFile(TEMPLATES_FILE, "utf-8");
     return JSON.parse(raw) as Record<string, Template>;
   } catch {
-    return { [exampleTemplate.key]: exampleTemplate };
+    return {
+      [exampleTemplate.key]: {
+        ...exampleTemplate,
+        updatedAt: new Date().toISOString(),
+      },
+    };
   }
 }
 
@@ -178,8 +184,15 @@ export const storageService: StorageService = {
   },
   async setTemplate(key, template) {
     const templates = await readTemplates();
-    templates[key] = template;
+    templates[key] = {
+      ...template,
+      updatedAt: new Date().toISOString(),
+    };
     await writeTemplates(templates);
+  },
+  async listTemplates() {
+    const templates = await readTemplates();
+    return Object.values(templates);
   },
   async getUser(key) {
     const users = await readUsers();

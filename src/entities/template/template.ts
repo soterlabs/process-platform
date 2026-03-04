@@ -9,4 +9,5 @@ export type Template = {
   firstStepKey: string;
   steps: (InputTemplateStep | ConditionTemplateStep | RequestTemplateStep | AutomaticTemplateStep)[];
   allowedRoles: string[];
+  updatedAt?: string;
 };

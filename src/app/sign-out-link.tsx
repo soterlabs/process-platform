@@ -3,12 +3,16 @@
 import Link from "next/link";
 import { removeToken } from "@/lib/auth-client";
 
-export function SignOutLink() {
+type SignOutLinkProps = {
+  className?: string;
+};
+
+export function SignOutLink({ className }: SignOutLinkProps) {
   return (
     <Link
       href="/login"
       onClick={() => removeToken()}
-      className="text-sm text-stone-500 hover:text-stone-400"
+      className={className ?? "text-sm text-stone-500 hover:text-stone-400"}
     >
       Sign out
     </Link>
