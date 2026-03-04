@@ -11,6 +11,9 @@ export const exampleTemplate: Template = {
       title: "Provide Description",
       allowedRoles: ["Prime"],
       nextStepKey: "review_description",
+      viewControls: [
+        { key: "review_description.description_review", title: "Feedback from OEA" },
+      ],
       inputs: [
         { key: "description", type: "string", title: "Describe why you need a new Halo" },
       ],
@@ -35,23 +38,9 @@ export const exampleTemplate: Template = {
       type: "condition",
       title: "Review Description Condition",
       thenStepKey: "input_risk_model_availability",
-      elseStepKey: "input_description_retry",
+      elseStepKey: "input_description",
       expression: "review_description.description_review_ok === true",
       nextStepKey: null,
-    },
-    {
-      key: "input_description_retry",
-      type: "input",
-      title: "Amend Description",
-      allowedRoles: ["Prime"],
-      nextStepKey: "review_description",
-      viewControls: [
-        { key: "review_description.description_review", title: "Feedback from OEA" },
-      ],
-      inputs: [
-        { key: "description", type: "string", title: "Describe why you need a new Halo" },
-      ],
-      confirmationMessage: "Thank you. A member of the OEA team will be in touch.",
     },
     {
       key: "input_risk_model_availability",

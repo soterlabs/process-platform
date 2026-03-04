@@ -3,9 +3,7 @@
 import { useParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import type { Process } from "@/entities/process";
 import { authFetch } from "@/lib/auth-client";
-import { getContextViewForEvaluation } from "@/services/template-helpers";
 import { evaluate } from "@/services/expression-service";
 
 type StepInput = {
@@ -154,7 +152,7 @@ export default function ProcessStepPage() {
         const step = getCurrentStep(result.process);
         const currentProcessStep = getCurrentProcessStepFromState(result.process);
         const stepContext = currentProcessStep
-          ? (result.process.context[currentProcessStep.id] as Record<string, unknown>)
+          ? (result.process.context[currentProcessStep.stepKey] as Record<string, unknown>)
           : undefined;
         if (step?.inputs) {
           setFormValues((prev) => {
@@ -295,14 +293,13 @@ export default function ProcessStepPage() {
   }
 
   if (noCurrentStep && process) {
-    const contextView = getContextViewForEvaluation(process as Process);
     const resultData =
       process.result && Object.keys(process.result).length > 0
         ? process.result
         : Object.fromEntries(
             process.template.steps
               .filter((s) => s.type === "request")
-              .map((s) => [s.key, contextView[s.key]])
+              .map((s) => [s.key, process.context[s.key]])
               .filter(
                 ([, v]) =>
                   v != null &&
@@ -415,12 +412,12 @@ export default function ProcessStepPage() {
 
   const evaluationContext = process
     ? (() => {
-        const view = getContextViewForEvaluation(process as Process);
+        const base = { ...process.context };
         if (step?.key && Object.keys(formValues).length > 0) {
-          const current = (view[step.key] as Record<string, unknown>) ?? {};
-          view[step.key] = { ...current, ...formValues };
+          const current = (base[step.key] as Record<string, unknown>) ?? {};
+          base[step.key] = { ...current, ...formValues };
         }
-        return view;
+        return base;
       })()
     : {};
 
@@ -440,8 +437,17 @@ export default function ProcessStepPage() {
         {step?.viewControls
           ?.filter(
             (vc) =>
-              !vc.visibleExpression ||
-              Boolean(process && evaluate(evaluationContext, vc.visibleExpression))
+              (!vc.visibleExpression ||
+                Boolean(process && evaluate(evaluationContext, vc.visibleExpression))) &&
+              (() => {
+                const contextView = evaluationContext;
+                const dot = vc.key.indexOf(".");
+                const stepKey = dot >= 0 ? vc.key.slice(0, dot) : "";
+                const fieldKey = dot >= 0 ? vc.key.slice(dot + 1) : vc.key;
+                const stepData = contextView[stepKey] as Record<string, unknown> | undefined;
+                const val = stepData?.[fieldKey];
+                return val !== undefined && val !== null;
+              })()
           )
           .map((vc) => {
             const contextView = evaluationContext;
@@ -451,15 +457,13 @@ export default function ProcessStepPage() {
             const stepData = contextView[stepKey] as Record<string, unknown> | undefined;
             const value = stepData?.[fieldKey];
             const display =
-              value === undefined || value === null
-                ? "—"
-                : typeof value === "string"
+              typeof value === "string"
+                ? value
+                : typeof value === "boolean"
                   ? value
-                  : typeof value === "boolean"
-                    ? value
-                      ? "Yes"
-                      : "No"
-                    : JSON.stringify(value);
+                    ? "Yes"
+                    : "No"
+                  : JSON.stringify(value);
             return (
               <div
                 key={vc.key}

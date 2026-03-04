@@ -105,7 +105,7 @@ export const openApiSpec = {
     "/api/process/{id}/steps/{stepId}": {
       put: {
         summary: "Update step state",
-        description: "Update a step instance's state without advancing. Body merged into context[stepId].",
+        description: "Update a step instance's state without advancing. Body merged into context[stepKey] (context is keyed by template step key).",
         parameters: [
           { name: "id", in: "path", required: true, schema: { type: "string" } },
           { name: "stepId", in: "path", required: true, schema: { type: "string" } },

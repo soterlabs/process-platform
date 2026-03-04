@@ -1,4 +1,4 @@
-import type { Process, ProcessStep } from "@/entities/process";
+import type { ProcessStep } from "@/entities/process";
 import type {
   Template,
   TemplateStep,
@@ -17,19 +17,6 @@ export function getProcessStepById(
   stepId: string
 ): ProcessStep | null {
   return steps.find((s) => s.id === stepId) ?? null;
-}
-
-/**
- * Builds a stepKey -> data view from process context (keyed by stepId).
- * Latest step instance per stepKey wins. Use for expression evaluation and completion display.
- */
-export function getContextViewForEvaluation(process: Process): Record<string, unknown> {
-  const view: Record<string, unknown> = {};
-  for (const step of process.steps) {
-    const data = process.context[step.id];
-    if (data !== undefined && data !== null) view[step.stepKey] = data;
-  }
-  return view;
 }
 
 export function getStepByKey(template: Template, stepKey: string): TemplateStep | null {

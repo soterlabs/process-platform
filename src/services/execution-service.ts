@@ -6,7 +6,6 @@ import type {
 } from "@/entities/template";
 import { evaluate } from "@/services/expression-service";
 import {
-  getContextViewForEvaluation,
   getCurrentProcessStep,
   getNextStepKey,
   getProcessStepById,
@@ -84,6 +83,10 @@ export const executionService = {
     return process;
   },
 
+  /**
+   * Updates the context for a step. Context is keyed by template step key (not step id).
+   * Each key in payload overwrites the existing value for that key in the step's context.
+   */
   async updateStep(
     process: Process,
     stepId: string,
@@ -92,8 +95,11 @@ export const executionService = {
     if (process.status !== "running") {
       throw new Error(`Process is not running: ${process.status}`);
     }
-    const existing = (process.context[stepId] as Record<string, unknown>) ?? {};
-    process.context[stepId] = { ...existing, ...payload };
+    const step = getProcessStepById(process.steps, stepId);
+    if (!step) throw new Error(`Step not found: ${stepId}`);
+    const stepKey = step.stepKey;
+    const existing = (process.context[stepKey] as Record<string, unknown>) ?? {};
+    process.context[stepKey] = { ...existing, ...payload };
     await storageService.saveProcessState(process);
   },
 
@@ -117,8 +123,7 @@ export const executionService = {
     }
     const step = getProcessStepById(process.steps, stepId);
     if (!step) throw new Error(`Step not found: ${stepId}`);
-    const contextView = getContextViewForEvaluation(process);
-    let nextStepKey = getNextStepKey(process.template, step.stepKey, contextView);
+    let nextStepKey = getNextStepKey(process.template, step.stepKey, process.context);
     if (nextStepKey === null) {
       await this.completeProcess(process);
       return nextStepKey;
@@ -143,7 +148,6 @@ export const executionService = {
       throw new Error(`Process is not running: ${process.status}`);
     }
 
-    const contextView = getContextViewForEvaluation(process);
     const currentStep = getCurrentProcessStep(process.steps);
     if (!currentStep) return;
 
@@ -153,12 +157,13 @@ export const executionService = {
     if (templateStep.type === "automatic") {
       const newContext = runAutomaticStep(
         templateStep as AutomaticTemplateStep,
-        contextView
+        process.context
       );
       const contextKey = (templateStep as AutomaticTemplateStep).contextKey;
       const value = newContext[contextKey];
-      const existing = (process.context[currentStep.id] as Record<string, unknown>) ?? {};
-      process.context[currentStep.id] = { ...existing, [contextKey]: value };
+      const stepKey = currentStep.stepKey;
+      const existing = (process.context[stepKey] as Record<string, unknown>) ?? {};
+      process.context[stepKey] = { ...existing, [contextKey]: value };
       const nextStepKey = templateStep.nextStepKey;
       if (nextStepKey && getStepByKey(process.template, nextStepKey)) {
         pushStep(process, nextStepKey);
@@ -172,7 +177,7 @@ export const executionService = {
     if (templateStep.type === "condition") {
       const nextKey = runConditionalStep(
         templateStep as ConditionTemplateStep,
-        contextView
+        process.context
       );
       if (nextKey && getStepByKey(process.template, nextKey)) {
         pushStep(process, nextKey);
