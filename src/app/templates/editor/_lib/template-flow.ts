@@ -114,11 +114,17 @@ export function templateToFlow(template: Template): {
   return { nodes, edges };
 }
 
+export type TemplateOverrides = {
+  resultViewControls?: { key: string; title: string; visibleExpression?: string }[];
+  allowedRoles?: string[];
+};
+
 export function flowToTemplate(
   nodes: Node<FlowNodeData>[],
   edges: Edge[],
   key: string,
-  name?: string
+  name?: string,
+  overrides?: TemplateOverrides
 ): Template {
   const steps: (InputTemplateStep | ConditionTemplateStep | RequestTemplateStep | AutomaticTemplateStep)[] = [];
   const nodeIds = new Set(nodes.map((n) => n.id));
@@ -197,6 +203,7 @@ export function flowToTemplate(
     name: name || undefined,
     firstStepKey,
     steps,
-    allowedRoles: [],
+    allowedRoles: overrides?.allowedRoles ?? [],
+    resultViewControls: overrides?.resultViewControls,
   };
 }

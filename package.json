@@ -9,8 +9,9 @@
     "job:step": "tsx src/jobs/run-step-job.ts"
   },
   "dependencies": {
-    "acorn": "^8.14.0",
     "@xyflow/react": "^12.10.0",
+    "acorn": "^8.14.0",
+    "dotenv": "^17.3.1",
     "jose": "^5.9.6",
     "next": "^14.2.0",
     "react": "^18.3.0",
@@ -24,8 +25,8 @@
     "@types/react-dom": "^18.3.0",
     "@types/swagger-ui-react": "^5.18.0",
     "autoprefixer": "^10.4.20",
-    "postcss": "^8.4.47",
     "concurrently": "^9.1.0",
+    "postcss": "^8.4.47",
     "tailwindcss": "^3.4.14",
     "tsx": "^4.19.0",
     "typescript": "^5.7.2"

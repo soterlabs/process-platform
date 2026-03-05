@@ -3,7 +3,9 @@ import type { Process } from "@/entities/process";
 import type {
   AutomaticTemplateStep,
   ConditionTemplateStep,
+  RequestTemplateStep,
 } from "@/entities/template";
+import { agentService } from "@/services/agent-service";
 import { evaluate } from "@/services/expression-service";
 import {
   getCurrentProcessStep,
@@ -185,6 +187,24 @@ export const executionService = {
       } else {
         await this.completeProcess(process);
       }
+      return;
+    }
+
+    if (templateStep.type === "request") {
+      const requestStep = templateStep as RequestTemplateStep;
+      const stepKey = currentStep.stepKey;
+      const response = await agentService.runAgent({
+        systemPrompt: requestStep.prompt ?? "",
+        context: process.context,
+      });
+      process.context[stepKey] = { response };
+      const nextStepKey = requestStep.nextStepKey;
+      if (nextStepKey && getStepByKey(process.template, nextStepKey)) {
+        pushStep(process, nextStepKey);
+      } else {
+        await this.completeProcess(process);
+      }
+      await storageService.saveProcessState(process);
       return;
     }
   },

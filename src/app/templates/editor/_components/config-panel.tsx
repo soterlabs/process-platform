@@ -3,21 +3,92 @@
 import type { Node } from "@xyflow/react";
 import type { FlowNodeData } from "../_lib/template-flow";
 
+type ResultViewControl = { key: string; title: string; visibleExpression?: string };
+
 export function ConfigPanel({
   node,
   onUpdate,
   onClose,
   allStepKeys,
+  resultViewControls = [],
+  onUpdateResultViewControls,
 }: {
   node: Node<FlowNodeData> | null;
   onUpdate: (nodeId: string, data: Partial<FlowNodeData>) => void;
   onClose: () => void;
   allStepKeys: string[];
+  resultViewControls?: ResultViewControl[];
+  onUpdateResultViewControls?: (vc: ResultViewControl[]) => void;
 }) {
   if (!node) {
     return (
       <aside className="flex w-80 shrink-0 flex-col border-l border-stone-700 bg-stone-900 p-4">
-        <p className="text-sm text-stone-500">Select a step to configure it.</p>
+        <p className="mb-3 text-sm text-stone-500">Select a step to configure it.</p>
+        {onUpdateResultViewControls && (
+          <div>
+            <span className="text-xs text-stone-500">Result view controls (shown when process has finished)</span>
+            <p className="mt-0.5 text-xs text-stone-600">Key = context path, e.g. stepKey.fieldKey</p>
+            <div className="mt-1 space-y-2">
+              {(resultViewControls ?? []).map((vc, i) => (
+                <div
+                  key={i}
+                  className="rounded border border-stone-600 bg-stone-800 p-2"
+                >
+                  <input
+                    placeholder="Context path (stepKey.fieldKey)"
+                    value={vc.key}
+                    onChange={(e) => {
+                      const viewControls = [...(resultViewControls ?? [])];
+                      viewControls[i] = { ...vc, key: e.target.value };
+                      onUpdateResultViewControls(viewControls);
+                    }}
+                    className="mb-1 w-full rounded border border-stone-600 bg-stone-900 px-2 py-1 text-xs text-stone-200"
+                  />
+                  <input
+                    placeholder="Title (label)"
+                    value={vc.title}
+                    onChange={(e) => {
+                      const viewControls = [...(resultViewControls ?? [])];
+                      viewControls[i] = { ...vc, title: e.target.value };
+                      onUpdateResultViewControls(viewControls);
+                    }}
+                    className="mb-1 w-full rounded border border-stone-600 bg-stone-900 px-2 py-1 text-xs text-stone-200"
+                  />
+                  <input
+                    placeholder="Visible when (e.g. context.step.field)"
+                    value={vc.visibleExpression ?? ""}
+                    onChange={(e) => {
+                      const viewControls = [...(resultViewControls ?? [])];
+                      viewControls[i] = { ...vc, visibleExpression: e.target.value || undefined };
+                      onUpdateResultViewControls(viewControls);
+                    }}
+                    className="w-full rounded border border-stone-600 bg-stone-900 px-2 py-1 text-xs text-stone-200"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const viewControls = (resultViewControls ?? []).filter((_, j) => j !== i);
+                      onUpdateResultViewControls(viewControls);
+                    }}
+                    className="mt-1 text-xs text-red-400 hover:text-red-300"
+                  >
+                    Remove
+                  </button>
+                </div>
+              ))}
+              <button
+                type="button"
+                onClick={() => {
+                  const viewControls = [...(resultViewControls ?? []), { key: "", title: "View", visibleExpression: undefined }];
+                  onUpdateResultViewControls(viewControls);
+                }}
+                className="text-xs text-amber-400 hover:text-amber-300"
+              >
+                + Add result view control
+              </button>
+            </div>
+          </div>
+        )}
       </aside>
     );
   }

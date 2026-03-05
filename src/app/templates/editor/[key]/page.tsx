@@ -106,6 +106,9 @@ function TemplateEditorInner() {
   const [templateName, setTemplateName] = useState("");
   const [nodes, setNodes, onNodesChange] = useNodesState<Node<FlowNodeData>>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
+  const [resultViewControls, setResultViewControls] = useState<
+    { key: string; title: string; visibleExpression?: string }[]
+  >([]);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "ok" | "error">("idle");
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -118,6 +121,7 @@ function TemplateEditorInner() {
       setTemplateName("");
       setNodes([]);
       setEdges([]);
+      setResultViewControls([]);
       setLoadError(null);
       return;
     }
@@ -132,6 +136,7 @@ function TemplateEditorInner() {
         if (cancelled) return;
         setTemplateKey(t.key);
         setTemplateName(t.name ?? "");
+        setResultViewControls(t.resultViewControls ?? []);
         const { nodes: n, edges: e } = templateToFlow(t);
         setNodes(n);
         setEdges(e);
@@ -240,7 +245,9 @@ function TemplateEditorInner() {
     }
     setSaveStatus("saving");
     try {
-      const template = flowToTemplate(nodes, edges, key, templateName.trim() || undefined);
+      const template = flowToTemplate(nodes, edges, key, templateName.trim() || undefined, {
+        resultViewControls,
+      });
       const res = await authFetch(`/api/templates/${encodeURIComponent(key)}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -256,7 +263,7 @@ function TemplateEditorInner() {
       setSaveStatus("error");
       console.error(err);
     }
-  }, [templateKey, templateName, nodes, edges, isNew, router]);
+  }, [templateKey, templateName, nodes, edges, resultViewControls, isNew, router]);
 
   return (
     <div className="flex h-screen flex-col bg-stone-950">
@@ -339,6 +346,8 @@ function TemplateEditorInner() {
           onUpdate={updateNodeData}
           onClose={() => setSelectedNodeId(null)}
           allStepKeys={nodes.map((n) => n.id)}
+          resultViewControls={resultViewControls}
+          onUpdateResultViewControls={setResultViewControls}
         />
       </div>
     </div>

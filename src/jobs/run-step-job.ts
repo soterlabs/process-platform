@@ -8,6 +8,8 @@
  * For dev, run this in a separate terminal alongside `npm run dev`.
  * For production, deploy and run this process independently.
  */
+import "dotenv/config";
+
 import {
   startStepExecutionJob,
   stopStepExecutionJob,

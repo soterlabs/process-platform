@@ -32,7 +32,7 @@ type CurrentStep = {
 
 type ProcessState = {
   processId: string;
-  template: { steps: CurrentStep[] };
+  template: { steps: CurrentStep[]; resultViewControls?: ViewControl[] };
   steps: { id: string; processId?: string; stepKey: string }[];
   context: Record<string, unknown>;
   result?: Record<string, unknown>;
@@ -265,11 +265,11 @@ export default function ProcessStepPage() {
     );
   }
 
-  const noCurrentStep = process?.steps.length === 0;
   const currentStepIndex = process ? getCurrentStepIndex(process) : 0;
+  const isProcessCompleted = process?.status === "completed";
 
   // While submitting (e.g. right after Continue), show waiting indicator immediately
-  if (submitting && process) {
+  if (submitting && process && !isProcessCompleted) {
     const nextStepTitle = process.template.steps[currentStepIndex + 1]?.title ?? "Processing…";
     return (
       <main className="mx-auto max-w-2xl px-6 py-16">
@@ -292,7 +292,8 @@ export default function ProcessStepPage() {
     );
   }
 
-  if (noCurrentStep && process) {
+  // Process completed: show completion state (no busy indicator) and resultViewControls
+  if (isProcessCompleted && process) {
     const resultData =
       process.result && Object.keys(process.result).length > 0
         ? process.result
@@ -310,6 +311,22 @@ export default function ProcessStepPage() {
               .map(([k, v]) => [k, (v as { response: string }).response])
           );
     const hasResult = Object.keys(resultData).length > 0;
+    const resolvedResultViewControls = (process.template.resultViewControls ?? [])
+      .filter(
+        (vc) =>
+          (!vc.visibleExpression ||
+            Boolean(evaluate(process.context, vc.visibleExpression))) &&
+          (() => {
+            const dot = vc.key.indexOf(".");
+            const stepKey = dot >= 0 ? vc.key.slice(0, dot) : "";
+            const fieldKey = dot >= 0 ? vc.key.slice(dot + 1) : vc.key;
+            const stepData = process.context[stepKey] as Record<string, unknown> | undefined;
+            const val = stepData?.[fieldKey];
+            return val !== undefined && val !== null;
+          })()
+      );
+    const showResultViewControls = resolvedResultViewControls.length > 0;
+    const showFallbackResult = hasResult && !showResultViewControls;
 
     return (
       <main className="mx-auto max-w-2xl px-6 py-16">
@@ -326,7 +343,40 @@ export default function ProcessStepPage() {
         <p className="mt-1 text-stone-400">
           This process has finished.
         </p>
-        {hasResult && (
+        {showResultViewControls && (
+          <section className="mt-8 space-y-4">
+            <h2 className="text-sm font-medium uppercase tracking-wider text-stone-500">
+              Result
+            </h2>
+            {resolvedResultViewControls.map((vc) => {
+              const dot = vc.key.indexOf(".");
+              const stepKey = dot >= 0 ? vc.key.slice(0, dot) : "";
+              const fieldKey = dot >= 0 ? vc.key.slice(dot + 1) : vc.key;
+              const stepData = process.context[stepKey] as Record<string, unknown> | undefined;
+              const value = stepData?.[fieldKey];
+              const display =
+                typeof value === "string"
+                  ? value
+                  : typeof value === "boolean"
+                    ? value
+                      ? "Yes"
+                      : "No"
+                    : JSON.stringify(value);
+              return (
+                <div
+                  key={vc.key}
+                  className="rounded-xl border border-stone-700 bg-stone-900/50 px-4 py-4"
+                >
+                  <div className="text-sm font-medium text-stone-400">{vc.title}</div>
+                  <div className="mt-2 text-stone-200" aria-readonly>
+                    {display}
+                  </div>
+                </div>
+              );
+            })}
+          </section>
+        )}
+        {showFallbackResult && (
           <section className="mt-8 space-y-4">
             <h2 className="text-sm font-medium uppercase tracking-wider text-stone-500">
               Result
@@ -386,7 +436,7 @@ export default function ProcessStepPage() {
     );
   }
 
-  if ((!isUserStep || !canAct) && step && process) {
+  if ((!isUserStep || !canAct) && step && process && !isProcessCompleted) {
     return (
       <main className="mx-auto max-w-2xl px-6 py-16">
         <Link href="/" className="text-stone-400 hover:text-stone-300">

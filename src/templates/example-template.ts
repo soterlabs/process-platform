@@ -46,13 +46,24 @@ export const exampleTemplate: Template = {
       key: "input_risk_model_availability",
       type: "input",
       title: "Indicate Risk Model Availability",
-      allowedRoles: ["RiskCouncil"],
-      nextStepKey: null,
+      allowedRoles: ["OEA"],
+      nextStepKey: "agent_recommendation",
       inputs: [
-        { key: "description", type: "dropdown", title: "Is a risk model available?", values: ["Not Available", "Partially Available", "Available"] },
+        { key: "availability", type: "dropdown", title: "Is a risk model available?", values: ["Not Available", "Partially Available", "Available"] },
       ]
     },
-   
+    {
+      key: "agent_recommendation",
+      type: "request",
+      requestType: "agent",
+      title: "LLM Recommendation",
+      nextStepKey: null,
+      prompt:
+        "You are assisting with new Halo requests. You will receive the Prime's description of why they need a new Halo, OEA's review, and the Risk Council's risk model availability. Write a short recommendation (2–4 sentences): whether to proceed, defer, or request more information, and why. Be concise and practical.",
+    },
   ],
-  allowedRoles:  ["Prime"],
+  allowedRoles: ["Prime"],
+  resultViewControls: [
+    { key: "agent_recommendation.response", title: "Recommendation" },
+  ],
 };

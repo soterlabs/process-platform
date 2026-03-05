@@ -1,6 +1,6 @@
 /**
  * Polling job: every second, finds running processes whose current step
- * is automatic or condition and executes that step via the execution service.
+ * is automatic, condition, or request and executes that step via the execution service.
  * Start with startStepExecutionJob(); stop with the returned stop function.
  */
 import { executionService } from "@/services/execution-service";
@@ -17,7 +17,9 @@ async function tick(): Promise<void> {
     if (!currentStep) continue;
     const templateStep = getStepByKey(p.template, currentStep.stepKey);
     const shouldAutoRun =
-      templateStep?.type === "automatic" || templateStep?.type === "condition";
+      templateStep?.type === "automatic" ||
+      templateStep?.type === "condition" ||
+      templateStep?.type === "request";
     if (shouldAutoRun) {
       await executionService.executeStep(p);
     }
