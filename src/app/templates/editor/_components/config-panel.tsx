@@ -205,7 +205,7 @@ export function ConfigPanel({
                       value={input.type}
                       onChange={(e) => {
                         const inputs = [...(d.inputs ?? [])];
-                        const newType = e.target.value as "bool" | "string" | "dropdown";
+                        const newType = e.target.value as "bool" | "string" | "number" | "dropdown";
                         inputs[i] = {
                           ...input,
                           type: newType,
@@ -216,6 +216,7 @@ export function ConfigPanel({
                       className="mb-1 w-full rounded border border-stone-600 bg-stone-900 px-2 py-1 text-xs text-stone-200"
                     >
                       <option value="string">string</option>
+                      <option value="number">number</option>
                       <option value="bool">bool</option>
                       <option value="dropdown">dropdown</option>
                     </select>

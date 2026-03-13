@@ -8,7 +8,7 @@ import { evaluate } from "@/services/expression-service";
 
 type StepInput = {
   key: string;
-  type: "bool" | "string" | "dropdown";
+  type: "bool" | "string" | "number" | "dropdown";
   title: string;
   visibleExpression?: string;
   values?: string[];
@@ -244,7 +244,18 @@ export default function ProcessStepPage() {
     try {
       const payload: Record<string, unknown> = {};
       step.inputs.forEach((inp) => {
-        payload[inp.key] = formValues[inp.key] ?? (inp.type === "bool" ? false : "");
+        if (inp.type === "bool") {
+          payload[inp.key] = formValues[inp.key] ?? false;
+        } else if (inp.type === "number") {
+          const v = formValues[inp.key];
+          if (v === undefined || v === "") payload[inp.key] = "";
+          else {
+            const n = Number(v);
+            payload[inp.key] = Number.isFinite(n) ? n : String(v);
+          }
+        } else {
+          payload[inp.key] = formValues[inp.key] ?? "";
+        }
       });
       const res = await authFetch(
         `/api/process/${processId}/steps/${encodeURIComponent(currentProcessStep.id)}/complete`,
@@ -391,9 +402,11 @@ export default function ProcessStepPage() {
                   className="rounded-xl border border-stone-700 bg-stone-900/50 px-4 py-4"
                 >
                   <div className="text-sm font-medium text-stone-400">{vc.title}</div>
-                  <div className="mt-2 text-stone-200" aria-readonly>
-                    {display}
-                  </div>
+                  <div
+                    className="mt-2 text-stone-200 [&_a]:text-sky-400 [&_a:hover]:underline [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_p]:mb-2"
+                    aria-readonly
+                    dangerouslySetInnerHTML={{ __html: display }}
+                  />
                 </div>
               );
             })}
@@ -524,9 +537,11 @@ export default function ProcessStepPage() {
                 className="rounded-xl border border-stone-700 bg-stone-900/50 px-4 py-4"
               >
                 <div className="text-sm font-medium text-stone-400">{vc.title}</div>
-                <div className="mt-2 text-stone-200" aria-readonly>
-                  {display}
-                </div>
+                <div
+                  className="mt-2 text-stone-200 [&_a]:text-sky-400 [&_a:hover]:underline [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_p]:mb-2"
+                  aria-readonly
+                  dangerouslySetInnerHTML={{ __html: display }}
+                />
               </div>
             );
           })}
@@ -600,6 +615,27 @@ export default function ProcessStepPage() {
                     </option>
                   ))}
                 </select>
+              </>
+            ) : inp.type === "number" ? (
+              <>
+                <label
+                  htmlFor={inp.key}
+                  className="block text-sm font-medium text-stone-300"
+                >
+                  {inp.title}
+                </label>
+                <input
+                  id={inp.key}
+                  type="number"
+                  value={String(formValues[inp.key] ?? "")}
+                  onChange={(e) =>
+                    setFormValues((prev) => ({
+                      ...prev,
+                      [inp.key]: e.target.value,
+                    }))
+                  }
+                  className="mt-2 w-full rounded-lg border border-stone-600 bg-stone-900 px-3 py-2.5 text-stone-200 placeholder-stone-500 focus:border-stone-500 focus:outline-none focus:ring-1 focus:ring-stone-500"
+                />
               </>
             ) : (
               <>

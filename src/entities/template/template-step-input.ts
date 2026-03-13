@@ -1,6 +1,6 @@
 export type TemplateStepInput = {
   key: string;
-  type: "bool" | "string" | "dropdown";
+  type: "bool" | "string" | "number" | "dropdown";
   title: string;
   visibleExpression?: string;
   values?: string[];
