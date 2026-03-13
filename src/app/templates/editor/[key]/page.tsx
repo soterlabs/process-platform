@@ -53,14 +53,27 @@ const nodeTypes: NodeTypes = {
 };
 
 function InputStepNode({ data }: { data: FlowNodeData }) {
+  const viewControls = data.viewControls ?? [];
   return (
-    <div className="relative rounded-lg border-2 border-amber-600/80 bg-stone-800 px-4 py-3 shadow-lg">
+    <div className="relative rounded-lg border-2 border-amber-600/80 bg-stone-800 px-4 py-3 shadow-lg min-w-[180px]">
       <Handle type="target" position={Position.Left} className="!border-2 !border-stone-500 !bg-stone-600" />
       <div className="flex items-center gap-2">
         <span className="text-amber-400">◇</span>
         <span className="font-medium text-stone-200">{data.title || "Input"}</span>
       </div>
       <div className="mt-1 text-xs text-stone-500">{data.stepKey}</div>
+      {viewControls.length > 0 && (
+        <div className="mt-2 border-t border-stone-600 pt-2">
+          <div className="text-[10px] uppercase tracking-wider text-stone-500">View controls</div>
+          <ul className="mt-1 space-y-0.5">
+            {viewControls.map((vc, i) => (
+              <li key={i} className="text-xs text-stone-400 truncate" title={vc.key}>
+                {vc.title || vc.key || "—"}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
       <Handle type="source" position={Position.Right} className="!border-2 !border-stone-500 !bg-stone-600" />
     </div>
   );
@@ -109,6 +122,7 @@ function TemplateEditorInner() {
   const [resultViewControls, setResultViewControls] = useState<
     { key: string; title: string; visibleExpression?: string }[]
   >([]);
+  const [templateAllowedRoles, setTemplateAllowedRoles] = useState<string[]>([]);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "ok" | "error">("idle");
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -122,6 +136,7 @@ function TemplateEditorInner() {
       setNodes([]);
       setEdges([]);
       setResultViewControls([]);
+      setTemplateAllowedRoles([]);
       setLoadError(null);
       return;
     }
@@ -137,6 +152,7 @@ function TemplateEditorInner() {
         setTemplateKey(t.key);
         setTemplateName(t.name ?? "");
         setResultViewControls(t.resultViewControls ?? []);
+        setTemplateAllowedRoles(t.allowedRoles ?? []);
         const { nodes: n, edges: e } = templateToFlow(t);
         setNodes(n);
         setEdges(e);
@@ -247,6 +263,7 @@ function TemplateEditorInner() {
     try {
       const template = flowToTemplate(nodes, edges, key, templateName.trim() || undefined, {
         resultViewControls,
+        allowedRoles: templateAllowedRoles,
       });
       const res = await authFetch(`/api/templates/${encodeURIComponent(key)}`, {
         method: "PUT",
@@ -263,7 +280,7 @@ function TemplateEditorInner() {
       setSaveStatus("error");
       console.error(err);
     }
-  }, [templateKey, templateName, nodes, edges, resultViewControls, isNew, router]);
+  }, [templateKey, templateName, nodes, edges, resultViewControls, templateAllowedRoles, isNew, router]);
 
   return (
     <div className="flex h-screen flex-col bg-stone-950">
@@ -348,6 +365,8 @@ function TemplateEditorInner() {
           allStepKeys={nodes.map((n) => n.id)}
           resultViewControls={resultViewControls}
           onUpdateResultViewControls={setResultViewControls}
+          templateAllowedRoles={templateAllowedRoles}
+          onUpdateTemplateAllowedRoles={setTemplateAllowedRoles}
         />
       </div>
     </div>
@@ -387,6 +406,7 @@ function defaultStepData(
   if (type === "input") {
     return {
       inputs: [{ key: "field_1", type: "string", title: "Field" }],
+      viewControls: [],
       allowedRoles: [],
       nextStepKey: null,
     };

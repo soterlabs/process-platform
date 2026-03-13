@@ -19,7 +19,7 @@ export async function POST(
     if (Object.keys(payload).length > 0) {
       await executionService.updateStepById(id, stepId, payload);
     }
-    const result = await executionService.completeStepById(id, stepId);
+    const result = await executionService.completeStepById(id, stepId, userId);
     return NextResponse.json(result);
   } catch (err) {
     console.error(err);

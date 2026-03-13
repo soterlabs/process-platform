@@ -12,6 +12,8 @@ export function ConfigPanel({
   allStepKeys,
   resultViewControls = [],
   onUpdateResultViewControls,
+  templateAllowedRoles = [],
+  onUpdateTemplateAllowedRoles,
 }: {
   node: Node<FlowNodeData> | null;
   onUpdate: (nodeId: string, data: Partial<FlowNodeData>) => void;
@@ -19,11 +21,32 @@ export function ConfigPanel({
   allStepKeys: string[];
   resultViewControls?: ResultViewControl[];
   onUpdateResultViewControls?: (vc: ResultViewControl[]) => void;
+  templateAllowedRoles?: string[];
+  onUpdateTemplateAllowedRoles?: (roles: string[]) => void;
 }) {
   if (!node) {
     return (
       <aside className="flex w-80 shrink-0 flex-col border-l border-stone-700 bg-stone-900 p-4">
         <p className="mb-3 text-sm text-stone-500">Select a step to configure it.</p>
+        {onUpdateTemplateAllowedRoles && (
+          <label className="mb-4 block">
+            <span className="text-xs text-stone-500">Template roles (who can start this process, comma-separated, empty = any)</span>
+            <input
+              type="text"
+              value={(templateAllowedRoles ?? []).join(", ")}
+              onChange={(e) =>
+                onUpdateTemplateAllowedRoles(
+                  e.target.value
+                    .split(",")
+                    .map((s) => s.trim())
+                    .filter(Boolean)
+                )
+              }
+              placeholder="e.g. Prime, OEA"
+              className="mt-0.5 w-full rounded border border-stone-600 bg-stone-800 px-2 py-1.5 text-sm text-stone-200"
+            />
+          </label>
+        )}
         {onUpdateResultViewControls && (
           <div>
             <span className="text-xs text-stone-500">Result view controls (shown when process has finished)</span>

@@ -118,13 +118,16 @@ export const executionService = {
 
   async completeStep(
     process: Process,
-    stepId: string
+    stepId: string,
+    updatedById?: string
   ): Promise<string | null> {
     if (process.status !== "running") {
       throw new Error(`Process is not running: ${process.status}`);
     }
     const step = getProcessStepById(process.steps, stepId);
     if (!step) throw new Error(`Step not found: ${stepId}`);
+    step.updatedUTC = new Date().toISOString();
+    if (updatedById !== undefined) step.updatedById = updatedById;
     let nextStepKey = getNextStepKey(process.template, step.stepKey, process.context);
     if (nextStepKey === null) {
       await this.completeProcess(process);
@@ -137,11 +140,12 @@ export const executionService = {
 
   async completeStepById(
     processId: string,
-    stepId: string
+    stepId: string,
+    updatedById?: string
   ): Promise<{ process: Process; nextStepKey: string | null }> {
     const process = await storageService.getProcessState(processId);
     if (!process) throw new Error(`Process not found: ${processId}`);
-    const nextStepKey = await this.completeStep(process, stepId);
+    const nextStepKey = await this.completeStep(process, stepId, updatedById);
     return { process, nextStepKey };
   },
 
@@ -155,6 +159,8 @@ export const executionService = {
 
     const templateStep = getStepByKey(process.template, currentStep.stepKey);
     if (!templateStep) return;
+
+    currentStep.updatedUTC = new Date().toISOString();
 
     if (templateStep.type === "automatic") {
       const newContext = runAutomaticStep(
