@@ -22,7 +22,7 @@ export type FlowNodeData = {
     values?: string[];
   }[];
   viewControls?: {
-    key: string;
+    data: string;
     title: string;
     visibleExpression?: string;
   }[];
@@ -115,7 +115,7 @@ export function templateToFlow(template: Template): {
 }
 
 export type TemplateOverrides = {
-  resultViewControls?: { key: string; title: string; visibleExpression?: string }[];
+  resultViewControls?: { data: string; title: string; visibleExpression?: string }[];
   allowedRoles?: string[];
 };
 

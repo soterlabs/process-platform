@@ -1,9 +1,9 @@
 /**
  * Read-only display of a value from another step's output (context).
- * key is the context path, e.g. "stepKey.inputKey" → context[stepKey][inputKey].
+ * data is shown as-is, except ${context.path} is resolved to the context value, e.g. "${stepKey.inputKey}".
  */
 export type TemplateStepViewControl = {
-  key: string;
+  data: string;
   title: string;
   visibleExpression?: string;
 };

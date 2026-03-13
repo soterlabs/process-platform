@@ -12,7 +12,7 @@ export const exampleTemplate: Template = {
       allowedRoles: ["Prime"],
       nextStepKey: "review_description",
       viewControls: [
-        { key: "review_description.description_review", title: "Feedback from OEA" },
+        { data: "${review_description.description_review}", title: "Feedback from OEA" },
       ],
       inputs: [
         { key: "description", type: "string", title: "Describe why you need a new Halo" },
@@ -26,7 +26,7 @@ export const exampleTemplate: Template = {
       allowedRoles: ["OEA"],
       nextStepKey: "review_description_condition",
       viewControls: [
-        { key: "input_description.description", title: "Description from Prime" },
+        { data: "${input_description.description}", title: "Description from Prime" },
       ],
       inputs: [
         { key: "description_review_ok", type: "bool", title: "Is the potential new Halo viable?" },
@@ -64,6 +64,6 @@ export const exampleTemplate: Template = {
   ],
   allowedRoles: ["Prime"],
   resultViewControls: [
-    { key: "agent_recommendation.response", title: "Recommendation" },
+    { data: "${agent_recommendation.response}", title: "Recommendation" },
   ],
 };

@@ -3,7 +3,7 @@
 import type { Node } from "@xyflow/react";
 import type { FlowNodeData } from "../_lib/template-flow";
 
-type ResultViewControl = { key: string; title: string; visibleExpression?: string };
+type ResultViewControl = { data: string; title: string; visibleExpression?: string };
 
 export function ConfigPanel({
   node,
@@ -50,7 +50,7 @@ export function ConfigPanel({
         {onUpdateResultViewControls && (
           <div>
             <span className="text-xs text-stone-500">Result view controls (shown when process has finished)</span>
-            <p className="mt-0.5 text-xs text-stone-600">Key = context path, e.g. stepKey.fieldKey</p>
+            <p className="mt-0.5 text-xs text-stone-600">Data: literal text, or use {"${stepKey.fieldKey}"} to resolve from context</p>
             <div className="mt-1 space-y-2">
               {(resultViewControls ?? []).map((vc, i) => (
                 <div
@@ -58,11 +58,11 @@ export function ConfigPanel({
                   className="rounded border border-stone-600 bg-stone-800 p-2"
                 >
                   <input
-                    placeholder="Context path (stepKey.fieldKey)"
-                    value={vc.key}
+                    placeholder={"e.g. ${stepKey.fieldKey} for context value"}
+                    value={vc.data}
                     onChange={(e) => {
                       const viewControls = [...(resultViewControls ?? [])];
-                      viewControls[i] = { ...vc, key: e.target.value };
+                      viewControls[i] = { ...vc, data: e.target.value };
                       onUpdateResultViewControls(viewControls);
                     }}
                     className="mb-1 w-full rounded border border-stone-600 bg-stone-900 px-2 py-1 text-xs text-stone-200"
@@ -102,7 +102,7 @@ export function ConfigPanel({
               <button
                 type="button"
                 onClick={() => {
-                  const viewControls = [...(resultViewControls ?? []), { key: "", title: "View", visibleExpression: undefined }];
+                  const viewControls = [...(resultViewControls ?? []), { data: "", title: "View", visibleExpression: undefined }];
                   onUpdateResultViewControls(viewControls);
                 }}
                 className="text-xs text-amber-400 hover:text-amber-300"
@@ -284,7 +284,7 @@ export function ConfigPanel({
             </div>
             <div>
               <span className="text-xs text-stone-500">View controls (read-only from other steps)</span>
-              <p className="mt-0.5 text-xs text-stone-600">Key = context path, e.g. stepKey.fieldKey</p>
+              <p className="mt-0.5 text-xs text-stone-600">Data: literal text, or use {"${stepKey.fieldKey}"} to resolve from context</p>
               <div className="mt-1 space-y-2">
                 {(d.viewControls ?? []).map((vc, i) => (
                   <div
@@ -292,11 +292,11 @@ export function ConfigPanel({
                     className="rounded border border-stone-600 bg-stone-800 p-2"
                   >
                     <input
-                      placeholder="Context path (stepKey.fieldKey)"
-                      value={vc.key}
+                      placeholder={"e.g. ${stepKey.fieldKey} for context value"}
+                      value={vc.data}
                       onChange={(e) => {
                         const viewControls = [...(d.viewControls ?? [])];
-                        viewControls[i] = { ...vc, key: e.target.value };
+                        viewControls[i] = { ...vc, data: e.target.value };
                         update({ viewControls });
                       }}
                       className="mb-1 w-full rounded border border-stone-600 bg-stone-900 px-2 py-1 text-xs text-stone-200"
@@ -336,7 +336,7 @@ export function ConfigPanel({
                 <button
                   type="button"
                   onClick={() => {
-                    const viewControls = [...(d.viewControls ?? []), { key: "", title: "View", visibleExpression: undefined }];
+                    const viewControls = [...(d.viewControls ?? []), { data: "", title: "View", visibleExpression: undefined }];
                     update({ viewControls });
                   }}
                   className="text-xs text-amber-400 hover:text-amber-300"

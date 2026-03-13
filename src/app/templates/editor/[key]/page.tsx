@@ -67,8 +67,8 @@ function InputStepNode({ data }: { data: FlowNodeData }) {
           <div className="text-[10px] uppercase tracking-wider text-stone-500">View controls</div>
           <ul className="mt-1 space-y-0.5">
             {viewControls.map((vc, i) => (
-              <li key={i} className="text-xs text-stone-400 truncate" title={vc.key}>
-                {vc.title || vc.key || "—"}
+              <li key={i} className="text-xs text-stone-400 truncate" title={vc.data}>
+                {vc.title || vc.data || "—"}
               </li>
             ))}
           </ul>
@@ -120,7 +120,7 @@ function TemplateEditorInner() {
   const [nodes, setNodes, onNodesChange] = useNodesState<Node<FlowNodeData>>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
   const [resultViewControls, setResultViewControls] = useState<
-    { key: string; title: string; visibleExpression?: string }[]
+    { data: string; title: string; visibleExpression?: string }[]
   >([]);
   const [templateAllowedRoles, setTemplateAllowedRoles] = useState<string[]>([]);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);

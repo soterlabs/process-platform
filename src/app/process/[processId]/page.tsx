@@ -15,7 +15,7 @@ type StepInput = {
 };
 
 type ViewControl = {
-  key: string;
+  data: string;
   title: string;
   visibleExpression?: string;
 };
@@ -41,6 +41,48 @@ type ProcessState = {
 };
 
 const POLL_INTERVAL_MS = 3000;
+
+/** Get value from context by dot path, e.g. "stepKey.fieldKey" */
+function getContextValue(context: Record<string, unknown>, path: string): unknown {
+  const dot = path.indexOf(".");
+  const stepKey = dot >= 0 ? path.slice(0, dot) : path;
+  const fieldKey = dot >= 0 ? path.slice(dot + 1) : path;
+  const stepData = context[stepKey] as Record<string, unknown> | undefined;
+  return stepData?.[fieldKey];
+}
+
+/**
+ * Resolve data string with context: "${path}" is replaced by the context value;
+ * plain text is left as-is.
+ */
+function resolveContextTemplate(
+  data: string,
+  context: Record<string, unknown>
+): string {
+  if (!/\$\{[^}]+\}/.test(data)) return data;
+  return data.replace(/\$\{([^}]+)\}/g, (_, path: string) => {
+    const val = getContextValue(context, path.trim());
+    if (val === undefined || val === null) return "";
+    if (typeof val === "string") return val;
+    if (typeof val === "boolean") return val ? "Yes" : "No";
+    return JSON.stringify(val);
+  });
+}
+
+/** True if data has no ${} or at least one ${path} exists in context */
+function shouldShowViewControl(
+  data: string,
+  context: Record<string, unknown>
+): boolean {
+  const re = /\$\{([^}]+)\}/g;
+  let hasAny = false;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(data)) !== null) {
+    hasAny = true;
+    if (getContextValue(context, m[1].trim()) !== undefined) return true;
+  }
+  return !hasAny;
+}
 
 function getCurrentProcessStepFromState(
   process: ProcessState
@@ -316,14 +358,7 @@ export default function ProcessStepPage() {
         (vc) =>
           (!vc.visibleExpression ||
             Boolean(evaluate(process.context, vc.visibleExpression))) &&
-          (() => {
-            const dot = vc.key.indexOf(".");
-            const stepKey = dot >= 0 ? vc.key.slice(0, dot) : "";
-            const fieldKey = dot >= 0 ? vc.key.slice(dot + 1) : vc.key;
-            const stepData = process.context[stepKey] as Record<string, unknown> | undefined;
-            const val = stepData?.[fieldKey];
-            return val !== undefined && val !== null;
-          })()
+          shouldShowViewControl(vc.data, process.context)
       );
     const showResultViewControls = resolvedResultViewControls.length > 0;
     const showFallbackResult = hasResult && !showResultViewControls;
@@ -348,23 +383,11 @@ export default function ProcessStepPage() {
             <h2 className="text-sm font-medium uppercase tracking-wider text-stone-500">
               Result
             </h2>
-            {resolvedResultViewControls.map((vc) => {
-              const dot = vc.key.indexOf(".");
-              const stepKey = dot >= 0 ? vc.key.slice(0, dot) : "";
-              const fieldKey = dot >= 0 ? vc.key.slice(dot + 1) : vc.key;
-              const stepData = process.context[stepKey] as Record<string, unknown> | undefined;
-              const value = stepData?.[fieldKey];
-              const display =
-                typeof value === "string"
-                  ? value
-                  : typeof value === "boolean"
-                    ? value
-                      ? "Yes"
-                      : "No"
-                    : JSON.stringify(value);
+            {resolvedResultViewControls.map((vc, i) => {
+              const display = resolveContextTemplate(vc.data, process.context);
               return (
                 <div
-                  key={vc.key}
+                  key={`${vc.data}-${vc.title}-${i}`}
                   className="rounded-xl border border-stone-700 bg-stone-900/50 px-4 py-4"
                 >
                   <div className="text-sm font-medium text-stone-400">{vc.title}</div>
@@ -489,34 +512,15 @@ export default function ProcessStepPage() {
             (vc) =>
               (!vc.visibleExpression ||
                 Boolean(process && evaluate(evaluationContext, vc.visibleExpression))) &&
-              (() => {
-                const contextView = evaluationContext;
-                const dot = vc.key.indexOf(".");
-                const stepKey = dot >= 0 ? vc.key.slice(0, dot) : "";
-                const fieldKey = dot >= 0 ? vc.key.slice(dot + 1) : vc.key;
-                const stepData = contextView[stepKey] as Record<string, unknown> | undefined;
-                const val = stepData?.[fieldKey];
-                return val !== undefined && val !== null;
-              })()
+              (process ? shouldShowViewControl(vc.data, evaluationContext) : true)
           )
-          .map((vc) => {
-            const contextView = evaluationContext;
-            const dot = vc.key.indexOf(".");
-            const stepKey = dot >= 0 ? vc.key.slice(0, dot) : "";
-            const fieldKey = dot >= 0 ? vc.key.slice(dot + 1) : vc.key;
-            const stepData = contextView[stepKey] as Record<string, unknown> | undefined;
-            const value = stepData?.[fieldKey];
-            const display =
-              typeof value === "string"
-                ? value
-                : typeof value === "boolean"
-                  ? value
-                    ? "Yes"
-                    : "No"
-                  : JSON.stringify(value);
+          .map((vc, i) => {
+            const display = process
+              ? resolveContextTemplate(vc.data, evaluationContext)
+              : vc.data;
             return (
               <div
-                key={vc.key}
+                key={`${vc.data}-${vc.title}-${i}`}
                 className="rounded-xl border border-stone-700 bg-stone-900/50 px-4 py-4"
               >
                 <div className="text-sm font-medium text-stone-400">{vc.title}</div>
