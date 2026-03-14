@@ -330,8 +330,9 @@ export default function ProcessStepPage() {
             }
           );
           if (res.ok) {
-            const data = await res.json();
-            setProcess(data as ProcessState);
+            const data = (await res.json()) as ProcessState;
+            // Merge only context so we keep canActOnCurrentStep and don't flash "Please wait"
+            setProcess((prev) => (prev ? { ...prev, context: data.context } : null));
           }
         } catch {
           // ignore
