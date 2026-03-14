@@ -4,7 +4,7 @@
  * Start with startStepExecutionJob(); stop with the returned stop function.
  */
 import { executionService } from "@/services/execution-service";
-import { storageService } from "@/services/storage-service";
+import { storageService } from "@/services/storage";
 import { getCurrentProcessStep, getStepByKey } from "@/services/template-helpers";
 
 const POLL_INTERVAL_MS = 1000;

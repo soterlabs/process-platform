@@ -1,0 +1,218 @@
+/**
+ * Storage service: MongoDB-backed. Same API for use in production (e.g. Railway).
+ * Uses MONGO_URL for connection.
+ */
+import { MongoClient, type Db, type Collection } from "mongodb";
+import type { Process } from "@/entities/process";
+import type { Template } from "@/entities/template";
+import type { Group, GroupMembership, User } from "@/entities/principal";
+import { curveTopupTemplate } from "@/templates/curve-topup";
+import type { IStorageService } from "./interface";
+import {
+  initialGroups,
+  initialGroupMemberships,
+  initialUsers,
+} from "./initial-data";
+
+const MONGO_URL = process.env.MONGO_URL ?? "";
+const DB_NAME = "process-platform";
+
+const COLL = {
+  templates: "templates",
+  users: "users",
+  groups: "groups",
+  groupMemberships: "groupMemberships",
+  processes: "processes",
+  authChallenges: "authChallenges",
+} as const;
+
+let client: MongoClient | null = null;
+let db: Db | null = null;
+
+async function getDb(): Promise<Db> {
+  if (!MONGO_URL) {
+    throw new Error("MONGO_URL is not set");
+  }
+  if (!db) {
+    client = new MongoClient(MONGO_URL);
+    await client.connect();
+    db = client.db(DB_NAME);
+  }
+  return db;
+}
+
+function col<T extends object>(name: keyof typeof COLL): Promise<Collection<T>> {
+  return getDb().then((d) => d.collection<T>(name));
+}
+
+async function ensureInitialTemplates(): Promise<void> {
+  const c = await col<{ _id: string }>(COLL.templates);
+  const existing = await c.findOne({});
+  if (existing) return;
+  const template = {
+    ...curveTopupTemplate,
+    updatedAt: new Date().toISOString(),
+  };
+  await c.insertOne({ _id: template.key, ...template } as Record<string, unknown>);
+}
+
+async function ensureInitialUsers(): Promise<void> {
+  const c = await col<{ _id: string }>(COLL.users);
+  const existing = await c.findOne({});
+  if (existing) return;
+  await c.insertMany(
+    Object.entries(initialUsers).map(([id, user]) => ({ _id: id, ...user } as Record<string, unknown>))
+  );
+}
+
+async function ensureInitialGroups(): Promise<void> {
+  const c = await col<{ _id: string }>(COLL.groups);
+  const existing = await c.findOne({});
+  if (existing) return;
+  await c.insertMany(
+    Object.entries(initialGroups).map(([id, group]) => ({ _id: id, ...group } as Record<string, unknown>))
+  );
+}
+
+async function ensureInitialGroupMemberships(): Promise<void> {
+  const c = await col<{ _id: string }>(COLL.groupMemberships);
+  const existing = await c.findOne({});
+  if (existing) return;
+  await c.insertMany(
+    Object.entries(initialGroupMemberships).map(([key, m]) => ({ _id: key, ...m } as Record<string, unknown>))
+  );
+}
+
+export const storageServiceMongo: IStorageService = {
+  async getTemplate(key) {
+    await ensureInitialTemplates();
+    const c = await col<Template & { _id: string }>(COLL.templates);
+    const doc = await c.findOne({ _id: key } as unknown);
+    if (!doc) return null;
+    const { _id, ...rest } = doc;
+    return { ...rest, key: _id } as Template;
+  },
+  async setTemplate(key, template) {
+    const c = await col<Record<string, unknown>>(COLL.templates);
+    const doc = {
+      ...template,
+      key,
+      updatedAt: new Date().toISOString(),
+    };
+    await c.updateOne({ _id: key }, { $set: doc }, { upsert: true });
+  },
+  async listTemplates() {
+    await ensureInitialTemplates();
+    const c = await col<Template & { _id: string }>(COLL.templates);
+    const docs = await c.find({}).toArray();
+    return docs.map((d) => {
+      const { _id, ...rest } = d;
+      return { ...rest, key: _id } as Template;
+    });
+  },
+  async getUser(key) {
+    await ensureInitialUsers();
+    const c = await col<User & { _id: string }>(COLL.users);
+    const doc = await c.findOne({ _id: key } as unknown);
+    if (!doc) return null;
+    const { _id, ...rest } = doc;
+    return { ...rest, id: _id } as User;
+  },
+  async setUser(key, user) {
+    const c = await col<Record<string, unknown>>(COLL.users);
+    await c.updateOne({ _id: key }, { $set: { ...user, id: key } }, { upsert: true });
+  },
+  async listUsers() {
+    await ensureInitialUsers();
+    const c = await col<User & { _id: string }>(COLL.users);
+    const docs = await c.find({}).toArray();
+    return docs.map((d) => {
+      const { _id, ...rest } = d;
+      return { ...rest, id: _id } as User;
+    });
+  },
+  async getUserByEvmAddress(evmWalletAddress) {
+    const normalized = evmWalletAddress?.toLowerCase?.() ?? "";
+    if (!normalized.startsWith("0x") || normalized.length < 10) return null;
+    await ensureInitialUsers();
+    const c = await col<User & { _id: string }>(COLL.users);
+    const doc = await c.findOne({ evmWalletAddress: { $regex: new RegExp(`^${normalized.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`, "i") } });
+    if (!doc) return null;
+    const { _id, ...rest } = doc;
+    return { ...rest, id: _id } as User;
+  },
+  async getGroup(key) {
+    await ensureInitialGroups();
+    const c = await col<Group & { _id: string }>(COLL.groups);
+    const doc = await c.findOne({ _id: key } as unknown);
+    if (!doc) return null;
+    const { _id, ...rest } = doc;
+    return { ...rest, id: _id } as Group;
+  },
+  async setGroup(key, group) {
+    const c = await col<Record<string, unknown>>(COLL.groups);
+    await c.updateOne({ _id: key }, { $set: { ...group, id: key } }, { upsert: true });
+  },
+  async getGroupMembership(key) {
+    await ensureInitialGroupMemberships();
+    const c = await col<GroupMembership & { _id: string }>(COLL.groupMemberships);
+    const doc = await c.findOne({ _id: key } as unknown);
+    if (!doc) return null;
+    const { _id, ...rest } = doc;
+    return rest as GroupMembership;
+  },
+  async setGroupMembership(key, membership) {
+    const c = await col<Record<string, unknown>>(COLL.groupMemberships);
+    await c.updateOne({ _id: key }, { $set: { ...membership } }, { upsert: true });
+  },
+  async listGroupMemberships() {
+    await ensureInitialGroupMemberships();
+    const c = await col<GroupMembership & { _id: string }>(COLL.groupMemberships);
+    const docs = await c.find({}).toArray();
+    return docs.map((d) => {
+      const { _id, ...rest } = d;
+      return rest as GroupMembership;
+    });
+  },
+  async getProcessState(processId) {
+    const c = await col<Process & { _id: string }>(COLL.processes);
+    const doc = await c.findOne({ _id: processId } as unknown);
+    if (!doc) return null;
+    const { _id, ...rest } = doc;
+    return { ...rest, processId: _id } as Process;
+  },
+  async saveProcessState(state) {
+    const c = await col<Record<string, unknown>>(COLL.processes);
+    const doc = {
+      ...state,
+      updatedAt: new Date().toISOString(),
+    };
+    await c.updateOne({ _id: state.processId }, { $set: doc }, { upsert: true });
+  },
+  async listProcesses() {
+    const c = await col<Process & { _id: string }>(COLL.processes);
+    const docs = await c.find({}).toArray();
+    return docs.map((d) => {
+      const { _id, ...rest } = d;
+      return { ...rest, processId: _id } as Process;
+    });
+  },
+  async getAuthChallenge(normalizedAddress) {
+    const c = await col<{ message: string; expiresAt: number } & { _id: string }>(COLL.authChallenges);
+    const doc = await c.findOne({ _id: normalizedAddress } as unknown);
+    if (!doc) return null;
+    return { message: doc.message, expiresAt: doc.expiresAt };
+  },
+  async setAuthChallenge(normalizedAddress, challenge) {
+    const c = await col<Record<string, unknown>>(COLL.authChallenges);
+    await c.updateOne(
+      { _id: normalizedAddress },
+      { $set: { ...challenge } },
+      { upsert: true }
+    );
+  },
+  async deleteAuthChallenge(normalizedAddress) {
+    const c = await col<{ _id: string }>(COLL.authChallenges);
+    await c.deleteOne({ _id: normalizedAddress } as unknown);
+  },
+};

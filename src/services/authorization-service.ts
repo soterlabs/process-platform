@@ -1,7 +1,7 @@
 import type { Process } from "@/entities/process";
 import type { InputTemplateStep } from "@/entities/template";
 import { getCurrentProcessStep, getProcessStepById, getStepByKey } from "@/services/template-helpers";
-import { storageService } from "@/services/storage-service";
+import { storageService } from "@/services/storage";
 
 /**
  * Returns true if the user is allowed to act on a step with the given allowedRoles.

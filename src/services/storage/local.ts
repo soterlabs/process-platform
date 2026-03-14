@@ -1,72 +1,19 @@
 /**
- * Storage service: file-based (dev). All API handlers read/write the same
- * JSON files so state is shared across workers/processes. Replace with your
- * DB-backed implementation for production.
+ * Storage service: file-based (local/dev). All API handlers read/write the same
+ * JSON files so state is shared across workers/processes.
  */
 import { readFile, writeFile, mkdir } from "fs/promises";
 import { join } from "path";
 import type { Process } from "@/entities/process";
 import type { Template } from "@/entities/template";
 import type { Group, GroupMembership, User } from "@/entities/principal";
-import { groupMembershipKey } from "@/entities/principal";
 import { curveTopupTemplate } from "@/templates/curve-topup";
-
-const initialGroups: Record<string, Group> = {
-  prime: { id: "prime", type: "group", roles: ["Prime"] },
-  oea: { id: "oea", type: "group", roles: ["OEA","Admin"] },
-};
-
-const initialUsers: Record<string, User> = {
-  "prime-user": {
-    id: "prime-user",
-    type: "user",
-    evmWalletAddress: "0xF402Db07E1caB5aE2c0f9DE4134c4941a3Aa7507",
-  },
-  "oea-user": {
-    id: "oea-user",
-    type: "user",
-    evmWalletAddress: "0x278f04483d4d1bc39A0A27b78C577D0D670033Be",
-  },
-};
-
-const initialGroupMemberships: Record<string, GroupMembership> = (() => {
-  const addedAt = new Date().toISOString();
-  return {
-    [groupMembershipKey("prime", "prime-user")]: {
-      groupId: "prime",
-      userId: "prime-user",
-      addedAt,
-      addedById: "prime-user",
-    },
-    [groupMembershipKey("oea", "oea-user")]: {
-      groupId: "oea",
-      userId: "oea-user",
-      addedAt,
-      addedById: "oea-user",
-    },
-  };
-})();
-
-export type StorageService = {
-  getTemplate(key: string): Promise<Template | null>;
-  setTemplate(key: string, template: Template): Promise<void>;
-  listTemplates(): Promise<Template[]>;
-  getUser(key: string): Promise<User | null>;
-  setUser(key: string, user: User): Promise<void>;
-  listUsers(): Promise<User[]>;
-  getUserByEvmAddress(evmWalletAddress: string): Promise<User | null>;
-  getGroup(key: string): Promise<Group | null>;
-  setGroup(key: string, group: Group): Promise<void>;
-  getGroupMembership(key: string): Promise<GroupMembership | null>;
-  setGroupMembership(key: string, membership: GroupMembership): Promise<void>;
-  listGroupMemberships(): Promise<GroupMembership[]>;
-  getProcessState(processId: string): Promise<Process | null>;
-  saveProcessState(state: Process): Promise<void>;
-  listProcesses(): Promise<Process[]>;
-  getAuthChallenge(normalizedAddress: string): Promise<{ message: string; expiresAt: number } | null>;
-  setAuthChallenge(normalizedAddress: string, challenge: { message: string; expiresAt: number }): Promise<void>;
-  deleteAuthChallenge(normalizedAddress: string): Promise<void>;
-};
+import type { IStorageService } from "./interface";
+import {
+  initialGroups,
+  initialGroupMemberships,
+  initialUsers,
+} from "./initial-data";
 
 const STORE_DIR = join(process.cwd(), ".process-platform");
 const TEMPLATES_FILE = join(STORE_DIR, "templates.json");
@@ -177,7 +124,7 @@ async function writeAuthChallenges(challenges: Record<string, AuthChallenge>): P
   await writeFile(AUTH_CHALLENGES_FILE, JSON.stringify(challenges, null, 2), "utf-8");
 }
 
-export const storageService: StorageService = {
+export const fileStorageService: IStorageService = {
   async getTemplate(key) {
     const templates = await readTemplates();
     return templates[key] ?? null;

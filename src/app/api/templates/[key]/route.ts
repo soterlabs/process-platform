@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { storageService } from "@/services/storage-service";
+import { storageService } from "@/services/storage";
 import type { Template } from "@/entities/template";
 
 export async function GET(

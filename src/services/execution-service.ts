@@ -13,7 +13,7 @@ import {
   getProcessStepById,
   getStepByKey,
 } from "@/services/template-helpers";
-import { storageService } from "@/services/storage-service";
+import { storageService } from "@/services/storage";
 
 function pushStep(process: Process, stepKey: string): void {
   process.steps.push({

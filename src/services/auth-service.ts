@@ -5,7 +5,7 @@ import {
   JWT_AUDIENCE,
   JWT_ISSUER,
 } from "@/lib/jwt";
-import { storageService } from "@/services/storage-service";
+import { storageService } from "@/services/storage";
 
 const CHALLENGE_TTL_MS = 5 * 60 * 1000; // 5 minutes
 const JWT_EXPIRY = "7d";
