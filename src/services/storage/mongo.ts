@@ -51,11 +51,8 @@ async function ensureInitialTemplates(): Promise<void> {
   const c = await col<DocWithStringId>(COLL.templates);
   const existing = await c.findOne({});
   if (existing) return;
-  const template = {
-    ...curveTopupTemplate,
-    updatedAt: new Date().toISOString(),
-  };
-  await c.insertOne({ _id: template.key, ...template } as DocWithStringId);
+  const { key, ...rest } = curveTopupTemplate;
+  await c.insertOne({ _id: key, ...rest, updatedAt: new Date().toISOString() } as DocWithStringId);
 }
 
 async function ensureInitialUsers(): Promise<void> {
@@ -63,7 +60,10 @@ async function ensureInitialUsers(): Promise<void> {
   const existing = await c.findOne({});
   if (existing) return;
   await c.insertMany(
-    Object.entries(initialUsers).map(([id, user]) => ({ _id: id, ...user } as DocWithStringId))
+    Object.entries(initialUsers).map(([id, user]) => {
+      const { id: _idField, ...rest } = user;
+      return { _id: id, ...rest } as DocWithStringId;
+    })
   );
 }
 
@@ -72,7 +72,10 @@ async function ensureInitialGroups(): Promise<void> {
   const existing = await c.findOne({});
   if (existing) return;
   await c.insertMany(
-    Object.entries(initialGroups).map(([id, group]) => ({ _id: id, ...group } as DocWithStringId))
+    Object.entries(initialGroups).map(([id, group]) => {
+      const { id: _idField, ...rest } = group;
+      return { _id: id, ...rest } as DocWithStringId;
+    })
   );
 }
 
@@ -96,11 +99,8 @@ export const storageServiceMongo: IStorageService = {
   },
   async setTemplate(key, template) {
     const c = await col<Template & { _id: string }>(COLL.templates);
-    const doc = {
-      ...template,
-      key,
-      updatedAt: new Date().toISOString(),
-    };
+    const { key: _key, ...rest } = template;
+    const doc = { ...rest, updatedAt: new Date().toISOString() };
     await c.updateOne({ _id: key } as Filter<Template & { _id: string }>, { $set: doc }, { upsert: true });
   },
   async listTemplates() {
@@ -122,7 +122,8 @@ export const storageServiceMongo: IStorageService = {
   },
   async setUser(key, user) {
     const c = await col<User & { _id: string }>(COLL.users);
-    await c.updateOne({ _id: key } as Filter<User & { _id: string }>, { $set: { ...user, id: key } }, { upsert: true });
+    const { id: _idField, ...rest } = user;
+    await c.updateOne({ _id: key } as Filter<User & { _id: string }>, { $set: rest }, { upsert: true });
   },
   async listUsers() {
     await ensureInitialUsers();
@@ -153,7 +154,8 @@ export const storageServiceMongo: IStorageService = {
   },
   async setGroup(key, group) {
     const c = await col<Group & { _id: string }>(COLL.groups);
-    await c.updateOne({ _id: key } as Filter<Group & { _id: string }>, { $set: { ...group, id: key } }, { upsert: true });
+    const { id: _idField, ...rest } = group;
+    await c.updateOne({ _id: key } as Filter<Group & { _id: string }>, { $set: rest }, { upsert: true });
   },
   async getGroupMembership(key) {
     await ensureInitialGroupMemberships();
@@ -185,10 +187,8 @@ export const storageServiceMongo: IStorageService = {
   },
   async saveProcessState(state) {
     const c = await col<Process & { _id: string }>(COLL.processes);
-    const doc = {
-      ...state,
-      updatedAt: new Date().toISOString(),
-    };
+    const { processId: _processId, ...rest } = state;
+    const doc = { ...rest, updatedAt: new Date().toISOString() };
     await c.updateOne({ _id: state.processId } as Filter<Process & { _id: string }>, { $set: doc }, { upsert: true });
   },
   async listProcesses() {
