@@ -157,6 +157,15 @@ export const storageServiceMongo: IStorageService = {
     const { id: _idField, ...rest } = group;
     await c.updateOne({ _id: key } as Filter<Group & { _id: string }>, { $set: rest }, { upsert: true });
   },
+  async listGroups() {
+    await ensureInitialGroups();
+    const c = await col<Group & { _id: string }>(COLL.groups);
+    const docs = await c.find({}).toArray();
+    return docs.map((d) => {
+      const { _id, ...rest } = d;
+      return { ...rest, id: _id } as Group;
+    });
+  },
   async getGroupMembership(key) {
     await ensureInitialGroupMemberships();
     const c = await col<GroupMembership & { _id: string }>(COLL.groupMemberships);
@@ -177,6 +186,10 @@ export const storageServiceMongo: IStorageService = {
       const { _id, ...rest } = d;
       return rest as GroupMembership;
     });
+  },
+  async deleteGroupMembership(key) {
+    const c = await col<GroupMembership & { _id: string }>(COLL.groupMemberships);
+    await c.deleteOne({ _id: key } as Filter<GroupMembership & { _id: string }>);
   },
   async getProcessState(processId) {
     const c = await col<Process & { _id: string }>(COLL.processes);

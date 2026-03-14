@@ -30,6 +30,8 @@ import {
 } from "../_lib/template-flow";
 import type { Template } from "@/entities/template";
 import { authFetch } from "@/lib/auth-client";
+import { useMe } from "@/lib/use-me";
+import { hasRole, ROLES } from "@/lib/roles";
 
 function AutomaticStepNode({ data }: { data: FlowNodeData }) {
   return (
@@ -114,6 +116,7 @@ function TemplateEditorInner() {
   const router = useRouter();
   const urlKey = params.key as string;
   const isNew = urlKey === "new";
+  const { me, loading: meLoading } = useMe();
 
   const [templateKey, setTemplateKey] = useState("");
   const [templateName, setTemplateName] = useState("");
@@ -128,6 +131,12 @@ function TemplateEditorInner() {
   const [loadError, setLoadError] = useState<string | null>(null);
 
   const { screenToFlowPosition } = useReactFlow();
+
+  useEffect(() => {
+    if (!meLoading && me && !hasRole(me.roles, ROLES.ADMIN)) {
+      router.replace("/");
+    }
+  }, [meLoading, me, router]);
 
   useEffect(() => {
     if (isNew) {
@@ -281,6 +290,18 @@ function TemplateEditorInner() {
       console.error(err);
     }
   }, [templateKey, templateName, nodes, edges, resultViewControls, templateAllowedRoles, isNew, router]);
+
+  if (meLoading || (me && !hasRole(me.roles, ROLES.ADMIN))) {
+    return (
+      <div className="flex h-screen flex-col items-center justify-center gap-4 bg-stone-950">
+        <div
+          className="h-10 w-10 animate-spin rounded-full border-2 border-stone-500 border-t-stone-300"
+          aria-hidden
+        />
+        <p className="text-stone-400">Loading…</p>
+      </div>
+    );
+  }
 
   return (
     <div className="flex h-screen flex-col bg-stone-950">

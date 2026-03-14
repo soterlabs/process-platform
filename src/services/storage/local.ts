@@ -173,6 +173,10 @@ export const fileStorageService: IStorageService = {
     groups[key] = group;
     await writeGroups(groups);
   },
+  async listGroups() {
+    const groups = await readGroups();
+    return Object.values(groups);
+  },
   async getGroupMembership(key) {
     const memberships = await readGroupMemberships();
     return memberships[key] ?? null;
@@ -185,6 +189,11 @@ export const fileStorageService: IStorageService = {
   async listGroupMemberships() {
     const memberships = await readGroupMemberships();
     return Object.values(memberships);
+  },
+  async deleteGroupMembership(key) {
+    const memberships = await readGroupMemberships();
+    delete memberships[key];
+    await writeGroupMemberships(memberships);
   },
   async getProcessState(processId) {
     const states = await readProcessStates();

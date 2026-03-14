@@ -4,6 +4,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { authFetch } from "@/lib/auth-client";
+import { useMe } from "@/lib/use-me";
+import { hasRole, ROLES } from "@/lib/roles";
 import type { Template } from "@/entities/template";
 
 function uniqueCloneKey(baseKey: string, existingKeys: string[]): string {
@@ -84,12 +86,19 @@ function TemplateRowMenu({
 
 export default function TemplatesPage() {
   const router = useRouter();
+  const { me, loading: meLoading } = useMe();
   const [templates, setTemplates] = useState<Template[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [openMenuKey, setOpenMenuKey] = useState<string | null>(null);
   const [cloningKey, setCloningKey] = useState<string | null>(null);
   const [cloneError, setCloneError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!meLoading && me && !hasRole(me.roles, ROLES.ADMIN)) {
+      router.replace("/");
+    }
+  }, [meLoading, me, router]);
 
   const handleClone = useCallback(
     async (sourceKey: string) => {
@@ -139,7 +148,7 @@ export default function TemplatesPage() {
     };
   }, []);
 
-  if (loading) {
+  if (meLoading || (me && !hasRole(me.roles, ROLES.ADMIN)) || loading) {
     return (
       <div className="mx-auto flex max-w-4xl flex-col items-center justify-center gap-4 px-6 py-24">
         <div

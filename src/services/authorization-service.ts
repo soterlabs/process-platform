@@ -17,15 +17,39 @@ export async function canUserActOnStep(
   }
   const memberships = await storageService.listGroupMemberships();
   const userMemberships = memberships.filter((m) => m.userId === userId);
-  const allowedSet = new Set(allowedRoles);
+  const allowedSet = new Set(allowedRoles.map((r) => r.toLowerCase()));
   for (const m of userMemberships) {
     const group = await storageService.getGroup(m.groupId);
     if (!group) continue;
     for (const role of group.roles) {
-      if (allowedSet.has(role)) return true;
+      if (allowedSet.has(role.toLowerCase())) return true;
     }
   }
   return false;
+}
+
+/**
+ * Returns the list of all roles the user has (from all their groups), case-preserved, unique.
+ */
+export async function getUserRoles(userId: string): Promise<string[]> {
+  const memberships = await storageService.listGroupMemberships();
+  const userMemberships = memberships.filter((m) => m.userId === userId);
+  const roleSet = new Set<string>();
+  for (const m of userMemberships) {
+    const group = await storageService.getGroup(m.groupId);
+    if (!group) continue;
+    for (const r of group.roles) roleSet.add(r);
+  }
+  return Array.from(roleSet);
+}
+
+/**
+ * Returns true if the user has the given role (case-insensitive).
+ */
+export async function userHasRole(userId: string, role: string): Promise<boolean> {
+  const roles = await getUserRoles(userId);
+  const lower = role.toLowerCase();
+  return roles.some((r) => r.toLowerCase() === lower);
 }
 
 /**

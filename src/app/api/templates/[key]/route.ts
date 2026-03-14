@@ -1,11 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
-import { storageService } from "@/services/storage";
 import type { Template } from "@/entities/template";
+import { requireAdmin } from "@/lib/require-admin";
+import { storageService } from "@/services/storage";
 
 export async function GET(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: { key: string } }
 ) {
+  const err = await requireAdmin(request, { message: "Admin role required to view templates" });
+  if (err) return err;
   try {
     const { key } = params;
     const template = await storageService.getTemplate(key);
@@ -26,6 +29,10 @@ export async function PUT(
   request: NextRequest,
   { params }: { params: { key: string } }
 ) {
+  const err = await requireAdmin(request, {
+    message: "Admin role required to create or edit templates",
+  });
+  if (err) return err;
   try {
     const { key } = params;
     const body = (await request.json()) as Template;

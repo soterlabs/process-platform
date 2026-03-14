@@ -17,7 +17,7 @@ function getJwtSecret(): Uint8Array {
 
 export async function verifyToken(
   token: string
-): Promise<{ userId: string } | null> {
+): Promise<{ userId: string; roles: string[] } | null> {
   try {
     const secret = getJwtSecret();
     const { payload } = await jose.jwtVerify(token, secret, {
@@ -26,7 +26,10 @@ export async function verifyToken(
     });
     const userId = payload.userId;
     if (typeof userId !== "string" || !userId) return null;
-    return { userId };
+    const roles = Array.isArray(payload.roles)
+      ? (payload.roles as string[]).filter((r) => typeof r === "string")
+      : [];
+    return { userId, roles };
   } catch {
     return null;
   }

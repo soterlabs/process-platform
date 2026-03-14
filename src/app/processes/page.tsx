@@ -22,7 +22,7 @@ export default function ProcessesPage() {
       try {
         const [pRes, tRes] = await Promise.all([
           authFetch("/api/process"),
-          authFetch("/api/templates"),
+          authFetch("/api/process-templates"),
         ]);
         if (cancelled) return;
         if (!pRes.ok) throw new Error("Failed to load processes");

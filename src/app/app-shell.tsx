@@ -2,12 +2,15 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useMe } from "@/lib/use-me";
+import { hasRole, ROLES } from "@/lib/roles";
 import { SignOutLink } from "./sign-out-link";
 
 const PUBLIC_PATHS = ["/login"];
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const { me } = useMe();
   const isPublic = PUBLIC_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`));
 
   if (isPublic) {
@@ -32,6 +35,22 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               >
                 Home
               </Link>
+              {hasRole(me?.roles, ROLES.ADMIN) && (
+                <>
+                  <Link
+                    href="/templates"
+                    className="rounded-md px-3 py-2 text-sm text-stone-400 transition hover:bg-stone-800 hover:text-stone-200"
+                  >
+                    Templates
+                  </Link>
+                  <Link
+                    href="/users"
+                    className="rounded-md px-3 py-2 text-sm text-stone-400 transition hover:bg-stone-800 hover:text-stone-200"
+                  >
+                    Users
+                  </Link>
+                </>
+              )}
             </nav>
           )}
         </div>

@@ -3,15 +3,15 @@ import { requireAdmin } from "@/lib/require-admin";
 import { storageService } from "@/services/storage";
 
 export async function GET(request: NextRequest) {
-  const err = await requireAdmin(request, { message: "Admin role required to list templates" });
+  const err = await requireAdmin(request);
   if (err) return err;
   try {
-    const templates = await storageService.listTemplates();
-    return NextResponse.json(templates);
-  } catch (err) {
-    console.error(err);
+    const memberships = await storageService.listGroupMemberships();
+    return NextResponse.json(memberships);
+  } catch (e) {
+    console.error(e);
     return NextResponse.json(
-      { error: err instanceof Error ? err.message : "Unknown error" },
+      { error: e instanceof Error ? e.message : "Unknown error" },
       { status: 500 }
     );
   }

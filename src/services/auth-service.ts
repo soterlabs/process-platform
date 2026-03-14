@@ -5,6 +5,7 @@ import {
   JWT_AUDIENCE,
   JWT_ISSUER,
 } from "@/lib/jwt";
+import { getUserRoles } from "@/services/authorization-service";
 import { storageService } from "@/services/storage";
 
 const CHALLENGE_TTL_MS = 5 * 60 * 1000; // 5 minutes
@@ -76,8 +77,10 @@ export async function verifyAndIssueToken(
     throw new Error("No user registered for this wallet address.");
   }
 
+  const roles = await getUserRoles(user.id);
+
   const secret = getJwtSecretForSigning();
-  const token = await new jose.SignJWT({ userId: user.id })
+  const token = await new jose.SignJWT({ userId: user.id, roles })
     .setProtectedHeader({ alg: "HS256" })
     .setIssuer(JWT_ISSUER)
     .setAudience(JWT_AUDIENCE)

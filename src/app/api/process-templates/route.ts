@@ -1,10 +1,11 @@
-import { NextRequest, NextResponse } from "next/server";
-import { requireAdmin } from "@/lib/require-admin";
+import { NextResponse } from "next/server";
 import { storageService } from "@/services/storage";
 
-export async function GET(request: NextRequest) {
-  const err = await requireAdmin(request, { message: "Admin role required to list templates" });
-  if (err) return err;
+/**
+ * List templates available to start a process. Any authenticated user may call this.
+ * For template management (list/edit), use GET /api/templates (admin only).
+ */
+export async function GET() {
   try {
     const templates = await storageService.listTemplates();
     return NextResponse.json(templates);

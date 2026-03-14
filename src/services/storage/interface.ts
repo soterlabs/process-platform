@@ -14,9 +14,11 @@ export interface IStorageService {
   getUserByEvmAddress(evmWalletAddress: string): Promise<User | null>;
   getGroup(key: string): Promise<Group | null>;
   setGroup(key: string, group: Group): Promise<void>;
+  listGroups(): Promise<Group[]>;
   getGroupMembership(key: string): Promise<GroupMembership | null>;
   setGroupMembership(key: string, membership: GroupMembership): Promise<void>;
   listGroupMemberships(): Promise<GroupMembership[]>;
+  deleteGroupMembership(key: string): Promise<void>;
   getProcessState(processId: string): Promise<Process | null>;
   saveProcessState(state: Process): Promise<void>;
   listProcesses(): Promise<Process[]>;

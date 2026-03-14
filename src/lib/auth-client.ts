@@ -1,8 +1,35 @@
 /**
  * Client-side auth: token in localStorage, helpers for fetch and redirect.
+ * Roles are read from the JWT payload (set at login); no verification on client.
  */
 
 const TOKEN_KEY = "process-platform-token";
+
+export type TokenPayload = { userId: string; roles: string[] };
+
+/**
+ * Decode JWT payload without verifying (client has no secret). Returns null if invalid.
+ * Used to read userId and roles for UI. Backend always verifies the token.
+ */
+export function decodeTokenPayload(token: string): TokenPayload | null {
+  try {
+    const parts = token.split(".");
+    if (parts.length !== 3) return null;
+    const base64url = parts[1];
+    const base64 = base64url.replace(/-/g, "+").replace(/_/g, "/");
+    const padded = base64.padEnd(base64.length + ((4 - (base64.length % 4)) % 4), "=");
+    const json = atob(padded);
+    const data = JSON.parse(json) as { userId?: unknown; roles?: unknown };
+    const userId = data.userId;
+    if (typeof userId !== "string" || !userId) return null;
+    const roles = Array.isArray(data.roles)
+      ? (data.roles as string[]).filter((r) => typeof r === "string")
+      : [];
+    return { userId, roles };
+  } catch {
+    return null;
+  }
+}
 
 export function getToken(): string | null {
   if (typeof window === "undefined") return null;
