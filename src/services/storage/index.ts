@@ -13,6 +13,7 @@ export type { IStorageService };
 export type StorageService = IStorageService;
 
 const container = new Container();
+console.log("[storage] MONGO_URL (startup):", process.env.MONGO_URL);
 if (process.env.MONGO_URL) {
   container.bind<IStorageService>(StorageServiceSymbol).toConstantValue(storageServiceMongo);
 } else {
