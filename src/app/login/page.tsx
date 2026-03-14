@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import Link from "next/link";
 import { setToken } from "@/lib/auth-client";
 
@@ -26,7 +26,7 @@ function toHex(message: string): string {
   );
 }
 
-export default function LoginPage() {
+function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const returnUrl = searchParams.get("returnUrl") ?? "/";
@@ -132,5 +132,19 @@ export default function LoginPage() {
         ← Back to home
       </Link>
     </main>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense
+      fallback={
+        <main className="mx-auto flex min-h-screen max-w-md flex-col items-center justify-center px-6">
+          <p className="text-stone-400">Loading…</p>
+        </main>
+      }
+    >
+      <LoginForm />
+    </Suspense>
   );
 }
