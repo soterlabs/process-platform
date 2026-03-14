@@ -5,19 +5,16 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { authFetch } from "@/lib/auth-client";
 import { evaluate } from "@/services/expression-service";
+import { DateTimePicker } from "./_components/DateTimePicker";
 
 type StepInput = {
   key: string;
-  type: "bool" | "string" | "number" | "dropdown";
+  type: "bool" | "string" | "string-multiline" | "number" | "datetime" | "dropdown";
   title: string;
   visibleExpression?: string;
   values?: string[];
-};
-
-type ViewControl = {
-  data: string;
-  title: string;
-  visibleExpression?: string;
+  readOnly?: boolean;
+  defaultValue?: string;
 };
 
 type CurrentStep = {
@@ -25,14 +22,15 @@ type CurrentStep = {
   title: string;
   type: string;
   inputs?: StepInput[];
-  viewControls?: ViewControl[];
   nextStepKey: string | null;
   confirmationMessage?: string;
 };
 
+type ResultViewControl = { data: string; title: string; visibleExpression?: string };
+
 type ProcessState = {
   processId: string;
-  template: { steps: CurrentStep[]; resultViewControls?: ViewControl[] };
+  template: { steps: CurrentStep[]; resultViewControls?: ResultViewControl[] };
   steps: { id: string; processId?: string; stepKey: string }[];
   context: Record<string, unknown>;
   result?: Record<string, unknown>;
@@ -52,28 +50,69 @@ function getContextValue(context: Record<string, unknown>, path: string): unknow
 }
 
 /**
- * Resolve data string with context: "${path}" is replaced by the context value;
- * plain text is left as-is.
+ * Evaluate a JavaScript expression with a limited scope (context + safe globals).
+ * Used for {{ expression }} in templates. Returns string; on error returns "".
+ */
+function evalTemplateExpression(
+  expr: string,
+  context: Record<string, unknown>
+): string {
+  try {
+    const fn = new Function(
+      "context",
+      "Date",
+      "Math",
+      "JSON",
+      "Number",
+      "String",
+      "Boolean",
+      `"use strict"; return (${expr.trim()});`
+    );
+    const result = fn(context, Date, Math, JSON, Number, String, Boolean);
+    if (result === undefined || result === null) return "";
+    if (typeof result === "string") return result;
+    if (typeof result === "boolean") return result ? "Yes" : "No";
+    if (typeof result === "number" && !Number.isFinite(result)) return "";
+    return String(result);
+  } catch {
+    return "";
+  }
+}
+
+/**
+ * Resolve a template string:
+ * - "{{ expression }}" → evaluated as JavaScript with context and Date/Math/JSON in scope.
+ * - "${path}" → context lookup by dot path (e.g. stepKey.fieldKey).
+ * Plain text is left as-is.
  */
 function resolveContextTemplate(
   data: string,
   context: Record<string, unknown>
 ): string {
-  if (!/\$\{[^}]+\}/.test(data)) return data;
-  return data.replace(/\$\{([^}]+)\}/g, (_, path: string) => {
-    const val = getContextValue(context, path.trim());
-    if (val === undefined || val === null) return "";
-    if (typeof val === "string") return val;
-    if (typeof val === "boolean") return val ? "Yes" : "No";
-    return JSON.stringify(val);
-  });
+  let out = data;
+  // First: replace {{ expression }} with eval result
+  out = out.replace(/\{\{([\s\S]*?)\}\}/g, (_, expr: string) =>
+    evalTemplateExpression(expr, context)
+  );
+  // Then: replace ${ path } with context lookup (backward compatible)
+  if (/\$\{[^}]+\}/.test(out)) {
+    out = out.replace(/\$\{([^}]+)\}/g, (_, path: string) => {
+      const val = getContextValue(context, path.trim());
+      if (val === undefined || val === null) return "";
+      if (typeof val === "string") return val;
+      if (typeof val === "boolean") return val ? "Yes" : "No";
+      return JSON.stringify(val);
+    });
+  }
+  return out;
 }
 
-/** True if data has no ${} or at least one ${path} exists in context */
+/** True if we should show: no placeholders, or {{ }} present, or at least one ${path} exists in context */
 function shouldShowViewControl(
   data: string,
   context: Record<string, unknown>
 ): boolean {
+  if (/\{\{[\s\S]*?\}\}/.test(data)) return true;
   const re = /\$\{([^}]+)\}/g;
   let hasAny = false;
   let m: RegExpExecArray | null;
@@ -197,17 +236,27 @@ export default function ProcessStepPage() {
           ? (result.process.context[currentProcessStep.stepKey] as Record<string, unknown>)
           : undefined;
         if (step?.inputs) {
+          const context = result.process.context;
           setFormValues((prev) => {
             const next = { ...prev };
             step.inputs?.forEach((inp) => {
+              if (inp.readOnly) return;
               if (inp.key in next) return;
               const raw = stepContext?.[inp.key];
-              next[inp.key] =
-                raw === undefined || raw === null
-                  ? inp.type === "bool"
-                    ? false
-                    : ""
-                  : (inp.type === "bool" ? Boolean(raw) : String(raw));
+              if (raw !== undefined && raw !== null) {
+                next[inp.key] = inp.type === "bool" ? Boolean(raw) : String(raw);
+                return;
+              }
+              if (inp.defaultValue != null && inp.defaultValue !== "") {
+                const resolved = resolveContextTemplate(inp.defaultValue, context);
+                if (inp.type === "bool") {
+                  next[inp.key] = /^(yes|true|1)$/i.test(resolved.trim());
+                } else {
+                  next[inp.key] = resolved;
+                }
+                return;
+              }
+              next[inp.key] = inp.type === "bool" ? false : "";
             });
             return next;
           });
@@ -244,6 +293,7 @@ export default function ProcessStepPage() {
     try {
       const payload: Record<string, unknown> = {};
       step.inputs.forEach((inp) => {
+        if (inp.readOnly) return;
         if (inp.type === "bool") {
           payload[inp.key] = formValues[inp.key] ?? false;
         } else if (inp.type === "number") {
@@ -520,38 +570,35 @@ export default function ProcessStepPage() {
       )}
       <h1 className="mt-6 text-2xl font-semibold text-stone-100">{step?.title}</h1>
       <form onSubmit={handleSubmit} className="mt-8 space-y-6">
-        {step?.viewControls
-          ?.filter(
-            (vc) =>
-              (!vc.visibleExpression ||
-                Boolean(process && evaluate(evaluationContext, vc.visibleExpression))) &&
-              (process ? shouldShowViewControl(vc.data, evaluationContext) : true)
-          )
-          .map((vc, i) => {
-            const display = process
-              ? resolveContextTemplate(vc.data, evaluationContext)
-              : vc.data;
-            return (
-              <div
-                key={`${vc.data}-${vc.title}-${i}`}
-                className="rounded-xl border border-stone-700 bg-stone-900/50 px-4 py-4"
-              >
-                <div className="text-sm font-medium text-stone-400">{vc.title}</div>
-                <div
-                  className="mt-2 text-stone-200 [&_a]:text-sky-400 [&_a:hover]:underline [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_p]:mb-2"
-                  aria-readonly
-                  dangerouslySetInnerHTML={{ __html: display }}
-                />
-              </div>
-            );
-          })}
         {step?.inputs
           ?.filter(
             (inp) =>
-              !inp.visibleExpression ||
-              Boolean(process && evaluate(evaluationContext, inp.visibleExpression))
+              (!inp.visibleExpression ||
+                Boolean(process && evaluate(evaluationContext, inp.visibleExpression))) &&
+              (inp.readOnly
+                ? process
+                  ? shouldShowViewControl(inp.defaultValue ?? "", evaluationContext)
+                  : true
+                : true)
           )
-          .map((inp) => (
+          .map((inp, i) =>
+            inp.readOnly ? (
+              <div
+                key={`${inp.key}-${i}`}
+                className="rounded-xl border border-stone-700 bg-stone-900/50 px-4 py-4"
+              >
+                <div className="text-sm font-medium text-stone-400">{inp.title}</div>
+                <div
+                  className="mt-2 text-stone-200 [&_a]:text-sky-400 [&_a:hover]:underline [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_p]:mb-2"
+                  aria-readonly
+                  dangerouslySetInnerHTML={{
+                    __html: process
+                      ? resolveContextTemplate(inp.defaultValue ?? "", evaluationContext)
+                      : inp.defaultValue ?? "",
+                  }}
+                />
+              </div>
+            ) : (
           <div
             key={inp.key}
             className="rounded-xl border border-stone-700 bg-stone-900/50 px-4 py-4"
@@ -637,6 +684,47 @@ export default function ProcessStepPage() {
                   className="mt-2 w-full rounded-lg border border-stone-600 bg-stone-900 px-3 py-2.5 text-stone-200 placeholder-stone-500 focus:border-stone-500 focus:outline-none focus:ring-1 focus:ring-stone-500"
                 />
               </>
+            ) : inp.type === "string-multiline" ? (
+              <>
+                <label
+                  htmlFor={inp.key}
+                  className="block text-sm font-medium text-stone-300"
+                >
+                  {inp.title}
+                </label>
+                <textarea
+                  id={inp.key}
+                  rows={4}
+                  value={String(formValues[inp.key] ?? "")}
+                  onChange={(e) =>
+                    setFormValues((prev) => ({
+                      ...prev,
+                      [inp.key]: e.target.value,
+                    }))
+                  }
+                  className="mt-2 w-full rounded-lg border border-stone-600 bg-stone-900 px-3 py-2.5 text-stone-200 placeholder-stone-500 focus:border-stone-500 focus:outline-none focus:ring-1 focus:ring-stone-500"
+                />
+              </>
+            ) : inp.type === "datetime" ? (
+              <>
+                <label
+                  htmlFor={inp.key}
+                  className="block text-sm font-medium text-stone-300"
+                >
+                  {inp.title}
+                </label>
+                <DateTimePicker
+                  id={inp.key}
+                  value={String(formValues[inp.key] ?? "")}
+                  onChange={(v) =>
+                    setFormValues((prev) => ({
+                      ...prev,
+                      [inp.key]: v,
+                    }))
+                  }
+                  className="mt-2"
+                />
+              </>
             ) : (
               <>
                 <label
@@ -660,7 +748,8 @@ export default function ProcessStepPage() {
               </>
             )}
           </div>
-        ))}
+            )
+          )}
         <button
           type="submit"
           disabled={submitting}

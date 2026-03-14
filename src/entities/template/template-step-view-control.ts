@@ -1,6 +1,5 @@
 /**
- * Read-only display of a value from another step's output (context).
- * data is shown as-is, except ${context.path} is resolved to the context value, e.g. "${stepKey.inputKey}".
+ * Read-only display: ${path} for context lookup, {{ expression }} for JavaScript (context, Date, Math, JSON in scope).
  */
 export type TemplateStepViewControl = {
   data: string;

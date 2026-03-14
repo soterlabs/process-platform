@@ -53,7 +53,7 @@ const nodeTypes: NodeTypes = {
 };
 
 function InputStepNode({ data }: { data: FlowNodeData }) {
-  const viewControls = data.viewControls ?? [];
+  const readOnlyInputs = (data.inputs ?? []).filter((inp) => inp.readOnly);
   return (
     <div className="relative rounded-lg border-2 border-amber-600/80 bg-stone-800 px-4 py-3 shadow-lg min-w-[180px]">
       <Handle type="target" position={Position.Left} className="!border-2 !border-stone-500 !bg-stone-600" />
@@ -62,13 +62,13 @@ function InputStepNode({ data }: { data: FlowNodeData }) {
         <span className="font-medium text-stone-200">{data.title || "Input"}</span>
       </div>
       <div className="mt-1 text-xs text-stone-500">{data.stepKey}</div>
-      {viewControls.length > 0 && (
+      {readOnlyInputs.length > 0 && (
         <div className="mt-2 border-t border-stone-600 pt-2">
           <div className="text-[10px] uppercase tracking-wider text-stone-500">View controls</div>
           <ul className="mt-1 space-y-0.5">
-            {viewControls.map((vc, i) => (
-              <li key={i} className="text-xs text-stone-400 truncate" title={vc.data}>
-                {vc.title || vc.data || "—"}
+            {readOnlyInputs.map((inp, i) => (
+              <li key={i} className="text-xs text-stone-400 truncate" title={inp.defaultValue ?? ""}>
+                {inp.title || inp.defaultValue || "—"}
               </li>
             ))}
           </ul>
@@ -406,7 +406,6 @@ function defaultStepData(
   if (type === "input") {
     return {
       inputs: [{ key: "field_1", type: "string", title: "Field" }],
-      viewControls: [],
       allowedRoles: [],
       nextStepKey: null,
     };

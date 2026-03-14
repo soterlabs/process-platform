@@ -50,15 +50,15 @@ export function ConfigPanel({
         {onUpdateResultViewControls && (
           <div>
             <span className="text-xs text-stone-500">Result view controls (shown when process has finished)</span>
-            <p className="mt-0.5 text-xs text-stone-600">Data: literal text, or use {"${stepKey.fieldKey}"} to resolve from context</p>
-            <div className="mt-1 space-y-2">
-              {(resultViewControls ?? []).map((vc, i) => (
-                <div
-                  key={i}
-                  className="rounded border border-stone-600 bg-stone-800 p-2"
-                >
-                  <input
-                    placeholder={"e.g. ${stepKey.fieldKey} for context value"}
+<p className="mt-0.5 text-xs text-stone-600">Data: literal text, {"${stepKey.fieldKey}"} for context, or {"{{ expression }}" } for JavaScript (context, Date, Math, JSON in scope)</p>
+                    <div className="mt-1 space-y-2">
+                      {(resultViewControls ?? []).map((vc, i) => (
+                        <div
+                          key={i}
+                          className="rounded border border-stone-600 bg-stone-800 p-2"
+                        >
+                          <input
+                            placeholder={'e.g. ${stepKey.fieldKey} or {{ new Date().toISOString() }}'}
                     value={vc.data}
                     onChange={(e) => {
                       const viewControls = [...(resultViewControls ?? [])];
@@ -184,81 +184,154 @@ export function ConfigPanel({
               />
             </label>
             <div>
-              <span className="text-xs text-stone-500">Inputs</span>
+              <span className="text-xs text-stone-500">Inputs & view controls (order is preserved)</span>
+              <p className="mt-0.5 text-xs text-stone-600">View controls: read-only string. Use {"${stepKey.fieldKey}"} for context or {"{{ expression }}" } for JavaScript (context, Date, Math, JSON).</p>
               <div className="mt-1 space-y-2">
                 {(d.inputs ?? []).map((input, i) => (
                   <div
                     key={i}
                     className="rounded border border-stone-600 bg-stone-800 p-2"
                   >
-                    <input
-                      placeholder="Field key"
-                      value={input.key}
-                      onChange={(e) => {
-                        const inputs = [...(d.inputs ?? [])];
-                        inputs[i] = { ...input, key: e.target.value };
-                        update({ inputs });
-                      }}
-                      className="mb-1 w-full rounded border border-stone-600 bg-stone-900 px-2 py-1 text-xs text-stone-200"
-                    />
-                    <select
-                      value={input.type}
-                      onChange={(e) => {
-                        const inputs = [...(d.inputs ?? [])];
-                        const newType = e.target.value as "bool" | "string" | "number" | "dropdown";
-                        inputs[i] = {
-                          ...input,
-                          type: newType,
-                          values: newType === "dropdown" ? input.values ?? [] : undefined,
-                        };
-                        update({ inputs });
-                      }}
-                      className="mb-1 w-full rounded border border-stone-600 bg-stone-900 px-2 py-1 text-xs text-stone-200"
-                    >
-                      <option value="string">string</option>
-                      <option value="number">number</option>
-                      <option value="bool">bool</option>
-                      <option value="dropdown">dropdown</option>
-                    </select>
-                    {input.type === "dropdown" && (
-                      <input
-                        type="text"
-                        placeholder="Values (comma-separated)"
-                        value={(input.values ?? []).join(", ")}
-                        onChange={(e) => {
-                          const inputs = [...(d.inputs ?? [])];
-                          inputs[i] = {
-                            ...input,
-                            values: e.target.value
-                              .split(",")
-                              .map((s) => s.trim())
-                              .filter(Boolean),
-                          };
-                          update({ inputs });
-                        }}
-                        className="mt-1 w-full rounded border border-stone-600 bg-stone-900 px-2 py-1 text-xs text-stone-200"
-                      />
+                    <div className="mb-1 flex items-center justify-between gap-1">
+                      <span className="text-[10px] uppercase tracking-wider text-stone-500">
+                        {input.readOnly ? "View control" : "Input"}
+                      </span>
+                      <div className="flex items-center gap-0.5">
+                        <button
+                          type="button"
+                          title="Move up"
+                          disabled={i === 0}
+                          onClick={() => {
+                            const inputs = [...(d.inputs ?? [])];
+                            [inputs[i - 1], inputs[i]] = [inputs[i], inputs[i - 1]];
+                            update({ inputs });
+                          }}
+                          className="text-stone-500 hover:text-stone-300 disabled:opacity-30"
+                        >
+                          ↑
+                        </button>
+                        <button
+                          type="button"
+                          title="Move down"
+                          disabled={i === (d.inputs?.length ?? 0) - 1}
+                          onClick={() => {
+                            const inputs = [...(d.inputs ?? [])];
+                            [inputs[i], inputs[i + 1]] = [inputs[i + 1], inputs[i]];
+                            update({ inputs });
+                          }}
+                          className="text-stone-500 hover:text-stone-300 disabled:opacity-30"
+                        >
+                          ↓
+                        </button>
+                      </div>
+                    </div>
+                    {input.readOnly ? (
+                      <>
+                        <input
+                          placeholder={'e.g. ${stepKey.fieldKey} or {{ new Date().toISOString() }}'}
+                          value={input.defaultValue ?? ""}
+                          onChange={(e) => {
+                            const inputs = [...(d.inputs ?? [])];
+                            inputs[i] = { ...input, defaultValue: e.target.value };
+                            update({ inputs });
+                          }}
+                          className="mb-1 w-full rounded border border-stone-600 bg-stone-900 px-2 py-1 text-xs text-stone-200"
+                        />
+                        <input
+                          placeholder="Title (label)"
+                          value={input.title}
+                          onChange={(e) => {
+                            const inputs = [...(d.inputs ?? [])];
+                            inputs[i] = { ...input, title: e.target.value };
+                            update({ inputs });
+                          }}
+                          className="mb-1 w-full rounded border border-stone-600 bg-stone-900 px-2 py-1 text-xs text-stone-200"
+                        />
+                        <input
+                          placeholder="Visible when (e.g. context.step.field)"
+                          value={input.visibleExpression ?? ""}
+                          onChange={(e) => {
+                            const inputs = [...(d.inputs ?? [])];
+                            inputs[i] = { ...input, visibleExpression: e.target.value || undefined };
+                            update({ inputs });
+                          }}
+                          className="w-full rounded border border-stone-600 bg-stone-900 px-2 py-1 text-xs text-stone-200"
+                        />
+                      </>
+                    ) : (
+                      <>
+                        <input
+                          placeholder="Field key"
+                          value={input.key}
+                          onChange={(e) => {
+                            const inputs = [...(d.inputs ?? [])];
+                            inputs[i] = { ...input, key: e.target.value };
+                            update({ inputs });
+                          }}
+                          className="mb-1 w-full rounded border border-stone-600 bg-stone-900 px-2 py-1 text-xs text-stone-200"
+                        />
+                        <select
+                          value={input.type}
+                          onChange={(e) => {
+                            const inputs = [...(d.inputs ?? [])];
+                            const newType = e.target.value as "bool" | "string" | "string-multiline" | "number" | "datetime" | "dropdown";
+                            inputs[i] = {
+                              ...input,
+                              type: newType,
+                              values: newType === "dropdown" ? input.values ?? [] : undefined,
+                            };
+                            update({ inputs });
+                          }}
+                          className="mb-1 w-full rounded border border-stone-600 bg-stone-900 px-2 py-1 text-xs text-stone-200"
+                        >
+                          <option value="string">string</option>
+                          <option value="string-multiline">string-multiline</option>
+                          <option value="datetime">datetime</option>
+                          <option value="number">number</option>
+                          <option value="bool">bool</option>
+                          <option value="dropdown">dropdown</option>
+                        </select>
+                        {input.type === "dropdown" && (
+                          <input
+                            type="text"
+                            placeholder="Values (comma-separated)"
+                            value={(input.values ?? []).join(", ")}
+                            onChange={(e) => {
+                              const inputs = [...(d.inputs ?? [])];
+                              inputs[i] = {
+                                ...input,
+                                values: e.target.value
+                                  .split(",")
+                                  .map((s) => s.trim())
+                                  .filter(Boolean),
+                              };
+                              update({ inputs });
+                            }}
+                            className="mt-1 w-full rounded border border-stone-600 bg-stone-900 px-2 py-1 text-xs text-stone-200"
+                          />
+                        )}
+                        <input
+                          placeholder="Title"
+                          value={input.title}
+                          onChange={(e) => {
+                            const inputs = [...(d.inputs ?? [])];
+                            inputs[i] = { ...input, title: e.target.value };
+                            update({ inputs });
+                          }}
+                          className="w-full rounded border border-stone-600 bg-stone-900 px-2 py-1 text-xs text-stone-200"
+                        />
+                        <input
+                          placeholder="Visible when (e.g. context.step.field)"
+                          value={input.visibleExpression ?? ""}
+                          onChange={(e) => {
+                            const inputs = [...(d.inputs ?? [])];
+                            inputs[i] = { ...input, visibleExpression: e.target.value || undefined };
+                            update({ inputs });
+                          }}
+                          className="mt-1 w-full rounded border border-stone-600 bg-stone-900 px-2 py-1 text-xs text-stone-200"
+                        />
+                      </>
                     )}
-                    <input
-                      placeholder="Title"
-                      value={input.title}
-                      onChange={(e) => {
-                        const inputs = [...(d.inputs ?? [])];
-                        inputs[i] = { ...input, title: e.target.value };
-                        update({ inputs });
-                      }}
-                      className="w-full rounded border border-stone-600 bg-stone-900 px-2 py-1 text-xs text-stone-200"
-                    />
-                    <input
-                      placeholder="Visible when (e.g. context.step.field)"
-                      value={input.visibleExpression ?? ""}
-                      onChange={(e) => {
-                        const inputs = [...(d.inputs ?? [])];
-                        inputs[i] = { ...input, visibleExpression: e.target.value || undefined };
-                        update({ inputs });
-                      }}
-                      className="mt-1 w-full rounded border border-stone-600 bg-stone-900 px-2 py-1 text-xs text-stone-200"
-                    />
                     <button
                       type="button"
                       onClick={() => {
@@ -271,79 +344,28 @@ export function ConfigPanel({
                     </button>
                   </div>
                 ))}
-                <button
-                  type="button"
-                  onClick={() => {
-                    const inputs = [...(d.inputs ?? []), { key: `field_${(d.inputs?.length ?? 0) + 1}`, type: "string" as const, title: "Field", visibleExpression: undefined }];
-                    update({ inputs });
-                  }}
-                  className="text-xs text-amber-400 hover:text-amber-300"
-                >
-                  + Add input
-                </button>
-              </div>
-            </div>
-            <div>
-              <span className="text-xs text-stone-500">View controls (read-only from other steps)</span>
-              <p className="mt-0.5 text-xs text-stone-600">Data: literal text, or use {"${stepKey.fieldKey}"} to resolve from context</p>
-              <div className="mt-1 space-y-2">
-                {(d.viewControls ?? []).map((vc, i) => (
-                  <div
-                    key={i}
-                    className="rounded border border-stone-600 bg-stone-800 p-2"
+                <div className="flex flex-wrap gap-1">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const inputs = [...(d.inputs ?? []), { key: `field_${(d.inputs?.length ?? 0) + 1}`, type: "string" as const, title: "Field", visibleExpression: undefined }];
+                      update({ inputs });
+                    }}
+                    className="text-xs text-amber-400 hover:text-amber-300"
                   >
-                    <input
-                      placeholder={"e.g. ${stepKey.fieldKey} for context value"}
-                      value={vc.data}
-                      onChange={(e) => {
-                        const viewControls = [...(d.viewControls ?? [])];
-                        viewControls[i] = { ...vc, data: e.target.value };
-                        update({ viewControls });
-                      }}
-                      className="mb-1 w-full rounded border border-stone-600 bg-stone-900 px-2 py-1 text-xs text-stone-200"
-                    />
-                    <input
-                      placeholder="Title (label)"
-                      value={vc.title}
-                      onChange={(e) => {
-                        const viewControls = [...(d.viewControls ?? [])];
-                        viewControls[i] = { ...vc, title: e.target.value };
-                        update({ viewControls });
-                      }}
-                      className="mb-1 w-full rounded border border-stone-600 bg-stone-900 px-2 py-1 text-xs text-stone-200"
-                    />
-                    <input
-                      placeholder="Visible when (e.g. context.step.field)"
-                      value={vc.visibleExpression ?? ""}
-                      onChange={(e) => {
-                        const viewControls = [...(d.viewControls ?? [])];
-                        viewControls[i] = { ...vc, visibleExpression: e.target.value || undefined };
-                        update({ viewControls });
-                      }}
-                      className="w-full rounded border border-stone-600 bg-stone-900 px-2 py-1 text-xs text-stone-200"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const viewControls = (d.viewControls ?? []).filter((_, j) => j !== i);
-                        update({ viewControls });
-                      }}
-                      className="mt-1 text-xs text-red-400 hover:text-red-300"
-                    >
-                      Remove
-                    </button>
-                  </div>
-                ))}
-                <button
-                  type="button"
-                  onClick={() => {
-                    const viewControls = [...(d.viewControls ?? []), { data: "", title: "View", visibleExpression: undefined }];
-                    update({ viewControls });
-                  }}
-                  className="text-xs text-amber-400 hover:text-amber-300"
-                >
-                  + Add view control
-                </button>
+                    + Add input
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const inputs = [...(d.inputs ?? []), { key: `_view_${Date.now()}`, type: "string" as const, title: "View", readOnly: true as const, defaultValue: "" }];
+                      update({ inputs });
+                    }}
+                    className="text-xs text-amber-400 hover:text-amber-300"
+                  >
+                    + Add view control
+                  </button>
+                </div>
               </div>
             </div>
           </>

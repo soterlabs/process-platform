@@ -9,11 +9,11 @@ import type { Process } from "@/entities/process";
 import type { Template } from "@/entities/template";
 import type { Group, GroupMembership, User } from "@/entities/principal";
 import { groupMembershipKey } from "@/entities/principal";
-import { exampleTemplate } from "@/templates/example-template";
+import { curveTopupTemplate } from "@/templates/curve-topup";
 
 const initialGroups: Record<string, Group> = {
   prime: { id: "prime", type: "group", roles: ["Prime"] },
-  oea: { id: "oea", type: "group", roles: ["OEA"] },
+  oea: { id: "oea", type: "group", roles: ["OEA","Admin"] },
 };
 
 const initialUsers: Record<string, User> = {
@@ -86,8 +86,8 @@ async function readTemplates(): Promise<Record<string, Template>> {
     return JSON.parse(raw) as Record<string, Template>;
   } catch {
     return {
-      [exampleTemplate.key]: {
-        ...exampleTemplate,
+      [curveTopupTemplate.key]: {
+        ...curveTopupTemplate,
         updatedAt: new Date().toISOString(),
       },
     };

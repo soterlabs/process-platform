@@ -11,10 +11,8 @@ export const exampleTemplate: Template = {
       title: "Provide Description",
       allowedRoles: ["Prime"],
       nextStepKey: "review_description",
-      viewControls: [
-        { data: "${review_description.description_review}", title: "Feedback from OEA" },
-      ],
       inputs: [
+        { key: "_view_0", type: "string", title: "Feedback from OEA", readOnly: true, defaultValue: "${review_description.description_review}" },
         { key: "description", type: "string", title: "Describe why you need a new Halo" },
       ],
       confirmationMessage: "Thank you. A member of the OEA team will be in touch.",
@@ -25,12 +23,10 @@ export const exampleTemplate: Template = {
       title: "Review Description",
       allowedRoles: ["OEA"],
       nextStepKey: "review_description_condition",
-      viewControls: [
-        { data: "${input_description.description}", title: "Description from Prime" },
-      ],
       inputs: [
+        { key: "_view_0", type: "string", title: "Description from Prime", readOnly: true, defaultValue: "${input_description.description}" },
         { key: "description_review_ok", type: "bool", title: "Is the potential new Halo viable?" },
-        { key: "description_review", type: "string", title: "Provide feedback for the Prime", visibleExpression: "review_description.description_review_ok === false"},
+        { key: "description_review", type: "string", title: "Provide feedback for the Prime", visibleExpression: "review_description.description_review_ok === false" },
       ],
     },
     {

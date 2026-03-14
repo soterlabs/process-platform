@@ -1,10 +1,9 @@
 import { TemplateStep } from "./template-step";
 import { TemplateStepInput } from "./template-step-input";
-import { TemplateStepViewControl } from "./template-step-view-control";
 
 export type InputTemplateStep = TemplateStep & {
   type: "input";
+  /** Ordered list: editable inputs and read-only view controls (readOnly + defaultValue). */
   inputs: TemplateStepInput[];
-  viewControls?: TemplateStepViewControl[];
   allowedRoles: string[];
 };
