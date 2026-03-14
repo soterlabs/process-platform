@@ -1,7 +1,7 @@
 "use client";
 
 import { useParams } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { authFetch } from "@/lib/auth-client";
 import { evaluate } from "@/services/expression-service";
@@ -202,6 +202,7 @@ export default function ProcessStepPage() {
   const [formValues, setFormValues] = useState<Record<string, boolean | string>>({});
   const [submitting, setSubmitting] = useState(false);
   const [confirmationMessage, setConfirmationMessage] = useState<string | null>(null);
+  const updateStepContextTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const fetchProcess = useCallback(async () => {
     const res = await authFetch(`/api/process/${processId}`, {
@@ -284,6 +285,67 @@ export default function ProcessStepPage() {
     }, POLL_INTERVAL_MS);
     return () => clearInterval(t);
   }, [loading, error, process?.processId, step?.key, processId, fetchProcess]);
+
+  /** Build the same payload we send on complete (editable inputs only). */
+  const buildStepPayload = useCallback(
+    (values: Record<string, boolean | string>) => {
+      if (!step?.inputs?.length) return {};
+      const payload: Record<string, unknown> = {};
+      step.inputs.forEach((inp) => {
+        if (inp.readOnly) return;
+        if (inp.type === "bool") {
+          payload[inp.key] = values[inp.key] ?? false;
+        } else if (inp.type === "number") {
+          const v = values[inp.key];
+          if (v === undefined || v === "") payload[inp.key] = "";
+          else {
+            const n = Number(v);
+            payload[inp.key] = Number.isFinite(n) ? n : String(v);
+          }
+        } else {
+          payload[inp.key] = values[inp.key] ?? "";
+        }
+      });
+      return payload;
+    },
+    [step?.inputs]
+  );
+
+  /** Debounced PUT to update step context when any input changes. */
+  const scheduleStepContextUpdate = useCallback(
+    (nextFormValues: Record<string, boolean | string>) => {
+      const currentProcessStep = process ? getCurrentProcessStepFromState(process) : null;
+      if (!process || !step?.inputs?.length || !currentProcessStep) return;
+      if (updateStepContextTimerRef.current) clearTimeout(updateStepContextTimerRef.current);
+      updateStepContextTimerRef.current = setTimeout(async () => {
+        updateStepContextTimerRef.current = null;
+        const payload = buildStepPayload(nextFormValues);
+        try {
+          const res = await authFetch(
+            `/api/process/${processId}/steps/${encodeURIComponent(currentProcessStep.id)}`,
+            {
+              method: "PUT",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(payload),
+            }
+          );
+          if (res.ok) {
+            const data = await res.json();
+            setProcess(data as ProcessState);
+          }
+        } catch {
+          // ignore
+        }
+      }, 400);
+    },
+    [process, processId, step?.inputs, buildStepPayload]
+  );
+
+  useEffect(() => {
+    return () => {
+      if (updateStepContextTimerRef.current) clearTimeout(updateStepContextTimerRef.current);
+    };
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -611,12 +673,11 @@ export default function ProcessStepPage() {
                 <input
                   type="checkbox"
                   checked={Boolean(formValues[inp.key])}
-                  onChange={(e) =>
-                    setFormValues((prev) => ({
-                      ...prev,
-                      [inp.key]: e.target.checked,
-                    }))
-                  }
+                  onChange={(e) => {
+                    const next = { ...formValues, [inp.key]: e.target.checked };
+                    setFormValues(next);
+                    scheduleStepContextUpdate(next);
+                  }}
                   className="sr-only"
                 />
                 <span
@@ -647,12 +708,11 @@ export default function ProcessStepPage() {
                 <select
                   id={inp.key}
                   value={String(formValues[inp.key] ?? "")}
-                  onChange={(e) =>
-                    setFormValues((prev) => ({
-                      ...prev,
-                      [inp.key]: e.target.value,
-                    }))
-                  }
+                  onChange={(e) => {
+                    const next = { ...formValues, [inp.key]: e.target.value };
+                    setFormValues(next);
+                    scheduleStepContextUpdate(next);
+                  }}
                   className="mt-2 w-full rounded-lg border border-stone-600 bg-stone-900 px-3 py-2.5 text-stone-200 focus:border-stone-500 focus:outline-none focus:ring-1 focus:ring-stone-500"
                 >
                   <option value="">Select…</option>
@@ -675,12 +735,11 @@ export default function ProcessStepPage() {
                   id={inp.key}
                   type="number"
                   value={String(formValues[inp.key] ?? "")}
-                  onChange={(e) =>
-                    setFormValues((prev) => ({
-                      ...prev,
-                      [inp.key]: e.target.value,
-                    }))
-                  }
+                  onChange={(e) => {
+                    const next = { ...formValues, [inp.key]: e.target.value };
+                    setFormValues(next);
+                    scheduleStepContextUpdate(next);
+                  }}
                   className="mt-2 w-full rounded-lg border border-stone-600 bg-stone-900 px-3 py-2.5 text-stone-200 placeholder-stone-500 focus:border-stone-500 focus:outline-none focus:ring-1 focus:ring-stone-500"
                 />
               </>
@@ -696,12 +755,11 @@ export default function ProcessStepPage() {
                   id={inp.key}
                   rows={4}
                   value={String(formValues[inp.key] ?? "")}
-                  onChange={(e) =>
-                    setFormValues((prev) => ({
-                      ...prev,
-                      [inp.key]: e.target.value,
-                    }))
-                  }
+                  onChange={(e) => {
+                    const next = { ...formValues, [inp.key]: e.target.value };
+                    setFormValues(next);
+                    scheduleStepContextUpdate(next);
+                  }}
                   className="mt-2 w-full rounded-lg border border-stone-600 bg-stone-900 px-3 py-2.5 text-stone-200 placeholder-stone-500 focus:border-stone-500 focus:outline-none focus:ring-1 focus:ring-stone-500"
                 />
               </>
@@ -716,12 +774,11 @@ export default function ProcessStepPage() {
                 <DateTimePicker
                   id={inp.key}
                   value={String(formValues[inp.key] ?? "")}
-                  onChange={(v) =>
-                    setFormValues((prev) => ({
-                      ...prev,
-                      [inp.key]: v,
-                    }))
-                  }
+                  onChange={(v) => {
+                    const next = { ...formValues, [inp.key]: v };
+                    setFormValues(next);
+                    scheduleStepContextUpdate(next);
+                  }}
                   className="mt-2"
                 />
               </>
@@ -737,12 +794,11 @@ export default function ProcessStepPage() {
                   id={inp.key}
                   type="text"
                   value={String(formValues[inp.key] ?? "")}
-                  onChange={(e) =>
-                    setFormValues((prev) => ({
-                      ...prev,
-                      [inp.key]: e.target.value,
-                    }))
-                  }
+                  onChange={(e) => {
+                    const next = { ...formValues, [inp.key]: e.target.value };
+                    setFormValues(next);
+                    scheduleStepContextUpdate(next);
+                  }}
                   className="mt-2 w-full rounded-lg border border-stone-600 bg-stone-900 px-3 py-2.5 text-stone-200 placeholder-stone-500 focus:border-stone-500 focus:outline-none focus:ring-1 focus:ring-stone-500"
                 />
               </>
