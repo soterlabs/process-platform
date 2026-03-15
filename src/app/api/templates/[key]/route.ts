@@ -1,13 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import type { Template } from "@/entities/template";
-import { requireAdmin } from "@/lib/require-admin";
+import { ROLES } from "@/lib/roles";
+import { requireRole } from "@/lib/require-role";
 import { storageService } from "@/services/storage";
+
+type PutTemplateBody = Template;
 
 export async function GET(
   request: NextRequest,
   { params }: { params: { key: string } }
 ) {
-  const err = await requireAdmin(request, { message: "Admin role required to view templates" });
+  const err = await requireRole(request, ROLES.ADMIN, { message: "Admin role required to view templates" });
   if (err) return err;
   try {
     const { key } = params;
@@ -29,13 +32,13 @@ export async function PUT(
   request: NextRequest,
   { params }: { params: { key: string } }
 ) {
-  const err = await requireAdmin(request, {
+  const err = await requireRole(request, ROLES.ADMIN, {
     message: "Admin role required to create or edit templates",
   });
   if (err) return err;
   try {
     const { key } = params;
-    const body = (await request.json()) as Template;
+    const body = (await request.json()) as PutTemplateBody;
     if (body.key !== key) {
       return NextResponse.json(
         { error: "Template key in body must match URL" },

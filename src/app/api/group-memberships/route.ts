@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireAdmin } from "@/lib/require-admin";
+import { ROLES } from "@/lib/roles";
+import { requireRole } from "@/lib/require-role";
 import { storageService } from "@/services/storage";
 
 export async function GET(request: NextRequest) {
-  const err = await requireAdmin(request);
+  const err = await requireRole(request, ROLES.ADMIN);
   if (err) return err;
   try {
     const memberships = await storageService.listGroupMemberships();

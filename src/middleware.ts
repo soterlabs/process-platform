@@ -2,7 +2,11 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { verifyToken } from "@/lib/jwt";
 
-const PUBLIC_API_PATHS = ["/api/auth/challenge", "/api/auth/verify"];
+const PUBLIC_API_PATHS = [
+  "/api/auth/challenge",
+  "/api/auth/verify",
+  "/api/auth/verify-google",
+];
 
 export async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname;

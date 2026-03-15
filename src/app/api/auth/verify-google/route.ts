@@ -1,16 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { authenticationService } from "@/services/auth";
 
-type VerifyBody = { walletAddress: string; message: string; signature: string };
+type VerifyGoogleBody = { idToken: string };
 
 export async function POST(request: NextRequest) {
   try {
-    const { walletAddress, message, signature } = (await request.json()) as VerifyBody;
-    const result = await authenticationService.verifyAndIssueToken(
-      walletAddress,
-      message,
-      signature
-    );
+    const { idToken } = (await request.json()) as VerifyGoogleBody;
+    const result = await authenticationService.verifyGoogleIdTokenAndIssueToken(idToken);
     return NextResponse.json(result);
   } catch (err) {
     const message = err instanceof Error ? err.message : "Verification failed";

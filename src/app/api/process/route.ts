@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { executionService } from "@/services/execution-service";
 import { storageService } from "@/services/storage";
 
+type StartProcessBody = { templateKey: string };
+
 export async function GET(_request: NextRequest) {
   try {
     const processes = await storageService.listProcesses();
@@ -17,7 +19,7 @@ export async function GET(_request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const { templateKey } = (await request.json()) as { templateKey: string };
+    const { templateKey } = (await request.json()) as StartProcessBody;
     const result = await executionService.startProcess(templateKey);
     return NextResponse.json(result);
   } catch (err) {

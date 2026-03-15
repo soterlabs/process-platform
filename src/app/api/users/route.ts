@@ -1,9 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireAdmin } from "@/lib/require-admin";
+import { ROLES } from "@/lib/roles";
+import { requireRole } from "@/lib/require-role";
 import { storageService } from "@/services/storage";
 
+type CreateUserBody = { id: string; evmWalletAddress: string };
+
 export async function GET(request: NextRequest) {
-  const err = await requireAdmin(request);
+  const err = await requireRole(request, ROLES.ADMIN);
   if (err) return err;
   try {
     const users = await storageService.listUsers();
@@ -18,11 +21,10 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const err = await requireAdmin(request);
+  const err = await requireRole(request, ROLES.ADMIN);
   if (err) return err;
   try {
-    const body = (await request.json()) as { id: string; evmWalletAddress: string };
-    const { id, evmWalletAddress } = body;
+    const { id, evmWalletAddress } = (await request.json()) as CreateUserBody;
     if (!id?.trim() || !evmWalletAddress?.trim()) {
       return NextResponse.json(
         { error: "id and evmWalletAddress are required" },

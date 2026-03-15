@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { groupMembershipKey } from "@/entities/principal";
-import { requireAdmin } from "@/lib/require-admin";
+import { ROLES } from "@/lib/roles";
+import { requireRole } from "@/lib/require-role";
 import { storageService } from "@/services/storage";
 
 /** Remove user from a group. */
@@ -8,7 +9,7 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: { id: string; groupId: string } }
 ) {
-  const err = await requireAdmin(request);
+  const err = await requireRole(request, ROLES.ADMIN);
   if (err) return err;
   const { id: targetUserId, groupId } = params;
   try {

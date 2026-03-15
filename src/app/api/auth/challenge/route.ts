@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createChallenge } from "@/services/authentication-service";
+import { authenticationService } from "@/services/auth";
+
+type ChallengeBody = { walletAddress: string };
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
-    const result = await createChallenge(body);
+    const { walletAddress } = (await request.json()) as ChallengeBody;
+    const result = await authenticationService.createChallenge(walletAddress);
     return NextResponse.json(result);
   } catch (err) {
     const message = err instanceof Error ? err.message : "Invalid request";

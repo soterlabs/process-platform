@@ -9,6 +9,7 @@ export const initialUsers: Record<string, User> = {
   "soter-filip": {
     id: "soter-filip",
     type: "user",
+    email: "filip@soterlabs.com",
     evmWalletAddress: "0x5160c1f6423a1500a73e065298b0145d532b55A2",
   },
 };

@@ -164,6 +164,16 @@ export const fileStorageService: IStorageService = {
       ) ?? null
     );
   },
+  async getUserByEmail(email) {
+    if (!email?.trim()) return null;
+    const normalized = email.trim().toLowerCase();
+    const users = await readUsers();
+    return (
+      Object.values(users).find(
+        (u) => (u.email ?? "").toLowerCase() === normalized
+      ) ?? null
+    );
+  },
   async getGroup(key) {
     const groups = await readGroups();
     return groups[key] ?? null;

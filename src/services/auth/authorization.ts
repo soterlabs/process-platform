@@ -2,19 +2,30 @@ import type { Process } from "@/entities/process";
 import type { InputTemplateStep } from "@/entities/template";
 import { getCurrentProcessStep, getProcessStepById, getStepByKey } from "@/services/template-helpers";
 import { storageService } from "@/services/storage";
+import type { IAuthorizationService } from "./interface";
 
-/**
- * Returns true if the user is allowed to act on a step with the given allowedRoles.
- * The user must belong to at least one group that has at least one role in allowedRoles.
- * If allowedRoles is missing or empty, allows (no restriction).
- */
-export async function canUserActOnStep(
+async function getUserRoles(userId: string): Promise<string[]> {
+  const memberships = await storageService.listGroupMemberships();
+  const userMemberships = memberships.filter((m) => m.userId === userId);
+  const roleSet = new Set<string>();
+  for (const m of userMemberships) {
+    const group = await storageService.getGroup(m.groupId);
+    if (!group) continue;
+    for (const r of group.roles) roleSet.add(r);
+  }
+  return Array.from(roleSet);
+}
+
+async function userHasRole(userId: string, role: string): Promise<boolean> {
+  const roles = await getUserRoles(userId);
+  return roles.some((r) => r.toLowerCase() === role.toLowerCase());
+}
+
+async function canUserActOnStep(
   userId: string,
   allowedRoles: string[] | undefined
 ): Promise<boolean> {
-  if (!allowedRoles || allowedRoles.length === 0) {
-    return true;
-  }
+  if (!allowedRoles || allowedRoles.length === 0) return true;
   const memberships = await storageService.listGroupMemberships();
   const userMemberships = memberships.filter((m) => m.userId === userId);
   const allowedSet = new Set(allowedRoles.map((r) => r.toLowerCase()));
@@ -28,35 +39,7 @@ export async function canUserActOnStep(
   return false;
 }
 
-/**
- * Returns the list of all roles the user has (from all their groups), case-preserved, unique.
- */
-export async function getUserRoles(userId: string): Promise<string[]> {
-  const memberships = await storageService.listGroupMemberships();
-  const userMemberships = memberships.filter((m) => m.userId === userId);
-  const roleSet = new Set<string>();
-  for (const m of userMemberships) {
-    const group = await storageService.getGroup(m.groupId);
-    if (!group) continue;
-    for (const r of group.roles) roleSet.add(r);
-  }
-  return Array.from(roleSet);
-}
-
-/**
- * Returns true if the user has the given role (case-insensitive).
- */
-export async function userHasRole(userId: string, role: string): Promise<boolean> {
-  const roles = await getUserRoles(userId);
-  const lower = role.toLowerCase();
-  return roles.some((r) => r.toLowerCase() === lower);
-}
-
-/**
- * Resolves process, step, and template step then checks if the user may act on the step.
- * Use from API layer before update/complete. Returns 401 if no user id, 404 if not found, 403 if not allowed.
- */
-export async function checkStepAuth(
+async function checkStepAuth(
   processId: string,
   stepId: string,
   userId: string | null
@@ -87,11 +70,7 @@ export async function checkStepAuth(
   return { authorized: true };
 }
 
-/**
- * Returns whether the user can act on the current step of the process (e.g. submit input / complete).
- * Used by GET process to signal the UI. Only input steps are user-actionable; for those we check allowedRoles.
- */
-export async function canUserActOnCurrentStep(
+async function canUserActOnCurrentStep(
   process: Process,
   userId: string | null
 ): Promise<boolean> {
@@ -103,3 +82,11 @@ export async function canUserActOnCurrentStep(
   if (!templateStep || templateStep.type !== "input") return false;
   return canUserActOnStep(userId, (templateStep as InputTemplateStep).allowedRoles);
 }
+
+export const authorizationService: IAuthorizationService = {
+  getUserRoles,
+  userHasRole,
+  canUserActOnStep,
+  checkStepAuth,
+  canUserActOnCurrentStep,
+};

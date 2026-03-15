@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getUserIdFromRequest } from "@/lib/auth-request";
-import { checkStepAuth } from "@/services/authorization-service";
+import { authorizationService } from "@/services/auth";
 import { executionService } from "@/services/execution-service";
+
+type CompleteStepBody = Record<string, unknown>;
 
 export async function POST(
   request: NextRequest,
@@ -10,12 +12,12 @@ export async function POST(
   const userId = getUserIdFromRequest(request)!;
   try {
     const { id, stepId } = params;
-    const auth = await checkStepAuth(id, stepId, userId);
+    const auth = await authorizationService.checkStepAuth(id, stepId, userId);
     if (!auth.authorized) {
       return NextResponse.json(auth.body, { status: auth.status });
     }
     const body = await request.json().catch(() => null);
-    const payload = (body as Record<string, unknown> | null) ?? {};
+    const payload = (body as CompleteStepBody | null) ?? {};
     if (Object.keys(payload).length > 0) {
       await executionService.updateStepById(id, stepId, payload);
     }

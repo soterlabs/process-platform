@@ -144,6 +144,18 @@ export const storageServiceMongo: IStorageService = {
     const { _id, ...rest } = doc;
     return { ...rest, id: _id } as User;
   },
+  async getUserByEmail(email) {
+    if (!email?.trim()) return null;
+    const normalized = email.trim().toLowerCase();
+    await ensureInitialUsers();
+    const c = await col<User & { _id: string }>(COLL.users);
+    const doc = await c.findOne({
+      email: { $regex: new RegExp(`^${normalized.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`, "i") },
+    });
+    if (!doc) return null;
+    const { _id, ...rest } = doc;
+    return { ...rest, id: _id } as User;
+  },
   async getGroup(key) {
     await ensureInitialGroups();
     const c = await col<Group & { _id: string }>(COLL.groups);

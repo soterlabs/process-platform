@@ -279,7 +279,7 @@ export default function UsersPage() {
                   <div>
                     <span className="font-medium text-stone-200">{user.id}</span>
                     <p className="mt-0.5 font-mono text-xs text-stone-500">
-                      {user.evmWalletAddress}
+                      {user.evmWalletAddress ?? (user.googleId ? "Google" : "—")}
                     </p>
                   </div>
                 </div>

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getUserIdFromRequest } from "@/lib/auth-request";
-import { canUserActOnCurrentStep } from "@/services/authorization-service";
+import { authorizationService } from "@/services/auth";
 import { executionService } from "@/services/execution-service";
 
 export async function GET(
@@ -17,7 +17,7 @@ export async function GET(
         { status: 404 }
       );
     }
-    const canActOnCurrentStep = await canUserActOnCurrentStep(result, userId);
+    const canActOnCurrentStep = await authorizationService.canUserActOnCurrentStep(result, userId);
     return NextResponse.json({ ...result, canActOnCurrentStep });
   } catch (err) {
     console.error(err);

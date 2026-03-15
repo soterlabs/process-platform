@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireAdmin } from "@/lib/require-admin";
+import { ROLES } from "@/lib/roles";
+import { requireRole } from "@/lib/require-role";
 import { storageService } from "@/services/storage";
 
 export async function GET(request: NextRequest) {
-  const err = await requireAdmin(request, { message: "Admin role required to list templates" });
+  const err = await requireRole(request, ROLES.ADMIN, { message: "Admin role required to list templates" });
   if (err) return err;
   try {
     const templates = await storageService.listTemplates();

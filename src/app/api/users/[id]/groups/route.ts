@@ -1,15 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getUserIdFromRequest } from "@/lib/auth-request";
 import { groupMembershipKey } from "@/entities/principal";
-import { requireAdmin } from "@/lib/require-admin";
+import { ROLES } from "@/lib/roles";
+import { requireRole } from "@/lib/require-role";
 import { storageService } from "@/services/storage";
+
+type AddUserToGroupBody = { groupId: string };
 
 /** List groups the user belongs to (returns memberships for this user). */
 export async function GET(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  const err = await requireAdmin(request);
+  const err = await requireRole(request, ROLES.ADMIN);
   if (err) return err;
   const targetUserId = params.id;
   try {
@@ -30,19 +33,12 @@ export async function POST(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  const err = await requireAdmin(request);
+  const err = await requireRole(request, ROLES.ADMIN);
   if (err) return err;
   const userId = getUserIdFromRequest(request)!;
   const targetUserId = params.id;
   try {
-    const body = (await request.json()) as { groupId: string };
-    const groupId = body?.groupId?.trim();
-    if (!groupId) {
-      return NextResponse.json(
-        { error: "groupId is required" },
-        { status: 400 }
-      );
-    }
+    const { groupId } = (await request.json()) as AddUserToGroupBody;
     const user = await storageService.getUser(targetUserId);
     if (!user) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });

@@ -12,6 +12,7 @@ export interface IStorageService {
   setUser(key: string, user: User): Promise<void>;
   listUsers(): Promise<User[]>;
   getUserByEvmAddress(evmWalletAddress: string): Promise<User | null>;
+  getUserByEmail(email: string): Promise<User | null>;
   getGroup(key: string): Promise<Group | null>;
   setGroup(key: string, group: Group): Promise<void>;
   listGroups(): Promise<Group[]>;

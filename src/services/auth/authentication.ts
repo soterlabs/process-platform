@@ -1,3 +1,4 @@
+import { OAuth2Client } from "google-auth-library";
 import * as jose from "jose";
 import { getAddress, verifyMessage } from "viem";
 import {
@@ -5,22 +6,20 @@ import {
   JWT_AUDIENCE,
   JWT_ISSUER,
 } from "@/lib/jwt";
-import { getUserRoles } from "@/services/authorization-service";
+import { verifyToken as verifyTokenJwt } from "@/lib/jwt";
 import { storageService } from "@/services/storage";
+import { authorizationService } from "./authorization";
+import type { IAuthenticationService } from "./interface";
 
 const CHALLENGE_TTL_MS = 5 * 60 * 1000; // 5 minutes
 const JWT_EXPIRY = "7d";
+const GOOGLE_CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID ?? "";
 
 function normalizeAddress(addr: string): string {
   return (addr ?? "").toLowerCase();
 }
 
-/**
- * Generate a challenge message for the wallet to sign (e.g. for MetaMask personal_sign).
- * The challenge is stored so verifyAndIssueToken can look it up. The client should
- * pass walletAddress and then sign the returned message.
- */
-export async function createChallenge(walletAddress: string): Promise<{ message: string }> {
+async function createChallenge(walletAddress: string): Promise<{ message: string }> {
   const normalized = normalizeAddress(walletAddress);
   if (!normalized.startsWith("0x") || normalized.length < 10) {
     throw new Error("Invalid wallet address");
@@ -34,14 +33,10 @@ export async function createChallenge(walletAddress: string): Promise<{ message:
   return { message };
 }
 
-/**
- * Verify the signature against the challenge and issue a JWT containing the user id.
- * The user must exist in storage with matching evmWalletAddress.
- */
-export async function verifyAndIssueToken(
+async function verifyAndIssueToken(
   walletAddress: string,
   message: string,
-  signature: `0x${string}`
+  signature: string
 ): Promise<{ token: string; userId: string }> {
   let address: `0x${string}`;
   try {
@@ -66,7 +61,7 @@ export async function verifyAndIssueToken(
   const valid = await verifyMessage({
     address,
     message,
-    signature,
+    signature: signature as `0x${string}`,
   });
   if (!valid) {
     throw new Error("Signature does not match wallet address.");
@@ -77,8 +72,7 @@ export async function verifyAndIssueToken(
     throw new Error("No user registered for this wallet address.");
   }
 
-  const roles = await getUserRoles(user.id);
-
+  const roles = await authorizationService.getUserRoles(user.id);
   const secret = getJwtSecretForSigning();
   const token = await new jose.SignJWT({ userId: user.id, roles })
     .setProtectedHeader({ alg: "HS256" })
@@ -91,4 +85,43 @@ export async function verifyAndIssueToken(
   return { token, userId: user.id };
 }
 
-export { verifyToken } from "@/lib/jwt";
+async function verifyGoogleIdTokenAndIssueToken(
+  idToken: string
+): Promise<{ token: string; userId: string }> {
+  if (!GOOGLE_CLIENT_ID) {
+    throw new Error("Google Sign-In is not configured (NEXT_PUBLIC_GOOGLE_CLIENT_ID missing).");
+  }
+  const client = new OAuth2Client(GOOGLE_CLIENT_ID);
+  const ticket = await client.verifyIdToken({
+    idToken: idToken.trim(),
+    audience: GOOGLE_CLIENT_ID,
+  });
+  const payload = ticket.getPayload();
+  const email = payload?.email?.trim();
+  if (!email) {
+    throw new Error("Invalid Google ID token: missing email.");
+  }
+  const user = await storageService.getUserByEmail(email);
+  if (!user) {
+    throw new Error("No user registered for this email address.");
+  }
+
+  const roles = await authorizationService.getUserRoles(user.id);
+  const secret = getJwtSecretForSigning();
+  const token = await new jose.SignJWT({ userId: user.id, roles })
+    .setProtectedHeader({ alg: "HS256" })
+    .setIssuer(JWT_ISSUER)
+    .setAudience(JWT_AUDIENCE)
+    .setExpirationTime(JWT_EXPIRY)
+    .setIssuedAt()
+    .sign(secret);
+
+  return { token, userId: user.id };
+}
+
+export const authenticationService: IAuthenticationService = {
+  createChallenge,
+  verifyAndIssueToken,
+  verifyGoogleIdTokenAndIssueToken,
+  verifyToken: verifyTokenJwt,
+};
