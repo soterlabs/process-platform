@@ -3,7 +3,7 @@ import { ROLES } from "@/lib/roles";
 import { requireRole } from "@/lib/require-role";
 import { storageService } from "@/services/storage";
 
-type CreateUserBody = { id: string; evmWalletAddress: string };
+type CreateUserBody = { id: string; evmWalletAddress?: string; email?: string };
 
 export async function GET(request: NextRequest) {
   const err = await requireRole(request, ROLES.ADMIN);
@@ -24,38 +24,29 @@ export async function POST(request: NextRequest) {
   const err = await requireRole(request, ROLES.ADMIN);
   if (err) return err;
   try {
-    const { id, evmWalletAddress } = (await request.json()) as CreateUserBody;
-    if (!id?.trim() || !evmWalletAddress?.trim()) {
+    const { id, evmWalletAddress, email } = (await request.json()) as CreateUserBody;
+    const trimmedId = id?.trim();
+    if (!trimmedId) {
       return NextResponse.json(
-        { error: "id and evmWalletAddress are required" },
+        { error: "id is required" },
         { status: 400 }
       );
     }
-    const normalized = evmWalletAddress.toLowerCase();
-    if (!normalized.startsWith("0x") || normalized.length < 10) {
-      return NextResponse.json(
-        { error: "evmWalletAddress must be a valid Ethereum address" },
-        { status: 400 }
-      );
-    }
-    const existing = await storageService.getUser(id.trim());
+    const existing = await storageService.getUser(trimmedId);
     if (existing) {
       return NextResponse.json(
         { error: "User with this id already exists" },
         { status: 409 }
       );
     }
-    const existingByAddress = await storageService.getUserByEvmAddress(normalized as `0x${string}`);
-    if (existingByAddress) {
-      return NextResponse.json(
-        { error: "A user with this wallet address already exists" },
-        { status: 409 }
-      );
-    }
+
     const user = {
-      id: id.trim(),
+      id: trimmedId,
       type: "user" as const,
-      evmWalletAddress: normalized as `0x${string}`,
+      ...(evmWalletAddress?.trim() && {
+        evmWalletAddress: evmWalletAddress.trim().toLowerCase() as `0x${string}`,
+      }),
+      ...(email?.trim() && { email: email.trim().toLowerCase() }),
     };
     await storageService.setUser(user.id, user);
     return NextResponse.json(user, { status: 201 });

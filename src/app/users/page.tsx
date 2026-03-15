@@ -87,6 +87,7 @@ export default function UsersPage() {
   const [createOpen, setCreateOpen] = useState(false);
   const [createId, setCreateId] = useState("");
   const [createAddress, setCreateAddress] = useState("");
+  const [createEmail, setCreateEmail] = useState("");
   const [createSubmitting, setCreateSubmitting] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
   const [addingUserId, setAddingUserId] = useState<string | null>(null);
@@ -133,17 +134,21 @@ export default function UsersPage() {
   const handleCreate = useCallback(async () => {
     setCreateError(null);
     const id = createId.trim();
-    const evmWalletAddress = createAddress.trim();
-    if (!id || !evmWalletAddress) {
-      setCreateError("ID and wallet address are required");
+    if (!id) {
+      setCreateError("User ID is required");
       return;
     }
     setCreateSubmitting(true);
     try {
+      const body: { id: string; evmWalletAddress?: string; email?: string } = { id };
+      const evmWalletAddress = createAddress.trim();
+      if (evmWalletAddress) body.evmWalletAddress = evmWalletAddress;
+      const email = createEmail.trim();
+      if (email) body.email = email;
       const res = await authFetch("/api/users", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id, evmWalletAddress }),
+        body: JSON.stringify(body),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
@@ -153,6 +158,7 @@ export default function UsersPage() {
       setCreateOpen(false);
       setCreateId("");
       setCreateAddress("");
+      setCreateEmail("");
       setCreateError(null);
       await load();
     } catch (e) {
@@ -160,7 +166,7 @@ export default function UsersPage() {
     } finally {
       setCreateSubmitting(false);
     }
-  }, [createId, createAddress, load]);
+  }, [createId, createAddress, createEmail, load]);
 
   const addToGroup = useCallback(
     async (userId: string, groupId: string) => {
@@ -279,7 +285,9 @@ export default function UsersPage() {
                   <div>
                     <span className="font-medium text-stone-200">{user.id}</span>
                     <p className="mt-0.5 font-mono text-xs text-stone-500">
-                      {user.evmWalletAddress ?? (user.googleId ? "Google" : "—")}
+                      {[user.email, user.evmWalletAddress, user.googleId ? "Google" : null]
+                        .filter(Boolean)
+                        .join(" · ") || "—"}
                     </p>
                   </div>
                 </div>
@@ -345,7 +353,7 @@ export default function UsersPage() {
               Create user
             </h2>
             <p className="mt-1 text-sm text-stone-400">
-              User id and Ethereum wallet address (used to sign in).
+              User ID is required. Wallet and email are optional (for sign-in).
             </p>
             {createError && (
               <p className="mt-3 rounded-lg bg-red-500/10 px-3 py-2 text-sm text-red-400">
@@ -367,8 +375,21 @@ export default function UsersPage() {
                 />
               </div>
               <div>
+                <label htmlFor="create-email" className="block text-sm font-medium text-stone-300">
+                  Email (optional)
+                </label>
+                <input
+                  id="create-email"
+                  type="email"
+                  value={createEmail}
+                  onChange={(e) => setCreateEmail(e.target.value)}
+                  placeholder="user@example.com"
+                  className="mt-1 w-full rounded-lg border border-stone-600 bg-stone-800 px-3 py-2 text-stone-200 placeholder-stone-500 focus:border-stone-500 focus:outline-none focus:ring-1 focus:ring-stone-500"
+                />
+              </div>
+              <div>
                 <label htmlFor="create-address" className="block text-sm font-medium text-stone-300">
-                  Wallet address
+                  Wallet address (optional)
                 </label>
                 <input
                   id="create-address"
