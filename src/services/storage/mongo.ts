@@ -7,6 +7,7 @@ import type { Process } from "@/entities/process";
 import type { Template } from "@/entities/template";
 import type { Group, GroupMembership, User } from "@/entities/principal";
 import { curveTopupTemplate } from "@/templates/curve-topup";
+import { ibPayoutsTemplate } from "@/templates/ib-payouts";
 import type { IStorageService } from "./interface";
 import {
   initialGroups,
@@ -47,12 +48,19 @@ function col<T extends object>(name: keyof typeof COLL): Promise<Collection<T>> 
 
 type DocWithStringId = { _id: string };
 
+const SEED_TEMPLATES: Template[] = [curveTopupTemplate, ibPayoutsTemplate];
+
 async function ensureInitialTemplates(): Promise<void> {
-  const c = await col<DocWithStringId>(COLL.templates);
-  const existing = await c.findOne({});
-  if (existing) return;
-  const { key, ...rest } = curveTopupTemplate;
-  await c.insertOne({ _id: key, ...rest, updatedAt: new Date().toISOString() } as DocWithStringId);
+  const c = await col<Template & DocWithStringId>(COLL.templates);
+  const now = new Date().toISOString();
+  for (const template of SEED_TEMPLATES) {
+    const { key, ...rest } = template;
+    await c.updateOne(
+      { _id: key } as Filter<Template & DocWithStringId>,
+      { $setOnInsert: { ...rest, updatedAt: now } },
+      { upsert: true }
+    );
+  }
 }
 
 async function ensureInitialUsers(): Promise<void> {

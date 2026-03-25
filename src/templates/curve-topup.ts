@@ -1,6 +1,6 @@
 import type { Template } from "@/entities/template";
 
-const SAFE_UI_URL = "https://app.safe.global/";
+const SAFE_UI_URL = "https://app.safe.global/transactions/queue?safe=eth:0xa7843f843D29Ca33BA48d9D1335b774eeCc328DC";
 const TX_KEEPER_URL = "https://tx-keeper-production.up.railway.app/";
 const STRATA_URL = "https://strata.amatsu.io/oea/integration-boost-payouts";
 const BA_LABS_URL = "https://observatory.data.blockanalitica.com/sky/integration-boost/";
@@ -58,7 +58,6 @@ export const curveTopupTemplate: Template = {
           defaultValue: `Download JSON payload from Transaction Keeper and paste below.`,
         },
         { key: "json_payload", type: "string-multiline", title: "JSON payload from Transaction Keeper" },
-        { key: "confirm_reward_in_json", type: "bool", title: "Verify: Reward Amount is correct in the JSON payload" },
         {
           key: "safe_upload",
           type: "string",
@@ -66,6 +65,7 @@ export const curveTopupTemplate: Template = {
           readOnly: true,
           defaultValue: `In Safe UI, go to New Transaction → Transaction Builder → Upload. Upload JSON payload from above.`,
         },
+        { key: "confirm_reward_in_json", type: "bool", title: "Verify: Reward Amount is correct in the JSON payload" },
         { key: "json_uploaded", type: "bool", title: "JSON payload uploaded to Transaction Builder" },
         {
           key: "send_batch",

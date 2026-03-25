@@ -8,6 +8,7 @@ import type { Process } from "@/entities/process";
 import type { Template } from "@/entities/template";
 import type { Group, GroupMembership, User } from "@/entities/principal";
 import { curveTopupTemplate } from "@/templates/curve-topup";
+import { ibPayoutsTemplate } from "@/templates/ib-payouts";
 import type { IStorageService } from "./interface";
 import {
   initialGroups,
@@ -27,17 +28,27 @@ async function ensureStoreDir(): Promise<void> {
   await mkdir(STORE_DIR, { recursive: true });
 }
 
+function seedTemplatesRecord(): Record<string, Template> {
+  const now = new Date().toISOString();
+  return {
+    [curveTopupTemplate.key]: { ...curveTopupTemplate, updatedAt: now },
+    [ibPayoutsTemplate.key]: { ...ibPayoutsTemplate, updatedAt: now },
+  };
+}
+
 async function readTemplates(): Promise<Record<string, Template>> {
+  const seeds = seedTemplatesRecord();
   try {
     const raw = await readFile(TEMPLATES_FILE, "utf-8");
-    return JSON.parse(raw) as Record<string, Template>;
+    const parsed = JSON.parse(raw) as Record<string, Template>;
+    for (const [k, t] of Object.entries(seeds)) {
+      if (!(k in parsed)) {
+        parsed[k] = { ...t };
+      }
+    }
+    return parsed;
   } catch {
-    return {
-      [curveTopupTemplate.key]: {
-        ...curveTopupTemplate,
-        updatedAt: new Date().toISOString(),
-      },
-    };
+    return seeds;
   }
 }
 
