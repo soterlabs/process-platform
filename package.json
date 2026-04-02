@@ -6,7 +6,8 @@
     "dev": "concurrently \"next dev\" \"npm run job:step\"",
     "build": "next build",
     "start": "next start",
-    "job:step": "tsx src/jobs/run-step-job.ts"
+    "job:step": "tsx src/jobs/run-step-job.ts",
+    "mint-long-lived-jwt": "tsx scripts/mint-long-lived-jwt.ts"
   },
   "dependencies": {
     "@xyflow/react": "^12.10.0",
