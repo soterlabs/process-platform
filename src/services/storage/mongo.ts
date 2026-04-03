@@ -5,26 +5,16 @@
 import { MongoClient, type Db, type Collection, type Filter } from "mongodb";
 import type { Process } from "@/entities/process";
 import type { Template } from "@/entities/template";
-import type { Group, GroupMembership, User } from "@/entities/principal";
 import { curveTopupTemplate } from "@/templates/curve-topup";
 import { ibPayoutsTemplate } from "@/templates/ib-payouts";
 import type { IStorageService } from "./interface";
-import {
-  initialGroups,
-  initialGroupMemberships,
-  initialUsers,
-} from "./initial-data";
 
 const MONGO_URL = process.env.MONGO_URL ?? "";
 const DB_NAME = "process-platform";
 
 const COLL = {
   templates: "templates",
-  users: "users",
-  groups: "groups",
-  groupMemberships: "groupMemberships",
   processes: "processes",
-  authChallenges: "authChallenges",
 } as const;
 
 let client: MongoClient | null = null;
@@ -63,39 +53,6 @@ async function ensureInitialTemplates(): Promise<void> {
   }
 }
 
-async function ensureInitialUsers(): Promise<void> {
-  const c = await col<DocWithStringId>(COLL.users);
-  const existing = await c.findOne({});
-  if (existing) return;
-  await c.insertMany(
-    Object.entries(initialUsers).map(([id, user]) => {
-      const { id: _idField, ...rest } = user;
-      return { _id: id, ...rest } as DocWithStringId;
-    })
-  );
-}
-
-async function ensureInitialGroups(): Promise<void> {
-  const c = await col<DocWithStringId>(COLL.groups);
-  const existing = await c.findOne({});
-  if (existing) return;
-  await c.insertMany(
-    Object.entries(initialGroups).map(([id, group]) => {
-      const { id: _idField, ...rest } = group;
-      return { _id: id, ...rest } as DocWithStringId;
-    })
-  );
-}
-
-async function ensureInitialGroupMemberships(): Promise<void> {
-  const c = await col<DocWithStringId>(COLL.groupMemberships);
-  const existing = await c.findOne({});
-  if (existing) return;
-  await c.insertMany(
-    Object.entries(initialGroupMemberships).map(([key, m]) => ({ _id: key, ...m } as DocWithStringId))
-  );
-}
-
 export const storageServiceMongo: IStorageService = {
   async getTemplate(key) {
     await ensureInitialTemplates();
@@ -120,97 +77,6 @@ export const storageServiceMongo: IStorageService = {
       return { ...rest, key: _id } as Template;
     });
   },
-  async getUser(key) {
-    await ensureInitialUsers();
-    const c = await col<User & { _id: string }>(COLL.users);
-    const doc = await c.findOne({ _id: key } as Filter<User & { _id: string }>);
-    if (!doc) return null;
-    const { _id, ...rest } = doc;
-    return { ...rest, id: _id } as User;
-  },
-  async setUser(key, user) {
-    const c = await col<User & { _id: string }>(COLL.users);
-    const { id: _idField, ...rest } = user;
-    await c.updateOne({ _id: key } as Filter<User & { _id: string }>, { $set: rest }, { upsert: true });
-  },
-  async listUsers() {
-    await ensureInitialUsers();
-    const c = await col<User & { _id: string }>(COLL.users);
-    const docs = await c.find({}).toArray();
-    return docs.map((d) => {
-      const { _id, ...rest } = d;
-      return { ...rest, id: _id } as User;
-    });
-  },
-  async getUserByEvmAddress(evmWalletAddress) {
-    const normalized = evmWalletAddress?.toLowerCase?.() ?? "";
-    if (!normalized.startsWith("0x") || normalized.length < 10) return null;
-    await ensureInitialUsers();
-    const c = await col<User & { _id: string }>(COLL.users);
-    const doc = await c.findOne({ evmWalletAddress: { $regex: new RegExp(`^${normalized.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`, "i") } });
-    if (!doc) return null;
-    const { _id, ...rest } = doc;
-    return { ...rest, id: _id } as User;
-  },
-  async getUserByEmail(email) {
-    if (!email?.trim()) return null;
-    const normalized = email.trim().toLowerCase();
-    await ensureInitialUsers();
-    const c = await col<User & { _id: string }>(COLL.users);
-    const doc = await c.findOne({
-      email: { $regex: new RegExp(`^${normalized.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`, "i") },
-    });
-    if (!doc) return null;
-    const { _id, ...rest } = doc;
-    return { ...rest, id: _id } as User;
-  },
-  async getGroup(key) {
-    await ensureInitialGroups();
-    const c = await col<Group & { _id: string }>(COLL.groups);
-    const doc = await c.findOne({ _id: key } as Filter<Group & { _id: string }>);
-    if (!doc) return null;
-    const { _id, ...rest } = doc;
-    return { ...rest, id: _id } as Group;
-  },
-  async setGroup(key, group) {
-    const c = await col<Group & { _id: string }>(COLL.groups);
-    const { id: _idField, ...rest } = group;
-    await c.updateOne({ _id: key } as Filter<Group & { _id: string }>, { $set: rest }, { upsert: true });
-  },
-  async listGroups() {
-    await ensureInitialGroups();
-    const c = await col<Group & { _id: string }>(COLL.groups);
-    const docs = await c.find({}).toArray();
-    return docs.map((d) => {
-      const { _id, ...rest } = d;
-      return { ...rest, id: _id } as Group;
-    });
-  },
-  async getGroupMembership(key) {
-    await ensureInitialGroupMemberships();
-    const c = await col<GroupMembership & { _id: string }>(COLL.groupMemberships);
-    const doc = await c.findOne({ _id: key } as Filter<GroupMembership & { _id: string }>);
-    if (!doc) return null;
-    const { _id, ...rest } = doc;
-    return rest as GroupMembership;
-  },
-  async setGroupMembership(key, membership) {
-    const c = await col<GroupMembership & { _id: string }>(COLL.groupMemberships);
-    await c.updateOne({ _id: key } as Filter<GroupMembership & { _id: string }>, { $set: { ...membership } }, { upsert: true });
-  },
-  async listGroupMemberships() {
-    await ensureInitialGroupMemberships();
-    const c = await col<GroupMembership & { _id: string }>(COLL.groupMemberships);
-    const docs = await c.find({}).toArray();
-    return docs.map((d) => {
-      const { _id, ...rest } = d;
-      return rest as GroupMembership;
-    });
-  },
-  async deleteGroupMembership(key) {
-    const c = await col<GroupMembership & { _id: string }>(COLL.groupMemberships);
-    await c.deleteOne({ _id: key } as Filter<GroupMembership & { _id: string }>);
-  },
   async getProcessState(processId) {
     const c = await col<Process & { _id: string }>(COLL.processes);
     const doc = await c.findOne({ _id: processId } as Filter<Process & { _id: string }>);
@@ -231,23 +97,5 @@ export const storageServiceMongo: IStorageService = {
       const { _id, ...rest } = d;
       return { ...rest, processId: _id } as Process;
     });
-  },
-  async getAuthChallenge(normalizedAddress) {
-    const c = await col<{ message: string; expiresAt: number } & { _id: string }>(COLL.authChallenges);
-    const doc = await c.findOne({ _id: normalizedAddress } as Filter<{ message: string; expiresAt: number } & { _id: string }>);
-    if (!doc) return null;
-    return { message: doc.message, expiresAt: doc.expiresAt };
-  },
-  async setAuthChallenge(normalizedAddress, challenge) {
-    const c = await col<{ message: string; expiresAt: number } & { _id: string }>(COLL.authChallenges);
-    await c.updateOne(
-      { _id: normalizedAddress } as Filter<{ _id: string }>,
-      { $set: { ...challenge } },
-      { upsert: true }
-    );
-  },
-  async deleteAuthChallenge(normalizedAddress) {
-    const c = await col<{ _id: string }>(COLL.authChallenges);
-    await c.deleteOne({ _id: normalizedAddress } as Filter<{ _id: string }>);
   },
 };

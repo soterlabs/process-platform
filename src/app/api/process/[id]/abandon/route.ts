@@ -1,10 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
+import { PERMISSIONS } from "@/lib/permissions";
+import { requirePermission } from "@/lib/require-permission";
 import { executionService } from "@/services/execution-service";
 
 export async function POST(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: { id: string } }
 ) {
+  const err = requirePermission(request, PERMISSIONS.PROCESSES_WRITE, {
+    message: "processes:write permission required",
+  });
+  if (err) return err;
   try {
     const { id } = params;
     const process = await executionService.completeProcessById(id);

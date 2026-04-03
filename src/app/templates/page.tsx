@@ -4,8 +4,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { authFetch } from "@/lib/auth-client";
-import { useMe } from "@/lib/use-me";
-import { hasRole, ROLES } from "@/lib/roles";
+import { useMe } from "@/hooks/use-me";
+import { hasPermission, PERMISSIONS } from "@/lib/permissions";
 import type { Template } from "@/entities/template";
 
 function uniqueCloneKey(baseKey: string, existingKeys: string[]): string {
@@ -95,7 +95,7 @@ export default function TemplatesPage() {
   const [cloneError, setCloneError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!meLoading && me && !hasRole(me.roles, ROLES.ADMIN)) {
+    if (!meLoading && me && !hasPermission(me.permissions, PERMISSIONS.TEMPLATES_READ)) {
       router.replace("/");
     }
   }, [meLoading, me, router]);
@@ -148,7 +148,7 @@ export default function TemplatesPage() {
     };
   }, []);
 
-  if (meLoading || (me && !hasRole(me.roles, ROLES.ADMIN)) || loading) {
+  if (meLoading || (me && !hasPermission(me.permissions, PERMISSIONS.TEMPLATES_READ)) || loading) {
     return (
       <div className="mx-auto flex max-w-4xl flex-col items-center justify-center gap-4 px-6 py-24">
         <div

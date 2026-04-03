@@ -1,9 +1,24 @@
+import { decodeJwt } from "jose";
 import type { NextRequest } from "next/server";
+import {
+  authenticationService,
+  type AuthPrincipal,
+} from "@/services/auth";
+
+export type { AuthPrincipal };
 
 /**
- * Read user id set by middleware after JWT verification.
- * Use in API routes that need the current user. Middleware guarantees this is set for protected routes.
+ * Read principal from the Bearer JWT (middleware already validated via verifySessionToken).
  */
-export function getUserIdFromRequest(request: NextRequest): string | null {
-  return request.headers.get("x-user-id");
+export function getPrincipalFromRequest(request: NextRequest): AuthPrincipal | null {
+  const auth = request.headers.get("authorization");
+  if (!auth?.startsWith("Bearer ")) return null;
+  const token = auth.slice(7).trim();
+  if (!token) return null;
+  try {
+    const payload = decodeJwt(token);
+    return authenticationService.principalFromJwtPayload(payload);
+  } catch {
+    return null;
+  }
 }

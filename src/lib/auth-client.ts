@@ -1,15 +1,16 @@
 /**
  * Client-side auth: token in localStorage, helpers for fetch and redirect.
- * Roles are read from the JWT payload (set at login); no verification on client.
+ * Permission strings come from the JWT `permissions` claim; no verification on client.
  */
 
-const TOKEN_KEY = "process-platform-token";
+/** Must match the key used in `/api/auth/callback` handoff HTML. */
+export const AUTH_TOKEN_STORAGE_KEY = "process-platform-token";
 
-export type TokenPayload = { userId: string; roles: string[] };
+export type TokenPayload = { userId: string; permissions: string[]; email?: string };
 
 /**
- * Decode JWT payload without verifying (client has no secret). Returns null if invalid.
- * Used to read userId and roles for UI. Backend always verifies the token.
+ * Decode JWT payload without verifying (client cannot verify RS256). Returns null if invalid.
+ * Auth0 tokens use `sub`; legacy minted tokens use `userId`. Backend verifies Bearer tokens.
  */
 export function decodeTokenPayload(token: string): TokenPayload | null {
   try {
@@ -19,13 +20,32 @@ export function decodeTokenPayload(token: string): TokenPayload | null {
     const base64 = base64url.replace(/-/g, "+").replace(/_/g, "/");
     const padded = base64.padEnd(base64.length + ((4 - (base64.length % 4)) % 4), "=");
     const json = atob(padded);
-    const data = JSON.parse(json) as { userId?: unknown; roles?: unknown };
-    const userId = data.userId;
-    if (typeof userId !== "string" || !userId) return null;
-    const roles = Array.isArray(data.roles)
-      ? (data.roles as string[]).filter((r) => typeof r === "string")
-      : [];
-    return { userId, roles };
+    const data = JSON.parse(json) as Record<string, unknown>;
+    const sub = data.sub;
+    const legacyId = data.userId;
+    const userId =
+      typeof sub === "string" && sub
+        ? sub
+        : typeof legacyId === "string" && legacyId
+          ? legacyId
+          : null;
+    if (!userId) return null;
+    let permissions: string[] = [];
+    if (Array.isArray(data.permissions)) {
+      permissions = data.permissions.filter((p): p is string => typeof p === "string");
+    } else if (Array.isArray(data.roles)) {
+      permissions = data.roles.filter((p): p is string => typeof p === "string");
+    }
+    const emailClaim =
+      process.env.NEXT_PUBLIC_AUTH0_EMAIL_CLAIM?.trim() || process.env.AUTH0_EMAIL_CLAIM?.trim();
+    const fromClaim =
+      emailClaim && typeof data[emailClaim] === "string"
+        ? (data[emailClaim] as string).trim()
+        : "";
+    const emailRaw = fromClaim || data.email;
+    const email =
+      typeof emailRaw === "string" && emailRaw.trim() ? emailRaw.trim() : undefined;
+    return email ? { userId, permissions, email } : { userId, permissions };
   } catch {
     return null;
   }
@@ -33,17 +53,17 @@ export function decodeTokenPayload(token: string): TokenPayload | null {
 
 export function getToken(): string | null {
   if (typeof window === "undefined") return null;
-  return localStorage.getItem(TOKEN_KEY);
+  return localStorage.getItem(AUTH_TOKEN_STORAGE_KEY);
 }
 
 export function setToken(token: string): void {
   if (typeof window === "undefined") return;
-  localStorage.setItem(TOKEN_KEY, token);
+  localStorage.setItem(AUTH_TOKEN_STORAGE_KEY, token);
 }
 
 export function removeToken(): void {
   if (typeof window === "undefined") return;
-  localStorage.removeItem(TOKEN_KEY);
+  localStorage.removeItem(AUTH_TOKEN_STORAGE_KEY);
 }
 
 export function authHeaders(): Record<string, string> {

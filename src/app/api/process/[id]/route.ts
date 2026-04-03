@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getUserIdFromRequest } from "@/lib/auth-request";
+import { getPrincipalFromRequest } from "@/lib/auth-request";
+import { PERMISSIONS } from "@/lib/permissions";
+import { requirePermission } from "@/lib/require-permission";
 import { authorizationService } from "@/services/auth";
 import { executionService } from "@/services/execution-service";
 
@@ -7,7 +9,12 @@ export async function GET(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  const userId = getUserIdFromRequest(request)!;
+  const denied = requirePermission(request, PERMISSIONS.PROCESSES_READ, {
+    message: "processes:read permission required",
+  });
+  if (denied) return denied;
+  const principal = getPrincipalFromRequest(request)!;
+  const { userId, permissions } = principal;
   try {
     const { id } = params;
     const result = await executionService.getProcessState(id);
@@ -17,7 +24,11 @@ export async function GET(
         { status: 404 }
       );
     }
-    const canActOnCurrentStep = await authorizationService.canUserActOnCurrentStep(result, userId);
+    const canActOnCurrentStep = authorizationService.canUserActOnCurrentStep(
+      result,
+      userId,
+      permissions
+    );
     return NextResponse.json({ ...result, canActOnCurrentStep });
   } catch (err) {
     console.error(err);

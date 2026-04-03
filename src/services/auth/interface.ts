@@ -1,30 +1,56 @@
+import type { JWTPayload } from "jose";
 import type { Process } from "@/entities/process";
 
 export const AuthenticationServiceSymbol = Symbol.for("AuthenticationService");
 export const AuthorizationServiceSymbol = Symbol.for("AuthorizationService");
 
+/** Verified session identity; `permissions` are Auth0 RBAC permission strings from the access token. */
+export type AuthPrincipal = {
+  userId: string;
+  permissions: string[];
+  email?: string;
+};
+
 export interface IAuthenticationService {
-  createChallenge(walletAddress: string): Promise<{ message: string }>;
-  verifyAndIssueToken(
-    walletAddress: string,
-    message: string,
-    signature: string
-  ): Promise<{ token: string; userId: string }>;
-  verifyGoogleIdTokenAndIssueToken(idToken: string): Promise<{ token: string; userId: string }>;
-  verifyToken(token: string): Promise<{ userId: string; roles: string[] } | null>;
+  /** Cryptographically verify the Bearer session token and return the principal. */
+  verifySessionToken(token: string): Promise<AuthPrincipal | null>;
+  /**
+   * Map a decoded JWT payload to principal (e.g. after decodeJwt in API handlers).
+   * Must match the same rules as verifySessionToken for that provider.
+   */
+  principalFromJwtPayload(payload: JWTPayload): AuthPrincipal | null;
+  /** OAuth2 authorization-code callback: exchange code, return token + redirect path. */
+  completeOAuthLogin(params: {
+    code: string;
+    state: string;
+    redirectUri: string;
+  }): Promise<{ token: string; returnUrl: string }>;
+  /**
+   * Start OAuth login: return URL to redirect the browser to the IdP.
+   * `connection` (e.g. Auth0 social connection name `google-oauth2`) skips the hosted login chooser and sends users straight to that IdP.
+   */
+  buildOAuthLoginUrl(
+    returnUrl: string,
+    options?: { connection?: string }
+  ): Promise<string>;
 }
 
 export interface IAuthorizationService {
-  getUserRoles(userId: string): Promise<string[]>;
-  userHasRole(userId: string, role: string): Promise<boolean>;
+  userHasPermission(permissions: string[], permission: string): boolean;
   canUserActOnStep(
-    userId: string,
+    permissions: string[],
+    /** Template field: permission strings required to act on this step (empty = any authenticated user). */
     allowedRoles: string[] | undefined
-  ): Promise<boolean>;
+  ): boolean;
   checkStepAuth(
     processId: string,
     stepId: string,
-    userId: string | null
+    userId: string | null,
+    permissions: string[]
   ): Promise<{ authorized: boolean; status?: number; body?: unknown }>;
-  canUserActOnCurrentStep(process: Process, userId: string | null): Promise<boolean>;
+  canUserActOnCurrentStep(
+    process: Process,
+    userId: string | null,
+    permissions: string[]
+  ): boolean;
 }

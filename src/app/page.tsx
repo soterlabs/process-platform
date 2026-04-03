@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useMe } from "@/lib/use-me";
-import { hasRole, ROLES } from "@/lib/roles";
+import { useMe } from "@/hooks/use-me";
+import { hasPermission, PERMISSIONS } from "@/lib/permissions";
 
 function TemplatesIcon() {
   return (
@@ -24,25 +24,6 @@ function TemplatesIcon() {
         strokeLinejoin="round"
         strokeWidth={1.5}
         d="M13 3v6a1 1 0 01-1 1H6"
-      />
-    </svg>
-  );
-}
-
-function UsersIcon() {
-  return (
-    <svg
-      className="h-16 w-16 text-sky-400/90"
-      fill="none"
-      stroke="currentColor"
-      viewBox="0 0 24 24"
-      aria-hidden
-    >
-      <path
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeWidth={1.5}
-        d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z"
       />
     </svg>
   );
@@ -75,7 +56,7 @@ function ProcessesIcon() {
 
 export default function HomePage() {
   const { me, loading } = useMe();
-  const showTemplates = hasRole(me?.roles, ROLES.ADMIN);
+  const showTemplates = hasPermission(me?.permissions, PERMISSIONS.TEMPLATES_READ);
 
   return (
     <div className="flex min-h-[calc(100vh-3.5rem)] flex-col items-center justify-center px-6 py-12">
@@ -96,26 +77,6 @@ export default function HomePage() {
             </p>
             <span className="mt-6 text-sm font-medium text-amber-400 opacity-0 transition group-hover:opacity-100">
               Open templates →
-            </span>
-          </Link>
-        )}
-
-        {!loading && showTemplates && (
-          <Link
-            href="/users"
-            className="group flex flex-col items-center justify-center rounded-2xl border-2 border-stone-700 bg-stone-900/80 p-12 shadow-xl transition hover:border-sky-500/50 hover:bg-stone-800/80 hover:shadow-sky-500/5 focus:outline-none focus:ring-2 focus:ring-sky-500/50 focus:ring-offset-2 focus:ring-offset-stone-950"
-          >
-            <span className="mb-6 transition group-hover:scale-105">
-              <UsersIcon />
-            </span>
-            <h2 className="text-xl font-semibold tracking-tight text-stone-100">
-              Users
-            </h2>
-            <p className="mt-2 max-w-[220px] text-center text-sm text-stone-400">
-              Manage users, create accounts, add to groups
-            </p>
-            <span className="mt-6 text-sm font-medium text-sky-400 opacity-0 transition group-hover:opacity-100">
-              Open users →
             </span>
           </Link>
         )}

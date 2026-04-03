@@ -1,12 +1,9 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { verifyToken } from "@/lib/jwt";
+/** Import the module directly so Edge middleware does not pull storage/Inversify via `@/services/auth`. */
+import { authenticationService } from "@/services/auth/authentication";
 
-const PUBLIC_API_PATHS = [
-  "/api/auth/challenge",
-  "/api/auth/verify",
-  "/api/auth/verify-google",
-];
+const PUBLIC_API_PATHS = ["/api/auth/login", "/api/auth/callback"];
 
 export async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
@@ -25,19 +22,12 @@ export async function middleware(request: NextRequest) {
   if (!token) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-  const payload = await verifyToken(token);
+  const payload = await authenticationService.verifySessionToken(token);
   if (!payload) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const requestHeaders = new Headers(request.headers);
-  const headerUserId = request.headers.get("x-user-id")?.trim();
-  const effectiveUserId =
-    headerUserId && headerUserId.length > 0 ? headerUserId : payload.userId;
-  requestHeaders.set("x-user-id", effectiveUserId);
-  return NextResponse.next({
-    request: { headers: requestHeaders },
-  });
+  return NextResponse.next();
 }
 
 export const config = {

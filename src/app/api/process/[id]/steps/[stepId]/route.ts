@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getUserIdFromRequest } from "@/lib/auth-request";
+import { getPrincipalFromRequest } from "@/lib/auth-request";
+import { PERMISSIONS } from "@/lib/permissions";
+import { requirePermission } from "@/lib/require-permission";
 import { authorizationService } from "@/services/auth";
 import { executionService } from "@/services/execution-service";
 
@@ -9,10 +11,15 @@ export async function PUT(
   request: NextRequest,
   { params }: { params: { id: string; stepId: string } }
 ) {
-  const userId = getUserIdFromRequest(request)!;
+  const denied = requirePermission(request, PERMISSIONS.PROCESSES_WRITE, {
+    message: "processes:write permission required",
+  });
+  if (denied) return denied;
+  const principal = getPrincipalFromRequest(request)!;
+  const { userId, permissions } = principal;
   try {
     const { id, stepId } = params;
-    const auth = await authorizationService.checkStepAuth(id, stepId, userId);
+    const auth = await authorizationService.checkStepAuth(id, stepId, userId, permissions);
     if (!auth.authorized) {
       return NextResponse.json(auth.body, { status: auth.status });
     }

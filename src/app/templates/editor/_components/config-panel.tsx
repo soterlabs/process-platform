@@ -30,7 +30,9 @@ export function ConfigPanel({
         <p className="mb-3 text-sm text-stone-500">Select a step to configure it.</p>
         {onUpdateTemplateAllowedRoles && (
           <label className="mb-4 block">
-            <span className="text-xs text-stone-500">Template roles (who can start this process, comma-separated, empty = any)</span>
+            <span className="text-xs text-stone-500">
+              Permissions to start (comma-separated Auth0 permission names, empty = any authenticated user)
+            </span>
             <input
               type="text"
               value={(templateAllowedRoles ?? []).join(", ")}
@@ -42,7 +44,7 @@ export function ConfigPanel({
                     .filter(Boolean)
                 )
               }
-              placeholder="e.g. Prime, OEA"
+              placeholder="e.g. processes:write"
               className="mt-0.5 w-full rounded border border-stone-600 bg-stone-800 px-2 py-1.5 text-sm text-stone-200"
             />
           </label>
@@ -167,7 +169,9 @@ export function ConfigPanel({
         {d.type === "input" && (
           <>
             <label className="block">
-              <span className="text-xs text-stone-500">Roles that can run this step (comma-separated, empty = any)</span>
+              <span className="text-xs text-stone-500">
+                Permissions that can run this step (comma-separated, empty = any authenticated user)
+              </span>
               <input
                 type="text"
                 value={(d.allowedRoles ?? []).join(", ")}
@@ -179,7 +183,7 @@ export function ConfigPanel({
                       .filter(Boolean),
                   })
                 }
-                placeholder="e.g. admin, editor"
+                placeholder="e.g. processes:write"
                 className="mt-0.5 w-full rounded border border-stone-600 bg-stone-800 px-2 py-1.5 text-sm text-stone-200"
               />
             </label>

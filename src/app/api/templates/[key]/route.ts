@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import type { Template } from "@/entities/template";
-import { ROLES } from "@/lib/roles";
-import { requireRole } from "@/lib/require-role";
+import { PERMISSIONS } from "@/lib/permissions";
+import { requirePermission } from "@/lib/require-permission";
 import { storageService } from "@/services/storage";
 
 type PutTemplateBody = Template;
@@ -10,7 +10,9 @@ export async function GET(
   request: NextRequest,
   { params }: { params: { key: string } }
 ) {
-  const err = await requireRole(request, ROLES.ADMIN, { message: "Admin role required to view templates" });
+  const err = requirePermission(request, PERMISSIONS.TEMPLATES_READ, {
+    message: "templates:read permission required to view templates",
+  });
   if (err) return err;
   try {
     const { key } = params;
@@ -32,8 +34,8 @@ export async function PUT(
   request: NextRequest,
   { params }: { params: { key: string } }
 ) {
-  const err = await requireRole(request, ROLES.ADMIN, {
-    message: "Admin role required to create or edit templates",
+  const err = requirePermission(request, PERMISSIONS.TEMPLATES_WRITE, {
+    message: "templates:write permission required to create or edit templates",
   });
   if (err) return err;
   try {

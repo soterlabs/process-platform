@@ -1,10 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
+import { PERMISSIONS } from "@/lib/permissions";
+import { requirePermission } from "@/lib/require-permission";
 import { executionService } from "@/services/execution-service";
 import { storageService } from "@/services/storage";
 
 type StartProcessBody = { templateKey: string };
 
-export async function GET(_request: NextRequest) {
+export async function GET(request: NextRequest) {
+  const err = requirePermission(request, PERMISSIONS.PROCESSES_READ, {
+    message: "processes:read permission required",
+  });
+  if (err) return err;
   try {
     const processes = await storageService.listProcesses();
     return NextResponse.json(processes);
@@ -18,6 +24,10 @@ export async function GET(_request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  const err = requirePermission(request, PERMISSIONS.PROCESSES_WRITE, {
+    message: "processes:write permission required",
+  });
+  if (err) return err;
   try {
     const { templateKey } = (await request.json()) as StartProcessBody;
     const result = await executionService.startProcess(templateKey);

@@ -4,48 +4,29 @@ import { getCurrentProcessStep, getProcessStepById, getStepByKey } from "@/servi
 import { storageService } from "@/services/storage";
 import type { IAuthorizationService } from "./interface";
 
-async function getUserRoles(userId: string): Promise<string[]> {
-  const memberships = await storageService.listGroupMemberships();
-  const userMemberships = memberships.filter((m) => m.userId === userId);
-  const roleSet = new Set<string>();
-  for (const m of userMemberships) {
-    const group = await storageService.getGroup(m.groupId);
-    if (!group) continue;
-    for (const r of group.roles) roleSet.add(r);
-  }
-  return Array.from(roleSet);
+function userHasPermission(permissions: string[], permission: string): boolean {
+  if (!permissions?.length || !permission) return false;
+  const lower = permission.toLowerCase();
+  return permissions.some((p) => p.toLowerCase() === lower);
 }
 
-async function userHasRole(userId: string, role: string): Promise<boolean> {
-  const roles = await getUserRoles(userId);
-  return roles.some((r) => r.toLowerCase() === role.toLowerCase());
-}
-
-async function canUserActOnStep(
-  userId: string,
+function canUserActOnStep(
+  permissions: string[],
   allowedRoles: string[] | undefined
-): Promise<boolean> {
+): boolean {
   if (!allowedRoles || allowedRoles.length === 0) return true;
-  const memberships = await storageService.listGroupMemberships();
-  const userMemberships = memberships.filter((m) => m.userId === userId);
   const allowedSet = new Set(allowedRoles.map((r) => r.toLowerCase()));
-  for (const m of userMemberships) {
-    const group = await storageService.getGroup(m.groupId);
-    if (!group) continue;
-    for (const role of group.roles) {
-      if (allowedSet.has(role.toLowerCase())) return true;
-    }
-  }
-  return false;
+  return permissions.some((p) => allowedSet.has(p.toLowerCase()));
 }
 
 async function checkStepAuth(
   processId: string,
   stepId: string,
-  userId: string | null
+  userId: string | null,
+  permissions: string[]
 ): Promise<{ authorized: boolean; status?: number; body?: unknown }> {
   if (!userId) {
-    return { authorized: false, status: 401, body: { error: "Missing x-user-id header" } };
+    return { authorized: false, status: 401, body: { error: "Missing user id" } };
   }
   const process = await storageService.getProcessState(processId);
   if (!process) {
@@ -63,29 +44,29 @@ async function checkStepAuth(
     templateStep.type === "input"
       ? (templateStep as InputTemplateStep).allowedRoles
       : undefined;
-  const allowed = await canUserActOnStep(userId, allowedRoles);
+  const allowed = canUserActOnStep(permissions, allowedRoles);
   if (!allowed) {
     return { authorized: false, status: 403, body: { error: "Not authorized to act on this step" } };
   }
   return { authorized: true };
 }
 
-async function canUserActOnCurrentStep(
+function canUserActOnCurrentStep(
   process: Process,
-  userId: string | null
-): Promise<boolean> {
+  userId: string | null,
+  permissions: string[]
+): boolean {
   if (!userId) return false;
   if (process.status !== "running") return false;
   const currentStep = getCurrentProcessStep(process.steps);
   if (!currentStep) return false;
   const templateStep = getStepByKey(process.template, currentStep.stepKey);
   if (!templateStep || templateStep.type !== "input") return false;
-  return canUserActOnStep(userId, (templateStep as InputTemplateStep).allowedRoles);
+  return canUserActOnStep(permissions, (templateStep as InputTemplateStep).allowedRoles);
 }
 
 export const authorizationService: IAuthorizationService = {
-  getUserRoles,
-  userHasRole,
+  userHasPermission,
   canUserActOnStep,
   checkStepAuth,
   canUserActOnCurrentStep,

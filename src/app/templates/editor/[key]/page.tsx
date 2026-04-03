@@ -30,8 +30,8 @@ import {
 } from "../_lib/template-flow";
 import type { Template } from "@/entities/template";
 import { authFetch } from "@/lib/auth-client";
-import { useMe } from "@/lib/use-me";
-import { hasRole, ROLES } from "@/lib/roles";
+import { useMe } from "@/hooks/use-me";
+import { hasPermission, PERMISSIONS } from "@/lib/permissions";
 
 function AutomaticStepNode({ data }: { data: FlowNodeData }) {
   return (
@@ -133,7 +133,7 @@ function TemplateEditorInner() {
   const { screenToFlowPosition } = useReactFlow();
 
   useEffect(() => {
-    if (!meLoading && me && !hasRole(me.roles, ROLES.ADMIN)) {
+    if (!meLoading && me && !hasPermission(me.permissions, PERMISSIONS.TEMPLATES_WRITE)) {
       router.replace("/");
     }
   }, [meLoading, me, router]);
@@ -291,7 +291,7 @@ function TemplateEditorInner() {
     }
   }, [templateKey, templateName, nodes, edges, resultViewControls, templateAllowedRoles, isNew, router]);
 
-  if (meLoading || (me && !hasRole(me.roles, ROLES.ADMIN))) {
+  if (meLoading || (me && !hasPermission(me.permissions, PERMISSIONS.TEMPLATES_WRITE))) {
     return (
       <div className="flex h-screen flex-col items-center justify-center gap-4 bg-stone-950">
         <div
