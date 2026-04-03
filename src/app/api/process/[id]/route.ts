@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getPrincipalFromRequest } from "@/lib/auth-request";
 import { PERMISSIONS } from "@/lib/permissions";
 import { requirePermission } from "@/lib/require-permission";
 import { authorizationService } from "@/services/auth";
@@ -8,11 +9,11 @@ export async function GET(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  const gate = await requirePermission(request, PERMISSIONS.PROCESSES_READ, {
+  const denied = requirePermission(request, PERMISSIONS.PROCESSES_READ, {
     message: "processes:read permission required",
   });
-  if (gate instanceof NextResponse) return gate;
-  const principal = gate;
+  if (denied) return denied;
+  const principal = getPrincipalFromRequest(request)!;
   const { userId, permissions } = principal;
   try {
     const { id } = params;

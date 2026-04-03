@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getPrincipalFromRequest } from "@/lib/auth-request";
 import { PERMISSIONS } from "@/lib/permissions";
 import { requirePermission } from "@/lib/require-permission";
 import { authorizationService } from "@/services/auth";
@@ -10,11 +11,11 @@ export async function PUT(
   request: NextRequest,
   { params }: { params: { id: string; stepId: string } }
 ) {
-  const gate = await requirePermission(request, PERMISSIONS.PROCESSES_WRITE, {
+  const denied = requirePermission(request, PERMISSIONS.PROCESSES_WRITE, {
     message: "processes:write permission required",
   });
-  if (gate instanceof NextResponse) return gate;
-  const principal = gate;
+  if (denied) return denied;
+  const principal = getPrincipalFromRequest(request)!;
   const { userId, permissions } = principal;
   try {
     const { id, stepId } = params;

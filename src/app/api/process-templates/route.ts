@@ -8,10 +8,10 @@ import { storageService } from "@/services/storage";
  * For full template definitions / editing, use GET/PUT /api/templates (templates:read / templates:write).
  */
 export async function GET(request: NextRequest) {
-  const gate = await requirePermission(request, PERMISSIONS.PROCESSES_READ, {
+  const err = requirePermission(request, PERMISSIONS.PROCESSES_READ, {
     message: "processes:read permission required",
   });
-  if (gate instanceof NextResponse) return gate;
+  if (err) return err;
   try {
     const templates = await storageService.listTemplates();
     return NextResponse.json(templates);

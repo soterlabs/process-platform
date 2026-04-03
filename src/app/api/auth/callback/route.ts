@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { AUTH_TOKEN_STORAGE_KEY } from "@/lib/auth-client";
-import { serverEnv } from "@/lib/server-env";
 import { authenticationService } from "@/services/auth";
 import { safeReturnPath } from "@/services/auth/authentication";
 
@@ -37,7 +36,7 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  const base = serverEnv("APP_BASE_URL").replace(/\/$/, "");
+  const base = process.env.APP_BASE_URL?.replace(/\/$/, "");
   if (!base) {
     return NextResponse.redirect(
       new URL("/login?error=app_base_url_missing", request.url)

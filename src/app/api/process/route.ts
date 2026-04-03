@@ -7,10 +7,10 @@ import { storageService } from "@/services/storage";
 type StartProcessBody = { templateKey: string };
 
 export async function GET(request: NextRequest) {
-  const gate = await requirePermission(request, PERMISSIONS.PROCESSES_READ, {
+  const err = requirePermission(request, PERMISSIONS.PROCESSES_READ, {
     message: "processes:read permission required",
   });
-  if (gate instanceof NextResponse) return gate;
+  if (err) return err;
   try {
     const processes = await storageService.listProcesses();
     return NextResponse.json(processes);
@@ -24,10 +24,10 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const gate = await requirePermission(request, PERMISSIONS.PROCESSES_WRITE, {
+  const err = requirePermission(request, PERMISSIONS.PROCESSES_WRITE, {
     message: "processes:write permission required",
   });
-  if (gate instanceof NextResponse) return gate;
+  if (err) return err;
   try {
     const { templateKey } = (await request.json()) as StartProcessBody;
     const result = await executionService.startProcess(templateKey);
