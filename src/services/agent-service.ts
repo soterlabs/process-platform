@@ -2,6 +2,8 @@
  * Agent service: calls Google Gemini with a system prompt and context from previous steps.
  * API key from env: GEMINI_API_KEY
  */
+import { serverEnv } from "@/lib/server-env";
+
 const GEMINI_API_BASE = "https://generativelanguage.googleapis.com/v1beta";
 const MODEL = "gemini-2.0-flash";
 
@@ -16,7 +18,7 @@ async function callGemini(
   systemPrompt: string,
   userMessage: string
 ): Promise<string> {
-  const apiKey = process.env.GEMINI_API_KEY;
+  const apiKey = serverEnv("GEMINI_API_KEY");
   if (!apiKey) {
     throw new Error("GEMINI_API_KEY is not set");
   }

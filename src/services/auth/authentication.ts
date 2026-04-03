@@ -3,15 +3,16 @@
  * (audience = AUTH0_AUDIENCE) so RBAC `permissions` are present. Not the ID token.
  */
 import * as jose from "jose";
+import { serverEnv } from "@/lib/server-env";
 import type { IAuthenticationService, AuthPrincipal } from "./interface";
 
 const STATE_EXPIRY = "10m";
 
-const AUTH0_DOMAIN = process.env.AUTH0_DOMAIN ?? "";
-const AUTH0_AUDIENCE = process.env.AUTH0_AUDIENCE ?? "";
-const AUTH0_CLIENT_ID = process.env.AUTH0_CLIENT_ID ?? "";
-const AUTH0_CLIENT_SECRET = process.env.AUTH0_CLIENT_SECRET ?? "";
-const AUTH0_SECRET = process.env.AUTH0_SECRET ?? "";
+const AUTH0_DOMAIN = serverEnv("AUTH0_DOMAIN");
+const AUTH0_AUDIENCE = serverEnv("AUTH0_AUDIENCE");
+const AUTH0_CLIENT_ID = serverEnv("AUTH0_CLIENT_ID");
+const AUTH0_CLIENT_SECRET = serverEnv("AUTH0_CLIENT_SECRET");
+const AUTH0_SECRET = serverEnv("AUTH0_SECRET");
 
 /** Used for OAuth authorize + token exchange; list missing vars so misconfig is obvious. */
 function missingAuth0OAuthEnv(): string[] {
@@ -54,8 +55,8 @@ function normalizePermissionsFromPayload(payload: jose.JWTPayload): string[] {
 
 function emailFromPayload(payload: jose.JWTPayload): string | undefined {
   const claim =
-    process.env.NEXT_PUBLIC_AUTH0_EMAIL_CLAIM?.trim() ||
-    process.env.AUTH0_EMAIL_CLAIM?.trim();
+    serverEnv("NEXT_PUBLIC_AUTH0_EMAIL_CLAIM").trim() ||
+    serverEnv("AUTH0_EMAIL_CLAIM").trim();
   if (claim) {
     const v = payload[claim];
     if (typeof v === "string" && v.trim()) return v.trim();
@@ -180,7 +181,7 @@ async function buildOAuthLoginUrl(
   options?: { connection?: string }
 ): Promise<string> {
   assertAuth0OAuthEnv();
-  const base = process.env.APP_BASE_URL?.replace(/\/$/, "");
+  const base = serverEnv("APP_BASE_URL").replace(/\/$/, "");
   if (!base) {
     throw new Error("APP_BASE_URL is not configured.");
   }
