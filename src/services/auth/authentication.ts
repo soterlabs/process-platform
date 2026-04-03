@@ -13,6 +13,25 @@ const AUTH0_CLIENT_ID = process.env.AUTH0_CLIENT_ID ?? "";
 const AUTH0_CLIENT_SECRET = process.env.AUTH0_CLIENT_SECRET ?? "";
 const AUTH0_SECRET = process.env.AUTH0_SECRET ?? "";
 
+/** Used for OAuth authorize + token exchange; list missing vars so misconfig is obvious. */
+function missingAuth0OAuthEnv(): string[] {
+  const m: string[] = [];
+  if (!AUTH0_DOMAIN) m.push("AUTH0_DOMAIN");
+  if (!AUTH0_AUDIENCE) m.push("AUTH0_AUDIENCE");
+  if (!AUTH0_CLIENT_ID) m.push("AUTH0_CLIENT_ID");
+  if (!AUTH0_CLIENT_SECRET) m.push("AUTH0_CLIENT_SECRET");
+  return m;
+}
+
+function assertAuth0OAuthEnv(): void {
+  const missing = missingAuth0OAuthEnv();
+  if (missing.length) {
+    throw new Error(
+      `Auth0 is not configured. Set these environment variables: ${missing.join(", ")}.`
+    );
+  }
+}
+
 function normalizeAuth0Domain(domain: string): string {
   return domain.replace(/^https?:\/\//, "").replace(/\/$/, "");
 }
@@ -112,11 +131,7 @@ async function exchangeAuth0AuthorizationCode(
   code: string,
   redirectUri: string
 ): Promise<{ access_token: string }> {
-  if (!AUTH0_DOMAIN || !AUTH0_CLIENT_ID || !AUTH0_CLIENT_SECRET || !AUTH0_AUDIENCE) {
-    throw new Error(
-      "Auth0 is not configured (AUTH0_DOMAIN, AUTH0_AUDIENCE, AUTH0_CLIENT_ID, AUTH0_CLIENT_SECRET)."
-    );
-  }
+  assertAuth0OAuthEnv();
   const domain = normalizeAuth0Domain(AUTH0_DOMAIN);
   /** Auth0 expects OAuth 2.0 form body; `audience` must match the authorize request. */
   const body = new URLSearchParams({
@@ -164,9 +179,7 @@ async function buildOAuthLoginUrl(
   returnUrl: string,
   options?: { connection?: string }
 ): Promise<string> {
-  if (!AUTH0_DOMAIN || !AUTH0_CLIENT_ID || !AUTH0_AUDIENCE) {
-    throw new Error("Auth0 is not configured (AUTH0_DOMAIN, AUTH0_AUDIENCE, AUTH0_CLIENT_ID).");
-  }
+  assertAuth0OAuthEnv();
   const base = process.env.APP_BASE_URL?.replace(/\/$/, "");
   if (!base) {
     throw new Error("APP_BASE_URL is not configured.");

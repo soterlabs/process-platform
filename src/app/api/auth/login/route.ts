@@ -12,6 +12,8 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(url);
   } catch (err) {
     const message = err instanceof Error ? err.message : "Login is not configured.";
-    return NextResponse.json({ error: message }, { status: 503 });
+    return NextResponse.redirect(
+      new URL(`/login?error=${encodeURIComponent(message)}`, request.url)
+    );
   }
 }
