@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getPrincipalFromRequest } from "@/lib/auth-request";
 
 export async function GET(request: NextRequest) {
-  const principal = getPrincipalFromRequest(request);
+  const principal = await getPrincipalFromRequest(request);
   if (!principal) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }

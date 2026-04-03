@@ -1,17 +1,17 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
-import { getPrincipalFromRequest } from "@/lib/auth-request";
+import { getPrincipalFromRequest, type AuthPrincipal } from "@/lib/auth-request";
 import { authorizationService } from "@/services/auth";
 
 /**
- * API routes: if the current user lacks the permission, returns 401/403; otherwise null.
+ * API routes: 401/403 response, or the verified principal (single JWT verification per call).
  */
-export function requirePermission(
+export async function requirePermission(
   request: NextRequest,
   permission: string,
   options?: { message?: string }
-): NextResponse | null {
-  const principal = getPrincipalFromRequest(request);
+): Promise<NextResponse | AuthPrincipal> {
+  const principal = await getPrincipalFromRequest(request);
   if (!principal) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
@@ -22,5 +22,5 @@ export function requirePermission(
       { status: 403 }
     );
   }
-  return null;
+  return principal;
 }

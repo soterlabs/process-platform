@@ -4,10 +4,10 @@ import { requirePermission } from "@/lib/require-permission";
 import { storageService } from "@/services/storage";
 
 export async function GET(request: NextRequest) {
-  const err = requirePermission(request, PERMISSIONS.TEMPLATES_READ, {
+  const gate = await requirePermission(request, PERMISSIONS.TEMPLATES_READ, {
     message: "templates:read permission required to list templates",
   });
-  if (err) return err;
+  if (gate instanceof NextResponse) return gate;
   try {
     const templates = await storageService.listTemplates();
     return NextResponse.json(templates);

@@ -10,10 +10,10 @@ export async function GET(
   request: NextRequest,
   { params }: { params: { key: string } }
 ) {
-  const err = requirePermission(request, PERMISSIONS.TEMPLATES_READ, {
+  const gate = await requirePermission(request, PERMISSIONS.TEMPLATES_READ, {
     message: "templates:read permission required to view templates",
   });
-  if (err) return err;
+  if (gate instanceof NextResponse) return gate;
   try {
     const { key } = params;
     const template = await storageService.getTemplate(key);
@@ -34,10 +34,10 @@ export async function PUT(
   request: NextRequest,
   { params }: { params: { key: string } }
 ) {
-  const err = requirePermission(request, PERMISSIONS.TEMPLATES_WRITE, {
+  const gate = await requirePermission(request, PERMISSIONS.TEMPLATES_WRITE, {
     message: "templates:write permission required to create or edit templates",
   });
-  if (err) return err;
+  if (gate instanceof NextResponse) return gate;
   try {
     const { key } = params;
     const body = (await request.json()) as PutTemplateBody;

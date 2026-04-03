@@ -7,10 +7,10 @@ export async function POST(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  const err = requirePermission(request, PERMISSIONS.PROCESSES_WRITE, {
+  const gate = await requirePermission(request, PERMISSIONS.PROCESSES_WRITE, {
     message: "processes:write permission required",
   });
-  if (err) return err;
+  if (gate instanceof NextResponse) return gate;
   try {
     const { id } = params;
     const process = await executionService.completeProcessById(id);
