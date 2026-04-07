@@ -3,17 +3,19 @@ import type { Template } from "@/entities/template";
 export const nfatHaloOnboardingTemplate: Template = {
   key: "nfat-halo-onboarding",
   name: "NFAT Halo Onboarding",
-  firstStepKey: "input_halo_details",
+  firstStepKey: "input_onboard",
   allowedRoles: ["GovOps"],
   steps: [
     {
-      key: "input_halo_details",
+      key: "input_onboard",
       type: "input",
-      title: "Halo Details",
+      title: "Onboard Halo",
       allowedRoles: ["GovOps"],
-      nextStepKey: "input_submit_documents",
-      confirmationMessage: "Halo details recorded. The Halo operator will now submit their compliance documents.",
+      nextStepKey: null,
+      confirmationMessage:
+        "Halo onboarding recorded. Call POST /halos and POST /halos/{haloId}/documents in the NFAT backend.",
       inputs: [
+        // ── Halo details ──
         {
           key: "name",
           type: "string",
@@ -29,30 +31,20 @@ export const nfatHaloOnboardingTemplate: Template = {
           type: "string",
           title: "Jurisdiction",
         },
-      ],
-    },
-    {
-      key: "input_submit_documents",
-      type: "input",
-      title: "Submit Compliance Documents",
-      allowedRoles: ["Halo"],
-      nextStepKey: "input_atlas_review",
-      confirmationMessage: "Documents submitted. The Atlas/GovOps team will review and make a decision.",
-      inputs: [
         {
-          key: "_view_halo_name",
-          type: "string",
-          title: "Halo",
-          readOnly: true,
-          defaultValue: "${input_halo_details.name}",
+          key: "atlasStatus",
+          type: "dropdown",
+          title: "Atlas Status",
+          values: ["PENDING", "ADMINISTERED", "REJECTED"],
         },
         {
-          key: "_view_instructions",
-          type: "string",
-          title: "Instructions",
-          readOnly: true,
-          defaultValue: "Submit file references (URLs or storage paths) for each required document type. All six document types are required for Atlas review.",
+          key: "admittedAt",
+          type: "datetime",
+          title: "Admitted At (if ADMINISTERED)",
+          visibleExpression: "input_onboard.atlasStatus === 'ADMINISTERED'",
         },
+
+        // ── Documents ──
         {
           key: "fileRef_legal",
           type: "string",
@@ -83,119 +75,8 @@ export const nfatHaloOnboardingTemplate: Template = {
           type: "string",
           title: "Economic / Financial Documentation",
         },
-      ],
-    },
-    {
-      key: "input_atlas_review",
-      type: "input",
-      title: "Atlas Review",
-      allowedRoles: ["GovOps"],
-      nextStepKey: "condition_atlas_decision",
-      inputs: [
-        {
-          key: "_view_name",
-          type: "string",
-          title: "Halo Name",
-          readOnly: true,
-          defaultValue: "${input_halo_details.name}",
-        },
-        {
-          key: "_view_legal_entity",
-          type: "string",
-          title: "Legal Entity",
-          readOnly: true,
-          defaultValue: "${input_halo_details.legalEntityName}",
-        },
-        {
-          key: "_view_jurisdiction",
-          type: "string",
-          title: "Jurisdiction",
-          readOnly: true,
-          defaultValue: "${input_halo_details.jurisdiction}",
-        },
-        {
-          key: "_view_doc_legal",
-          type: "string",
-          title: "Legal Documents",
-          readOnly: true,
-          defaultValue: "${input_submit_documents.fileRef_legal}",
-        },
-        {
-          key: "_view_doc_governance",
-          type: "string",
-          title: "Governance Documents",
-          readOnly: true,
-          defaultValue: "${input_submit_documents.fileRef_governance}",
-        },
-        {
-          key: "_view_doc_risk_model",
-          type: "string",
-          title: "Risk Model",
-          readOnly: true,
-          defaultValue: "${input_submit_documents.fileRef_risk_model}",
-        },
-        {
-          key: "_view_doc_technical",
-          type: "string",
-          title: "Technical Documentation",
-          readOnly: true,
-          defaultValue: "${input_submit_documents.fileRef_technical}",
-        },
-        {
-          key: "_view_doc_reporting",
-          type: "string",
-          title: "Reporting Framework",
-          readOnly: true,
-          defaultValue: "${input_submit_documents.fileRef_reporting}",
-        },
-        {
-          key: "_view_doc_economic",
-          type: "string",
-          title: "Economic / Financial Documentation",
-          readOnly: true,
-          defaultValue: "${input_submit_documents.fileRef_economic}",
-        },
-        {
-          key: "approved",
-          type: "bool",
-          title: "Approve this Halo for ADMINISTERED status?",
-        },
-        {
-          key: "rejectionReason",
-          type: "string-multiline",
-          title: "Rejection Reason",
-          visibleExpression: "input_atlas_review.approved === false",
-        },
-      ],
-    },
-    {
-      key: "condition_atlas_decision",
-      type: "condition",
-      title: "Atlas Decision",
-      expression: "input_atlas_review.approved === true",
-      thenStepKey: "input_approved",
-      elseStepKey: "input_rejected",
-      nextStepKey: null,
-    },
-    {
-      key: "input_approved",
-      type: "input",
-      title: "Halo Approved",
-      allowedRoles: ["GovOps"],
-      nextStepKey: null,
-      inputs: [
-        {
-          key: "_view_instructions",
-          type: "string",
-          title: "Next Steps",
-          readOnly: true,
-          defaultValue: "The Halo has been approved. Create the halo in the NFAT system via POST /halos with atlasStatus: 'ADMINISTERED' and record the admittedAt date below.",
-        },
-        {
-          key: "admittedAt",
-          type: "datetime",
-          title: "Admitted At",
-        },
+
+        // ── Result ──
         {
           key: "nfatHaloId",
           type: "string",
@@ -203,32 +84,11 @@ export const nfatHaloOnboardingTemplate: Template = {
         },
       ],
     },
-    {
-      key: "input_rejected",
-      type: "input",
-      title: "Halo Rejected",
-      allowedRoles: ["Halo"],
-      nextStepKey: null,
-      inputs: [
-        {
-          key: "_view_reason",
-          type: "string",
-          title: "Rejection Reason from Atlas",
-          readOnly: true,
-          defaultValue: "${input_atlas_review.rejectionReason}",
-        },
-        {
-          key: "acknowledged",
-          type: "bool",
-          title: "I acknowledge this Halo application has been rejected",
-        },
-      ],
-    },
   ],
   resultViewControls: [
-    { data: "${input_halo_details.name}", title: "Halo Name" },
-    { data: "${input_halo_details.legalEntityName}", title: "Legal Entity" },
-    { data: "${input_approved.nfatHaloId}", title: "NFAT Halo ID" },
-    { data: "${input_approved.admittedAt}", title: "Admitted At" },
+    { data: "${input_onboard.name}", title: "Halo Name" },
+    { data: "${input_onboard.legalEntityName}", title: "Legal Entity" },
+    { data: "${input_onboard.atlasStatus}", title: "Atlas Status" },
+    { data: "${input_onboard.nfatHaloId}", title: "NFAT Halo ID" },
   ],
 };
