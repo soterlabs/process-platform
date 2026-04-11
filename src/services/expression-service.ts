@@ -3,11 +3,18 @@
  * Expressions are JavaScript (e.g. "context.foo.bar", "context.role === 'admin'").
  *
  * Security: we parse the string as an expression, validate the AST to allow only
- * side-effect-free expression nodes (no calls, assignment, new, etc.), then evaluate
- * with `context` and its keys in scope (e.g. context.foo or bare foo).
+ * side-effect-free expression nodes (no arbitrary calls; only keccak256,
+ * generatePayload, and makeAddressKey), then evaluate with `context` and its keys in scope.
  */
 
 import * as acorn from "acorn";
+import {
+  generatePayload as ethGeneratePayload,
+  keccak256 as ethKeccak256,
+  LIMIT_COLLECT,
+  LIMIT_SUBSCRIBE,
+  makeAddressKey as ethMakeAddressKey,
+} from "@/lib/eth-expression-vm";
 
 type EstreeExpression = acorn.Node & {
   type: string;
@@ -31,13 +38,45 @@ const ALLOWED_NODE_TYPES = new Set([
   "TemplateElement",
   "ChainExpression",
   "ParenthesizedExpression",
+  "CallExpression",
 ]);
+
+const ALLOWED_CALLEE_NAMES = new Set(["keccak256", "generatePayload", "makeAddressKey"]);
+
+const EXPR_GLOBALS: Record<string, unknown> = {
+  LIMIT_SUBSCRIBE,
+  LIMIT_COLLECT,
+  makeAddressKey: ethMakeAddressKey,
+};
 
 function walkAndValidate(node: EstreeExpression): void {
   if (!ALLOWED_NODE_TYPES.has(node.type)) {
     throw new Error(`Disallowed expression node: ${node.type}`);
   }
   switch (node.type) {
+    case "CallExpression": {
+      const c = node as EstreeExpression & {
+        callee: EstreeExpression;
+        arguments: EstreeExpression[];
+      };
+      if (c.callee.type !== "Identifier") {
+        throw new Error(
+          "Only direct calls to keccak256, generatePayload, or makeAddressKey are allowed"
+        );
+      }
+      const calleeName = (c.callee as EstreeExpression & { name: string }).name;
+      if (!ALLOWED_CALLEE_NAMES.has(calleeName)) {
+        throw new Error(`Disallowed callee: ${calleeName}`);
+      }
+      walkAndValidate(c.callee);
+      for (const arg of c.arguments) {
+        if ((arg as EstreeExpression).type === "SpreadElement") {
+          throw new Error("Spread arguments are not allowed");
+        }
+        walkAndValidate(arg as EstreeExpression);
+      }
+      break;
+    }
     case "ChainExpression":
       if (
         (node as EstreeExpression & { expression: EstreeExpression }).expression
@@ -287,6 +326,38 @@ function safeEval(
         (node as EstreeExpression & { expression: EstreeExpression }).expression,
         context
       );
+    case "CallExpression": {
+      const c = node as EstreeExpression & {
+        callee: EstreeExpression;
+        arguments: EstreeExpression[];
+      };
+      if (c.callee.type !== "Identifier") {
+        throw new Error(
+          "Only keccak256, generatePayload, and makeAddressKey calls are supported"
+        );
+      }
+      const calleeName = (c.callee as EstreeExpression & { name: string }).name;
+      const argValues = c.arguments.map((a) => safeEval(a as EstreeExpression, context));
+      if (calleeName === "keccak256") {
+        if (argValues.length !== 1) {
+          throw new Error(
+            'keccak256 expects one signature string, e.g. keccak256("subscribe(address)")'
+          );
+        }
+        return ethKeccak256(String(argValues[0]));
+      }
+      if (calleeName === "generatePayload") {
+        const [first, ...rest] = argValues;
+        return ethGeneratePayload(first, ...rest);
+      }
+      if (calleeName === "makeAddressKey") {
+        if (argValues.length !== 2) {
+          throw new Error("makeAddressKey expects (bytes32 key, address)");
+        }
+        return ethMakeAddressKey(argValues[0], argValues[1]);
+      }
+      throw new Error(`Unsupported callee: ${calleeName}`);
+    }
     case "TemplateElement":
       return (node as EstreeExpression & { value: { cooked: string } }).value
         .cooked;
@@ -342,7 +413,8 @@ export function evaluate(
     }
 
     walkAndValidate(ast);
-    return safeEval(ast, context);
+    const merged = { ...context, ...EXPR_GLOBALS };
+    return safeEval(ast, merged);
   } catch (err) {
     console.error("[expression-service] evaluate failed", {
       expression: trimmed,

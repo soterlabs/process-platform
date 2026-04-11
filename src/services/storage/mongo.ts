@@ -7,7 +7,10 @@ import type { Process } from "@/entities/process";
 import type { Template } from "@/entities/template";
 import { curveTopupTemplate } from "@/templates/curve-topup";
 import { ibPayoutsTemplate } from "@/templates/ib-payouts";
+import { nfatSubscribeTemplate } from "@/templates/nfat-subscribe";
+import { nfatSetupFacilityTemplate } from "@/templates/nfat-setup-facility";
 import type { IStorageService } from "./interface";
+import { nfatEnableFacilityForPrimeTemplate } from "@/templates/nfat-enable-facility-for-prime";
 
 const MONGO_URL = process.env.MONGO_URL ?? "";
 const DB_NAME = "process-platform";
@@ -38,7 +41,13 @@ function col<T extends object>(name: keyof typeof COLL): Promise<Collection<T>> 
 
 type DocWithStringId = { _id: string };
 
-const SEED_TEMPLATES: Template[] = [curveTopupTemplate, ibPayoutsTemplate];
+const SEED_TEMPLATES: Template[] = [
+  curveTopupTemplate,
+  ibPayoutsTemplate,
+  nfatSetupFacilityTemplate,
+  nfatEnableFacilityForPrimeTemplate,
+  nfatSubscribeTemplate,
+];
 
 async function ensureInitialTemplates(): Promise<void> {
   const c = await col<Template & DocWithStringId>(COLL.templates);

@@ -13,7 +13,13 @@ import {
   getProcessStepById,
   getStepByKey,
 } from "@/services/template-helpers";
+import { deserializeProcessContextNumericFields } from "@/lib/numeric-field";
 import { storageService } from "@/services/storage";
+
+/** Context with template `number` fields as bigint | string (same as UI / expressions). */
+function contextForEvaluation(process: Process): Record<string, unknown> {
+  return deserializeProcessContextNumericFields(process.template, process.context);
+}
 
 function pushStep(process: Process, stepKey: string): void {
   process.steps.push({
@@ -128,7 +134,11 @@ export const executionService = {
     if (!step) throw new Error(`Step not found: ${stepId}`);
     step.updatedUTC = new Date().toISOString();
     if (updatedById !== undefined) step.updatedById = updatedById;
-    let nextStepKey = getNextStepKey(process.template, step.stepKey, process.context);
+    let nextStepKey = getNextStepKey(
+      process.template,
+      step.stepKey,
+      contextForEvaluation(process)
+    );
     if (nextStepKey === null) {
       await this.completeProcess(process);
       return nextStepKey;
@@ -165,7 +175,7 @@ export const executionService = {
     if (templateStep.type === "automatic") {
       const newContext = runAutomaticStep(
         templateStep as AutomaticTemplateStep,
-        process.context
+        contextForEvaluation(process)
       );
       const contextKey = (templateStep as AutomaticTemplateStep).contextKey;
       const value = newContext[contextKey];
@@ -185,7 +195,7 @@ export const executionService = {
     if (templateStep.type === "condition") {
       const nextKey = runConditionalStep(
         templateStep as ConditionTemplateStep,
-        process.context
+        contextForEvaluation(process)
       );
       if (nextKey && getStepByKey(process.template, nextKey)) {
         pushStep(process, nextKey);
@@ -201,7 +211,7 @@ export const executionService = {
       const stepKey = currentStep.stepKey;
       const response = await agentService.runAgent({
         systemPrompt: requestStep.prompt ?? "",
-        context: process.context,
+        context: contextForEvaluation(process),
       });
       process.context[stepKey] = { response };
       const nextStepKey = requestStep.nextStepKey;

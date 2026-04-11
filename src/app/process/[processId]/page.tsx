@@ -4,6 +4,21 @@ import { useParams } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { authFetch } from "@/lib/auth-client";
+import {
+  generatePayload,
+  keccak256,
+  LIMIT_COLLECT,
+  LIMIT_SUBSCRIBE,
+  makeAddressKey,
+} from "@/lib/eth-expression-vm";
+import type { NumericFieldValue } from "@/lib/numeric-field";
+import {
+  deserializeProcessContextNumericFields,
+  numericFieldToFormString,
+  sanitizeNumericFormInput,
+  serializeNumericFieldFromForm,
+  withDeserializedNumericContext,
+} from "@/lib/numeric-field";
 import { evaluate } from "@/services/expression-service";
 import { DateTimePicker } from "./_components/DateTimePicker";
 
@@ -49,17 +64,53 @@ function getContextValue(context: Record<string, unknown>, path: string): unknow
   return stepData?.[fieldKey];
 }
 
+function contextValueToDisplayString(val: unknown): string {
+  if (val === undefined || val === null) return "";
+  if (typeof val === "string") return val;
+  if (typeof val === "boolean") return val ? "Yes" : "No";
+  if (typeof val === "bigint") return val.toString();
+  if (typeof val === "number") return Number.isFinite(val) ? String(val) : "";
+  if (typeof val === "object") return JSON.stringify(val);
+  return String(val);
+}
+
 /**
- * Evaluate a JavaScript expression with a limited scope (context + safe globals).
- * Used for {{ expression }} in templates. Returns string; on error returns "".
+ * Evaluate a JavaScript expression with a limited scope (context keys, keccak256,
+ * generatePayload, Date/Math/JSON). Used for {{ expression }} in templates.
+ * Returns string; on error returns "".
  */
+/** Must not collide with parameters passed into the template Function (avoids SyntaxError). */
+const TEMPLATE_EXPR_RESERVED_KEYS = new Set([
+  "context",
+  "keccak256",
+  "generatePayload",
+  "makeAddressKey",
+  "LIMIT_SUBSCRIBE",
+  "LIMIT_COLLECT",
+  "Date",
+  "Math",
+  "JSON",
+  "Number",
+  "String",
+  "Boolean",
+]);
+
 function evalTemplateExpression(
   expr: string,
   context: Record<string, unknown>
 ): string {
   try {
+    const keys = Object.keys(context).filter(
+      (k) => /^[a-zA-Z_$][\w$]*$/.test(k) && !TEMPLATE_EXPR_RESERVED_KEYS.has(k)
+    );
     const fn = new Function(
       "context",
+      "keccak256",
+      "generatePayload",
+      "makeAddressKey",
+      "LIMIT_SUBSCRIBE",
+      "LIMIT_COLLECT",
+      ...keys,
       "Date",
       "Math",
       "JSON",
@@ -68,20 +119,38 @@ function evalTemplateExpression(
       "Boolean",
       `"use strict"; return (${expr.trim()});`
     );
-    const result = fn(context, Date, Math, JSON, Number, String, Boolean);
+    const result = fn(
+      context,
+      keccak256,
+      generatePayload,
+      makeAddressKey,
+      LIMIT_SUBSCRIBE,
+      LIMIT_COLLECT,
+      ...keys.map((k) => context[k]),
+      Date,
+      Math,
+      JSON,
+      Number,
+      String,
+      Boolean
+    );
     if (result === undefined || result === null) return "";
     if (typeof result === "string") return result;
     if (typeof result === "boolean") return result ? "Yes" : "No";
+    if (typeof result === "bigint") return result.toString();
     if (typeof result === "number" && !Number.isFinite(result)) return "";
     return String(result);
-  } catch {
+  } catch (err) {
+    console.error("[evalTemplateExpression]", err instanceof Error ? err.message : err, {
+      expr: expr.trim().slice(0, 200),
+    });
     return "";
   }
 }
 
 /**
  * Resolve a template string:
- * - "{{ expression }}" → evaluated as JavaScript with context and Date/Math/JSON in scope.
+ * - "{{ expression }}" → JavaScript with context step keys, keccak256, generatePayload, Date/Math/JSON.
  * - "${path}" → context lookup by dot path (e.g. stepKey.fieldKey).
  * Plain text is left as-is.
  */
@@ -98,10 +167,7 @@ function resolveContextTemplate(
   if (/\$\{[^}]+\}/.test(out)) {
     out = out.replace(/\$\{([^}]+)\}/g, (_, path: string) => {
       const val = getContextValue(context, path.trim());
-      if (val === undefined || val === null) return "";
-      if (typeof val === "string") return val;
-      if (typeof val === "boolean") return val ? "Yes" : "No";
-      return JSON.stringify(val);
+      return contextValueToDisplayString(val);
     });
   }
   return out;
@@ -230,14 +296,15 @@ export default function ProcessStepPage() {
           setProcess(null);
           return;
         }
-        setProcess(result.process);
-        const step = getCurrentStep(result.process);
-        const currentProcessStep = getCurrentProcessStepFromState(result.process);
+        const proc = withDeserializedNumericContext(result.process);
+        setProcess(proc);
+        const step = getCurrentStep(proc);
+        const currentProcessStep = getCurrentProcessStepFromState(proc);
         const stepContext = currentProcessStep
-          ? (result.process.context[currentProcessStep.stepKey] as Record<string, unknown>)
+          ? (proc.context[currentProcessStep.stepKey] as Record<string, unknown>)
           : undefined;
         if (step?.inputs) {
-          const context = result.process.context;
+          const context = proc.context;
           setFormValues((prev) => {
             const next = { ...prev };
             step.inputs?.forEach((inp) => {
@@ -245,7 +312,10 @@ export default function ProcessStepPage() {
               if (inp.key in next) return;
               const raw = stepContext?.[inp.key];
               if (raw !== undefined && raw !== null) {
-                next[inp.key] = inp.type === "bool" ? Boolean(raw) : String(raw);
+                if (inp.type === "bool") next[inp.key] = Boolean(raw);
+                else if (inp.type === "number")
+                  next[inp.key] = numericFieldToFormString(raw as NumericFieldValue);
+                else next[inp.key] = String(raw);
                 return;
               }
               if (inp.defaultValue != null && inp.defaultValue !== "") {
@@ -280,7 +350,9 @@ export default function ProcessStepPage() {
 
     const t = setInterval(async () => {
       const result = await fetchProcess();
-      if ("process" in result) setProcess(result.process ?? null);
+      if ("process" in result && result.process)
+        setProcess(withDeserializedNumericContext(result.process));
+      else if ("process" in result) setProcess(null);
       if ("error" in result) setError(result.error ?? null);
     }, POLL_INTERVAL_MS);
     return () => clearInterval(t);
@@ -297,11 +369,8 @@ export default function ProcessStepPage() {
           payload[inp.key] = values[inp.key] ?? false;
         } else if (inp.type === "number") {
           const v = values[inp.key];
-          if (v === undefined || v === "") payload[inp.key] = "";
-          else {
-            const n = Number(v);
-            payload[inp.key] = Number.isFinite(n) ? n : String(v);
-          }
+          payload[inp.key] =
+            v === undefined || v === "" ? "" : serializeNumericFieldFromForm(String(v));
         } else {
           payload[inp.key] = values[inp.key] ?? "";
         }
@@ -331,8 +400,14 @@ export default function ProcessStepPage() {
           );
           if (res.ok) {
             const data = (await res.json()) as ProcessState;
-            // Merge only context so we keep canActOnCurrentStep and don't flash "Please wait"
-            setProcess((prev) => (prev ? { ...prev, context: data.context } : null));
+            setProcess((prev) =>
+              prev
+                ? {
+                    ...prev,
+                    context: deserializeProcessContextNumericFields(prev.template, data.context),
+                  }
+                : null
+            );
           }
         } catch {
           // ignore
@@ -361,11 +436,8 @@ export default function ProcessStepPage() {
           payload[inp.key] = formValues[inp.key] ?? false;
         } else if (inp.type === "number") {
           const v = formValues[inp.key];
-          if (v === undefined || v === "") payload[inp.key] = "";
-          else {
-            const n = Number(v);
-            payload[inp.key] = Number.isFinite(n) ? n : String(v);
-          }
+          payload[inp.key] =
+            v === undefined || v === "" ? "" : serializeNumericFieldFromForm(String(v));
         } else {
           payload[inp.key] = formValues[inp.key] ?? "";
         }
@@ -387,7 +459,7 @@ export default function ProcessStepPage() {
       const completedStepConfirmation = step.confirmationMessage?.trim();
       const result = await fetchProcess();
       if ("process" in result) {
-        const nextProcess = result.process!;
+        const nextProcess = withDeserializedNumericContext(result.process!);
         setProcess(nextProcess);
         if (
           completedStepConfirmation &&
@@ -609,14 +681,18 @@ export default function ProcessStepPage() {
     );
   }
 
+  const isLastStepInTemplate = step != null && step.nextStepKey === null;
+
+  /** Merge live form values into the current step, then re-apply numeric deserialization
+   *  so readOnly {{ expressions }} (e.g. tx payload) update on every keystroke. */
   const evaluationContext = process
     ? (() => {
         const base = { ...process.context };
-        if (step?.key && Object.keys(formValues).length > 0) {
+        if (step?.key) {
           const current = (base[step.key] as Record<string, unknown>) ?? {};
           base[step.key] = { ...current, ...formValues };
         }
-        return base;
+        return deserializeProcessContextNumericFields(process.template, base);
       })()
     : {};
 
@@ -652,7 +728,11 @@ export default function ProcessStepPage() {
               >
                 <div className="text-sm font-medium text-stone-400">{inp.title}</div>
                 <div
-                  className="mt-2 text-stone-200 [&_a]:text-sky-400 [&_a:hover]:underline [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_p]:mb-2"
+                  className={
+                    inp.type === "string-multiline"
+                      ? "mt-2 whitespace-pre-wrap break-all font-mono text-sm leading-relaxed text-stone-200 [&_a]:text-sky-400 [&_a:hover]:underline [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_p]:mb-2"
+                      : "mt-2 text-stone-200 [&_a]:text-sky-400 [&_a:hover]:underline [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_p]:mb-2"
+                  }
                   aria-readonly
                   dangerouslySetInnerHTML={{
                     __html: process
@@ -734,10 +814,14 @@ export default function ProcessStepPage() {
                 </label>
                 <input
                   id={inp.key}
-                  type="number"
+                  type="text"
+                  inputMode="decimal"
+                  autoComplete="off"
+                  pattern="[-0-9.]*"
                   value={String(formValues[inp.key] ?? "")}
                   onChange={(e) => {
-                    const next = { ...formValues, [inp.key]: e.target.value };
+                    const v = sanitizeNumericFormInput(e.target.value);
+                    const next = { ...formValues, [inp.key]: v };
                     setFormValues(next);
                     scheduleStepContextUpdate(next);
                   }}
@@ -812,7 +896,7 @@ export default function ProcessStepPage() {
           disabled={submitting}
           className="rounded-lg bg-stone-600 px-4 py-2 text-stone-100 hover:bg-stone-500 disabled:opacity-50"
         >
-          {submitting ? "Submitting…" : "Continue"}
+          {submitting ? "Submitting…" : isLastStepInTemplate ? "Finish" : "Continue"}
         </button>
       </form>
     </main>

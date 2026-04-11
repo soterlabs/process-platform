@@ -52,7 +52,7 @@ export function ConfigPanel({
         {onUpdateResultViewControls && (
           <div>
             <span className="text-xs text-stone-500">Result view controls (shown when process has finished)</span>
-<p className="mt-0.5 text-xs text-stone-600">Data: literal text, {"${stepKey.fieldKey}"} for context, or {"{{ expression }}" } for JavaScript (context, Date, Math, JSON in scope)</p>
+<p className="mt-0.5 text-xs text-stone-600">Data: literal text, {"${stepKey.fieldKey}"} for context, or {"{{ expression }}" } for JavaScript (step keys, keccak256, generatePayload, Date/Math/JSON)</p>
                     <div className="mt-1 space-y-2">
                       {(resultViewControls ?? []).map((vc, i) => (
                         <div
@@ -189,7 +189,7 @@ export function ConfigPanel({
             </label>
             <div>
               <span className="text-xs text-stone-500">Inputs & view controls (order is preserved)</span>
-              <p className="mt-0.5 text-xs text-stone-600">View controls: read-only string. Use {"${stepKey.fieldKey}"} for context or {"{{ expression }}" } for JavaScript (context, Date, Math, JSON).</p>
+              <p className="mt-0.5 text-xs text-stone-600">View controls: read-only string. Use {"${stepKey.fieldKey}"} for context or {"{{ expression }}" } for JavaScript (step keys, keccak256, generatePayload, Date/Math/JSON).</p>
               <div className="mt-1 space-y-2">
                 {(d.inputs ?? []).map((input, i) => (
                   <div

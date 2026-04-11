@@ -4,6 +4,7 @@ import { PERMISSIONS } from "@/lib/permissions";
 import { requirePermission } from "@/lib/require-permission";
 import { authorizationService } from "@/services/auth";
 import { executionService } from "@/services/execution-service";
+import { storageService } from "@/services/storage";
 
 export async function GET(
   request: NextRequest,
@@ -29,7 +30,15 @@ export async function GET(
       userId,
       permissions
     );
-    return NextResponse.json({ ...result, canActOnCurrentStep });
+    /** Use latest template definition from storage so readOnly defaultValue / inputs stay current. */
+    let template = result.template;
+    try {
+      const latest = await storageService.getTemplate(result.template.key);
+      if (latest) template = latest;
+    } catch {
+      // keep embedded template
+    }
+    return NextResponse.json({ ...result, template, canActOnCurrentStep });
   } catch (err) {
     console.error(err);
     return NextResponse.json(

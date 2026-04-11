@@ -8,6 +8,9 @@ import type { Process } from "@/entities/process";
 import type { Template } from "@/entities/template";
 import { curveTopupTemplate } from "@/templates/curve-topup";
 import { ibPayoutsTemplate } from "@/templates/ib-payouts";
+import { nfatSubscribeTemplate } from "@/templates/nfat-subscribe";
+import { nfatSetupFacilityTemplate } from "@/templates/nfat-setup-facility";
+import { nfatEnableFacilityForPrimeTemplate } from "@/templates/nfat-enable-facility-for-prime";
 import type { IStorageService } from "./interface";
 
 const STORE_DIR = join(process.cwd(), ".process-platform");
@@ -23,6 +26,9 @@ function seedTemplatesRecord(): Record<string, Template> {
   return {
     [curveTopupTemplate.key]: { ...curveTopupTemplate, updatedAt: now },
     [ibPayoutsTemplate.key]: { ...ibPayoutsTemplate, updatedAt: now },
+    [nfatSetupFacilityTemplate.key]: { ...nfatSetupFacilityTemplate, updatedAt: now },
+    [nfatEnableFacilityForPrimeTemplate.key]: { ...nfatEnableFacilityForPrimeTemplate, updatedAt: now },
+    [nfatSubscribeTemplate.key]: { ...nfatSubscribeTemplate, updatedAt: now },
   };
 }
 
