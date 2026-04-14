@@ -24,7 +24,7 @@ export async function PUT(
       return NextResponse.json(auth.body, { status: auth.status });
     }
     const payload = (await request.json()) as UpdateStepBody;
-    const result = await executionService.updateStepById(id, stepId, payload);
+    const result = await executionService.updateStepById(id, stepId, payload, userId);
     return NextResponse.json(result);
   } catch (err) {
     console.error(err);

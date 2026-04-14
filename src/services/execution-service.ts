@@ -1,5 +1,5 @@
 import { randomUUID } from "crypto";
-import type { Process } from "@/entities/process";
+import { type Process, SYSTEM_STEP_CONTEXT_USER_ID } from "@/entities/process";
 import type {
   AutomaticTemplateStep,
   ConditionTemplateStep,
@@ -46,6 +46,21 @@ function runConditionalStep(
   else return step.elseStepKey;
 }
 
+function appendStepContextAudit(
+  process: Process,
+  userId: string,
+  stepKey: string,
+  updates: Record<string, unknown>
+): void {
+  if (Object.keys(updates).length === 0) return;
+  process.stepContextAudit.push({
+    at: new Date().toISOString(),
+    userId,
+    stepKey,
+    updates: { ...updates },
+  });
+}
+
 export const executionService = {
   async getProcessState(processId: string): Promise<Process | null> {
     return storageService.getProcessState(processId);
@@ -64,6 +79,7 @@ export const executionService = {
       status: "running",
       steps: [],
       context: {},
+      stepContextAudit: [],
       result: {},
       startedAt: now,
       updatedAt: now,
@@ -94,11 +110,13 @@ export const executionService = {
   /**
    * Updates the context for a step. Context is keyed by template step key (not step id).
    * Each key in payload overwrites the existing value for that key in the step's context.
+   * Non-empty payloads are appended to {@link Process.stepContextAudit}.
    */
   async updateStep(
     process: Process,
     stepId: string,
-    payload: Record<string, unknown>
+    payload: Record<string, unknown>,
+    userId: string
   ): Promise<void> {
     if (process.status !== "running") {
       throw new Error(`Process is not running: ${process.status}`);
@@ -108,17 +126,19 @@ export const executionService = {
     const stepKey = step.stepKey;
     const existing = (process.context[stepKey] as Record<string, unknown>) ?? {};
     process.context[stepKey] = { ...existing, ...payload };
+    appendStepContextAudit(process, userId, stepKey, payload);
     await storageService.saveProcessState(process);
   },
 
   async updateStepById(
     processId: string,
     stepId: string,
-    payload: Record<string, unknown>
+    payload: Record<string, unknown>,
+    userId: string
   ): Promise<Process> {
     const process = await storageService.getProcessState(processId);
     if (!process) throw new Error(`Process not found: ${processId}`);
-    await this.updateStep(process, stepId, payload);
+    await this.updateStep(process, stepId, payload, userId);
     return process;
   },
 
@@ -181,7 +201,9 @@ export const executionService = {
       const value = newContext[contextKey];
       const stepKey = currentStep.stepKey;
       const existing = (process.context[stepKey] as Record<string, unknown>) ?? {};
-      process.context[stepKey] = { ...existing, [contextKey]: value };
+      const updates = { [contextKey]: value };
+      process.context[stepKey] = { ...existing, ...updates };
+      appendStepContextAudit(process, SYSTEM_STEP_CONTEXT_USER_ID, stepKey, updates);
       const nextStepKey = templateStep.nextStepKey;
       if (nextStepKey && getStepByKey(process.template, nextStepKey)) {
         pushStep(process, nextStepKey);
@@ -213,7 +235,9 @@ export const executionService = {
         systemPrompt: requestStep.prompt ?? "",
         context: contextForEvaluation(process),
       });
-      process.context[stepKey] = { response };
+      const updates = { response };
+      process.context[stepKey] = updates;
+      appendStepContextAudit(process, SYSTEM_STEP_CONTEXT_USER_ID, stepKey, updates);
       const nextStepKey = requestStep.nextStepKey;
       if (nextStepKey && getStepByKey(process.template, nextStepKey)) {
         pushStep(process, nextStepKey);

@@ -26,7 +26,7 @@ export async function POST(
     const body = await request.json().catch(() => null);
     const payload = (body as CompleteStepBody | null) ?? {};
     if (Object.keys(payload).length > 0) {
-      await executionService.updateStepById(id, stepId, payload);
+      await executionService.updateStepById(id, stepId, payload, userId);
     }
     const result = await executionService.completeStepById(id, stepId, userId);
     return NextResponse.json(result);
