@@ -35,14 +35,14 @@ import { hasPermission, PERMISSIONS } from "@/lib/permissions";
 
 function AutomaticStepNode({ data }: { data: FlowNodeData }) {
   return (
-    <div className="relative rounded-lg border-2 border-violet-600/80 bg-stone-800 px-4 py-3 shadow-lg">
-      <Handle type="target" position={Position.Left} className="!border-2 !border-stone-500 !bg-stone-600" />
+    <div className="relative rounded-lg border-2 border-violet-500 bg-white px-4 py-3 shadow-md">
+      <Handle type="target" position={Position.Left} className="!border-2 !border-surface-300 !bg-white" />
       <div className="flex items-center gap-2">
-        <span className="text-violet-400">▸</span>
-        <span className="font-medium text-stone-200">{data.title || "Set context"}</span>
+        <span className="text-violet-600">▸</span>
+        <span className="font-medium text-surface-900">{data.title || "Set context"}</span>
       </div>
-      <div className="mt-1 text-xs text-stone-500">{data.stepKey}</div>
-      <Handle type="source" position={Position.Right} className="!border-2 !border-stone-500 !bg-stone-600" />
+      <div className="mt-1 text-xs text-surface-500">{data.stepKey}</div>
+      <Handle type="source" position={Position.Right} className="!border-2 !border-surface-300 !bg-white" />
     </div>
   );
 }
@@ -57,56 +57,56 @@ const nodeTypes: NodeTypes = {
 function InputStepNode({ data }: { data: FlowNodeData }) {
   const readOnlyInputs = (data.inputs ?? []).filter((inp) => inp.readOnly);
   return (
-    <div className="relative rounded-lg border-2 border-amber-600/80 bg-stone-800 px-4 py-3 shadow-lg min-w-[180px]">
-      <Handle type="target" position={Position.Left} className="!border-2 !border-stone-500 !bg-stone-600" />
+    <div className="relative min-w-[180px] rounded-lg border-2 border-amber-500 bg-white px-4 py-3 shadow-md">
+      <Handle type="target" position={Position.Left} className="!border-2 !border-surface-300 !bg-white" />
       <div className="flex items-center gap-2">
-        <span className="text-amber-400">◇</span>
-        <span className="font-medium text-stone-200">{data.title || "Input"}</span>
+        <span className="text-amber-600">◇</span>
+        <span className="font-medium text-surface-900">{data.title || "Input"}</span>
       </div>
-      <div className="mt-1 text-xs text-stone-500">{data.stepKey}</div>
+      <div className="mt-1 text-xs text-surface-500">{data.stepKey}</div>
       {readOnlyInputs.length > 0 && (
-        <div className="mt-2 border-t border-stone-600 pt-2">
-          <div className="text-[10px] uppercase tracking-wider text-stone-500">View controls</div>
+        <div className="mt-2 border-t border-surface-200 pt-2">
+          <div className="text-[10px] uppercase tracking-wider text-surface-500">View controls</div>
           <ul className="mt-1 space-y-0.5">
             {readOnlyInputs.map((inp, i) => (
-              <li key={i} className="text-xs text-stone-400 truncate" title={inp.defaultValue ?? ""}>
+              <li key={i} className="truncate text-xs text-surface-600" title={inp.defaultValue ?? ""}>
                 {inp.title || inp.defaultValue || "—"}
               </li>
             ))}
           </ul>
         </div>
       )}
-      <Handle type="source" position={Position.Right} className="!border-2 !border-stone-500 !bg-stone-600" />
+      <Handle type="source" position={Position.Right} className="!border-2 !border-surface-300 !bg-white" />
     </div>
   );
 }
 
 function ConditionStepNode({ data }: { data: FlowNodeData }) {
   return (
-    <div className="relative rounded-lg border-2 border-sky-600/80 bg-stone-800 px-4 py-3 shadow-lg">
-      <Handle type="target" position={Position.Left} className="!border-2 !border-stone-500 !bg-stone-600" />
+    <div className="relative rounded-lg border-2 border-sky-500 bg-white px-4 py-3 shadow-md">
+      <Handle type="target" position={Position.Left} className="!border-2 !border-surface-300 !bg-white" />
       <div className="flex items-center gap-2">
-        <span className="text-sky-400">◆</span>
-        <span className="font-medium text-stone-200">{data.title || "Condition"}</span>
+        <span className="text-sky-600">◆</span>
+        <span className="font-medium text-surface-900">{data.title || "Condition"}</span>
       </div>
-      <div className="mt-1 text-xs text-stone-500">{data.stepKey}</div>
-      <div className="mt-1 text-xs text-sky-500">then / else</div>
-      <Handle type="source" position={Position.Right} id="then" className="!top-[45%] !border-2 !border-sky-500 !bg-sky-700" />
-      <Handle type="source" position={Position.Right} id="else" className="!top-[75%] !border-2 !border-stone-500 !bg-stone-600" />
+      <div className="mt-1 text-xs text-surface-500">{data.stepKey}</div>
+      <div className="mt-1 text-xs text-sky-600">then / else</div>
+      <Handle type="source" position={Position.Right} id="then" className="!top-[45%] !border-2 !border-sky-500 !bg-sky-500" />
+      <Handle type="source" position={Position.Right} id="else" className="!top-[75%] !border-2 !border-surface-300 !bg-white" />
     </div>
   );
 }
 
 function RequestStepNode({ data }: { data: FlowNodeData }) {
   return (
-    <div className="relative rounded-lg border-2 border-emerald-600/80 bg-stone-800 px-4 py-3 shadow-lg">
-      <Handle type="target" position={Position.Left} className="!border-2 !border-stone-500 !bg-stone-600" />
+    <div className="relative rounded-lg border-2 border-emerald-500 bg-white px-4 py-3 shadow-md">
+      <Handle type="target" position={Position.Left} className="!border-2 !border-surface-300 !bg-white" />
       <div className="flex items-center gap-2">
-        <span className="text-emerald-400">●</span>
-        <span className="font-medium text-stone-200">{data.title || "Request"}</span>
+        <span className="text-emerald-600">●</span>
+        <span className="font-medium text-surface-900">{data.title || "Request"}</span>
       </div>
-      <div className="mt-1 text-xs text-stone-500">{data.stepKey}</div>
-      <Handle type="source" position={Position.Right} className="!border-2 !border-stone-500 !bg-stone-600" />
+      <div className="mt-1 text-xs text-surface-500">{data.stepKey}</div>
+      <Handle type="source" position={Position.Right} className="!border-2 !border-surface-300 !bg-white" />
     </div>
   );
 }
@@ -293,25 +293,25 @@ function TemplateEditorInner() {
 
   if (meLoading || (me && !hasPermission(me.permissions, PERMISSIONS.TEMPLATES_WRITE))) {
     return (
-      <div className="flex h-screen flex-col items-center justify-center gap-4 bg-stone-950">
+      <div className="flex h-screen flex-col items-center justify-center gap-4 bg-surface-50">
         <div
-          className="h-10 w-10 animate-spin rounded-full border-2 border-stone-500 border-t-stone-300"
+          className="h-10 w-10 animate-spin rounded-full border-2 border-surface-300 border-t-primary-600"
           aria-hidden
         />
-        <p className="text-stone-400">Loading…</p>
+        <p className="text-surface-500">Loading…</p>
       </div>
     );
   }
 
   return (
-    <div className="flex h-screen flex-col bg-stone-950">
-      <header className="flex shrink-0 items-center justify-between border-b border-stone-700 bg-stone-900 px-4 py-2">
+    <div className="flex h-screen flex-col bg-surface-50">
+      <header className="flex shrink-0 items-center justify-between border-b border-surface-200 bg-white px-4 py-3 shadow-sm">
         <div className="flex items-center gap-4">
           <Link
-            href="/"
-            className="text-stone-400 transition hover:text-stone-200"
+            href="/templates"
+            className="text-sm text-surface-600 transition hover:text-surface-900"
           >
-            ← Process Platform
+            ← Templates
           </Link>
           <div className="flex items-center gap-3">
             <input
@@ -319,28 +319,28 @@ function TemplateEditorInner() {
               placeholder="Template key"
               value={templateKey}
               onChange={(e) => setTemplateKey(e.target.value)}
-              className="rounded border border-stone-600 bg-stone-800 px-3 py-1.5 text-stone-200 placeholder-stone-500"
+              className="rounded-lg border border-surface-200 bg-white px-3 py-1.5 text-sm text-surface-900 placeholder-surface-400 focus:border-primary-300 focus:outline-none focus:ring-2 focus:ring-primary-100"
             />
             <input
               type="text"
               placeholder="Template name"
               value={templateName}
               onChange={(e) => setTemplateName(e.target.value)}
-              className="w-56 rounded border border-stone-600 bg-stone-800 px-3 py-1.5 text-stone-200 placeholder-stone-500"
+              className="w-56 rounded-lg border border-surface-200 bg-white px-3 py-1.5 text-sm text-surface-900 placeholder-surface-400 focus:border-primary-300 focus:outline-none focus:ring-2 focus:ring-primary-100"
             />
           </div>
         </div>
         <div className="flex items-center gap-2">
           {saveStatus === "ok" && (
-            <span className="text-sm text-emerald-400">Saved</span>
+            <span className="text-sm text-emerald-600">Saved</span>
           )}
           {saveStatus === "error" && (
-            <span className="text-sm text-red-400">Save failed</span>
+            <span className="text-sm text-red-600">Save failed</span>
           )}
           <button
             onClick={handleSave}
             disabled={saveStatus === "saving" || !templateKey.trim()}
-            className="rounded-lg bg-amber-600 px-4 py-2 font-medium text-stone-900 transition hover:bg-amber-500 disabled:opacity-50"
+            className="rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-primary-700 disabled:opacity-50"
           >
             {saveStatus === "saving" ? "Saving…" : "Save"}
           </button>
@@ -348,7 +348,7 @@ function TemplateEditorInner() {
       </header>
 
       {loadError && !isNew && (
-        <div className="bg-red-900/30 px-4 py-2 text-red-300">
+        <div className="border-b border-red-200 bg-red-50 px-4 py-2 text-sm text-red-700">
           {loadError}
         </div>
       )}
@@ -368,13 +368,13 @@ function TemplateEditorInner() {
             onPaneClick={onPaneClick}
             nodeTypes={nodeTypes}
             fitView
-            className="bg-stone-900"
+            className="template-flow-canvas bg-surface-100"
             defaultEdgeOptions={{ type: "smoothstep" }}
-            connectionLineStyle={{ stroke: "rgb(120 113 108)" }}
+            connectionLineStyle={{ stroke: "rgb(148 163 184)" }}
           >
-            <Background gap={16} size={1} color="rgb(68 64 60)" />
-            <Controls className="!border-stone-600 !bg-stone-800" />
-            <Panel position="top-left" className="text-stone-500 text-sm">
+            <Background gap={16} size={1} color="rgb(203 213 225)" />
+            <Controls className="!border-surface-200 !bg-white !shadow-md" />
+            <Panel position="top-left" className="rounded-md bg-white/90 px-2 py-1 text-xs text-surface-600 shadow-sm backdrop-blur-sm">
               Drag steps from the left; connect with edges. Select a step to configure.
             </Panel>
           </ReactFlow>

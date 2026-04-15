@@ -17,9 +17,9 @@ export function StepPalette() {
   }
 
   return (
-    <aside className="flex w-52 shrink-0 flex-col border-r border-stone-700 bg-stone-900 p-3">
-      <h2 className="mb-3 text-sm font-medium text-stone-400">Steps</h2>
-      <p className="mb-3 text-xs text-stone-500">
+    <aside className="flex w-52 shrink-0 flex-col border-r border-surface-200 bg-white p-3">
+      <h2 className="mb-3 text-sm font-medium text-surface-700">Steps</h2>
+      <p className="mb-3 text-xs text-surface-500">
         Drag a step onto the canvas, then connect and configure.
       </p>
       <div className="flex flex-col gap-2">
@@ -28,17 +28,17 @@ export function StepPalette() {
             key={type}
             draggable
             onDragStart={(e) => onDragStart(e, type)}
-            className="cursor-grab rounded-lg border border-stone-600 bg-stone-800 px-3 py-2.5 transition hover:border-stone-500 hover:bg-stone-800/80 active:cursor-grabbing"
+            className="cursor-grab rounded-lg border border-surface-200 bg-surface-50 px-3 py-2.5 transition hover:border-primary-300 hover:bg-primary-50 active:cursor-grabbing"
           >
-            <div className="font-medium text-stone-200">{label}</div>
-            <div className="text-xs text-stone-500">{desc}</div>
+            <div className="font-medium text-surface-900">{label}</div>
+            <div className="text-xs text-surface-500">{desc}</div>
           </div>
         ))}
       </div>
-      <div className="mt-4 border-t border-stone-700 pt-3">
+      <div className="mt-4 border-t border-surface-200 pt-3">
         <a
           href="/templates/editor/new"
-          className="text-sm text-amber-400 hover:text-amber-300"
+          className="text-sm font-medium text-primary-600 hover:text-primary-700"
         >
           New template
         </a>

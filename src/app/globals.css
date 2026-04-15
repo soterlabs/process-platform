@@ -7,3 +7,42 @@
     @apply bg-surface-50 text-surface-900 antialiased;
   }
 }
+
+/* Template editor: custom nodes use types like "input" that collide with React Flow’s
+   built-in class names (.react-flow__node-input, etc.), which add padding and a dark
+   border (#1a192b) — a second box around our cards. Strip that wrapper chrome. */
+.template-flow-canvas .react-flow__node-input,
+.template-flow-canvas .react-flow__node-default,
+.template-flow-canvas .react-flow__node-output,
+.template-flow-canvas .react-flow__node-group {
+  padding: 0;
+  border: none;
+  background: transparent;
+  width: auto;
+  min-width: 0;
+  box-shadow: none;
+  border-radius: 0;
+  text-align: inherit;
+  font-size: inherit;
+  color: inherit;
+}
+.template-flow-canvas .react-flow__node-input.selectable:hover,
+.template-flow-canvas .react-flow__node-default.selectable:hover,
+.template-flow-canvas .react-flow__node-output.selectable:hover,
+.template-flow-canvas .react-flow__node-group.selectable:hover {
+  box-shadow: none;
+}
+.template-flow-canvas .react-flow__node-input.selectable.selected,
+.template-flow-canvas .react-flow__node-input.selectable:focus,
+.template-flow-canvas .react-flow__node-input.selectable:focus-visible,
+.template-flow-canvas .react-flow__node-default.selectable.selected,
+.template-flow-canvas .react-flow__node-default.selectable:focus,
+.template-flow-canvas .react-flow__node-default.selectable:focus-visible,
+.template-flow-canvas .react-flow__node-output.selectable.selected,
+.template-flow-canvas .react-flow__node-output.selectable:focus,
+.template-flow-canvas .react-flow__node-output.selectable:focus-visible,
+.template-flow-canvas .react-flow__node-group.selectable.selected,
+.template-flow-canvas .react-flow__node-group.selectable:focus,
+.template-flow-canvas .react-flow__node-group.selectable:focus-visible {
+  box-shadow: none;
+}
