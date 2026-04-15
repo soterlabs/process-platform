@@ -1,4 +1,4 @@
-export type { Template } from "./template";
+export type { Template, TemplateStatus } from "./template";
 export type { TemplateStep } from "./template-step";
 export type { TemplateStepInput } from "./template-step-input";
 export type { TemplateStepViewControl } from "./template-step-view-control";
