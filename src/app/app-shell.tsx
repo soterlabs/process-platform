@@ -107,14 +107,17 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     }`;
 
   return (
-    <div className="flex min-h-screen">
-      <aside className="flex w-[260px] shrink-0 flex-col border-r border-surface-200 bg-white">
-        <div className="flex h-16 items-center gap-2.5 border-b border-surface-100 px-5">
+    <div className="flex h-screen min-h-0 overflow-hidden">
+      <aside className="flex h-full min-h-0 w-[260px] shrink-0 flex-col overflow-hidden border-r border-surface-200 bg-white">
+        <div className="flex h-16 shrink-0 items-center gap-2.5 border-b border-surface-100 px-5">
           <LogoIcon />
           <span className="text-lg font-semibold tracking-tight text-surface-900">processOS</span>
         </div>
 
-        <nav className="flex flex-1 flex-col gap-0.5 p-3" aria-label="Main">
+        <nav
+          className="flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto p-3"
+          aria-label="Main"
+        >
           <Link
             href="/"
             className={navLinkClass(pathname === "/")}
@@ -140,7 +143,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </Link>
         </nav>
 
-        <div className="mt-auto border-t border-surface-100 p-4">
+        <div className="shrink-0 border-t border-surface-100 p-4">
           <div className="rounded-xl border border-surface-200 bg-surface-50/80 p-3">
             <div className="flex items-center gap-3">
               <span
@@ -168,8 +171,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </div>
       </aside>
 
-      <div className="flex min-h-0 min-w-0 flex-1 flex-col bg-surface-50">
-        <main className="flex-1 overflow-y-auto">{children}</main>
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-surface-50">
+        <main className="min-h-0 flex-1 overflow-y-auto">{children}</main>
       </div>
     </div>
   );
