@@ -230,7 +230,7 @@ function StepProgress({
             {index > 0 && (
               <div
                 className={`h-0.5 w-4 sm:w-6 ${
-                  isCompleted ? "bg-stone-400" : "bg-stone-600"
+                  isCompleted ? "bg-primary-300" : "bg-surface-200"
                 }`}
                 aria-hidden
               />
@@ -238,10 +238,10 @@ function StepProgress({
             <span
               className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-medium transition-colors ${
                 isCompleted
-                  ? "bg-stone-400 text-stone-900"
+                  ? "bg-primary-500 text-white"
                   : isCurrent
-                    ? "border-2 border-stone-300 bg-stone-950 text-stone-100 ring-2 ring-stone-400"
-                    : "border-2 border-stone-600 bg-stone-950 text-stone-500"
+                    ? "border-2 border-primary-400 bg-primary-600 text-white ring-2 ring-primary-200"
+                    : "border-2 border-surface-300 bg-white text-surface-500"
               }`}
               title={s.title}
               aria-current={isCurrent ? "step" : undefined}
@@ -480,10 +480,10 @@ export default function ProcessStepPage() {
       <main className="mx-auto max-w-2xl px-6 py-16">
         <div className="flex flex-col items-center gap-4">
           <div
-            className="h-8 w-8 animate-spin rounded-full border-2 border-stone-500 border-t-stone-300"
+            className="h-8 w-8 animate-spin rounded-full border-2 border-surface-300 border-t-primary-600"
             aria-hidden
           />
-          <p className="text-stone-400">Loading…</p>
+          <p className="text-surface-500">Loading…</p>
         </div>
       </main>
     );
@@ -492,10 +492,10 @@ export default function ProcessStepPage() {
   if (error) {
     return (
       <main className="mx-auto max-w-2xl px-6 py-16">
-        <p className="text-red-400">{error}</p>
+        <p className="text-red-600">{error}</p>
         <Link
           href="/"
-          className="mt-4 inline-block text-stone-400 hover:text-stone-300"
+          className="mt-4 inline-block text-primary-600 hover:text-primary-700"
         >
           ← Back to home
         </Link>
@@ -511,7 +511,7 @@ export default function ProcessStepPage() {
     const nextStepTitle = process.template.steps[currentStepIndex + 1]?.title ?? "Processing…";
     return (
       <main className="mx-auto max-w-2xl px-6 py-16">
-        <Link href="/" className="text-stone-400 hover:text-stone-300">
+        <Link href="/" className="text-surface-500 hover:text-surface-700">
           ← Back to home
         </Link>
         <StepProgress
@@ -520,11 +520,11 @@ export default function ProcessStepPage() {
         />
         <div className="flex flex-col items-center gap-4">
           <div
-            className="h-10 w-10 animate-spin rounded-full border-2 border-stone-500 border-t-stone-300"
+            className="h-10 w-10 animate-spin rounded-full border-2 border-surface-300 border-t-primary-600"
             aria-hidden
           />
-          <p className="text-stone-400">Please wait…</p>
-          <p className="text-sm text-stone-500">{nextStepTitle}</p>
+          <p className="text-surface-500">Please wait…</p>
+          <p className="text-sm text-surface-500">{nextStepTitle}</p>
         </div>
       </main>
     );
@@ -561,22 +561,22 @@ export default function ProcessStepPage() {
 
     return (
       <main className="mx-auto max-w-2xl px-6 py-16">
-        <Link href="/" className="text-stone-400 hover:text-stone-300">
+        <Link href="/" className="text-surface-500 hover:text-surface-700">
           ← Back to home
         </Link>
         <StepProgress
           steps={process.template.steps.map((s) => ({ key: s.key, title: s.title }))}
           currentStepIndex={-1}
         />
-        <h1 className="text-2xl font-semibold text-stone-100">
+        <h1 className="text-2xl font-semibold text-surface-900">
           Process completed
         </h1>
-        <p className="mt-1 text-stone-400">
+        <p className="mt-1 text-surface-500">
           This process has finished.
         </p>
         {showResultViewControls && (
           <section className="mt-8 space-y-4">
-            <h2 className="text-sm font-medium uppercase tracking-wider text-stone-500">
+            <h2 className="text-sm font-medium uppercase tracking-wider text-surface-500">
               Result
             </h2>
             {resolvedResultViewControls.map((vc, i) => {
@@ -584,11 +584,11 @@ export default function ProcessStepPage() {
               return (
                 <div
                   key={`${vc.data}-${vc.title}-${i}`}
-                  className="rounded-xl border border-stone-700 bg-stone-900/50 px-4 py-4"
+                  className="rounded-xl border border-surface-200 bg-surface-50 px-4 py-4"
                 >
-                  <div className="text-sm font-medium text-stone-400">{vc.title}</div>
+                  <div className="text-sm font-medium text-surface-600">{vc.title}</div>
                   <div
-                    className="mt-2 text-stone-200 [&_a]:text-sky-400 [&_a:hover]:underline [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_p]:mb-2"
+                    className="mt-2 text-surface-800 [&_a]:text-primary-600 [&_a:hover]:underline [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_p]:mb-2"
                     aria-readonly
                     dangerouslySetInnerHTML={{ __html: display }}
                   />
@@ -599,7 +599,7 @@ export default function ProcessStepPage() {
         )}
         {showFallbackResult && (
           <section className="mt-8 space-y-4">
-            <h2 className="text-sm font-medium uppercase tracking-wider text-stone-500">
+            <h2 className="text-sm font-medium uppercase tracking-wider text-surface-500">
               Result
             </h2>
             {Object.entries(resultData).map(([key, value]) => {
@@ -612,10 +612,10 @@ export default function ProcessStepPage() {
               return (
                 <div
                   key={key}
-                  className="rounded-xl border border-stone-700 bg-stone-900/50 px-4 py-4"
+                  className="rounded-xl border border-surface-200 bg-surface-50 px-4 py-4"
                 >
-                  <div className="text-sm font-medium text-stone-400">{label}</div>
-                  <pre className="mt-2 whitespace-pre-wrap font-sans text-sm text-stone-200">
+                  <div className="text-sm font-medium text-surface-600">{label}</div>
+                  <pre className="mt-2 whitespace-pre-wrap font-sans text-sm text-surface-800">
                     {text}
                   </pre>
                 </div>
@@ -625,7 +625,7 @@ export default function ProcessStepPage() {
         )}
         <Link
           href="/"
-          className="mt-8 inline-block rounded-lg bg-stone-600 px-4 py-2 text-stone-100 hover:bg-stone-500"
+          className="mt-8 inline-block rounded-lg bg-primary-600 px-4 py-2 text-white hover:bg-primary-700"
         >
           Back to home
         </Link>
@@ -639,17 +639,17 @@ export default function ProcessStepPage() {
   if (confirmationMessage && process) {
     return (
       <main className="mx-auto max-w-2xl px-6 py-16">
-        <Link href="/" className="text-stone-400 hover:text-stone-300">
+        <Link href="/" className="text-surface-500 hover:text-surface-700">
           ← Back to home
         </Link>
         <StepProgress
           steps={process.template.steps.map((s) => ({ key: s.key, title: s.title }))}
           currentStepIndex={currentStepIndex}
         />
-        <p className="mt-6 text-stone-200">{confirmationMessage}</p>
+        <p className="mt-6 text-surface-800">{confirmationMessage}</p>
         <Link
           href="/"
-          className="mt-8 inline-block text-stone-500 hover:text-stone-400"
+          className="mt-8 inline-block text-surface-600 hover:text-surface-800"
         >
           Back to home
         </Link>
@@ -660,7 +660,7 @@ export default function ProcessStepPage() {
   if ((!isUserStep || !canAct) && step && process && !isProcessCompleted) {
     return (
       <main className="mx-auto max-w-2xl px-6 py-16">
-        <Link href="/" className="text-stone-400 hover:text-stone-300">
+        <Link href="/" className="text-surface-500 hover:text-surface-700">
           ← Back to home
         </Link>
         <StepProgress
@@ -669,12 +669,12 @@ export default function ProcessStepPage() {
         />
         <div className="flex flex-col items-center gap-4">
           <div
-            className="h-10 w-10 animate-spin rounded-full border-2 border-stone-500 border-t-stone-300"
+            className="h-10 w-10 animate-spin rounded-full border-2 border-surface-300 border-t-primary-600"
             aria-hidden
           />
-          <p className="text-stone-400">Please wait…</p>
+          <p className="text-surface-500">Please wait…</p>
           {!isUserStep && (
-            <p className="text-sm text-stone-500">{step.title}</p>
+            <p className="text-sm text-surface-500">{step.title}</p>
           )}
         </div>
       </main>
@@ -698,7 +698,7 @@ export default function ProcessStepPage() {
 
   return (
     <main className="mx-auto max-w-2xl px-6 py-16">
-      <Link href="/" className="text-stone-400 hover:text-stone-300">
+      <Link href="/" className="text-surface-500 hover:text-surface-700">
         ← Back to home
       </Link>
       {process && (
@@ -707,7 +707,7 @@ export default function ProcessStepPage() {
           currentStepIndex={currentStepIndex}
         />
       )}
-      <h1 className="mt-6 text-2xl font-semibold text-stone-100">{step?.title}</h1>
+      <h1 className="mt-6 text-2xl font-semibold text-surface-900">{step?.title}</h1>
       <form onSubmit={handleSubmit} className="mt-8 space-y-6">
         {step?.inputs
           ?.filter(
@@ -724,14 +724,14 @@ export default function ProcessStepPage() {
             inp.readOnly ? (
               <div
                 key={`${inp.key}-${i}`}
-                className="rounded-xl border border-stone-700 bg-stone-900/50 px-4 py-4"
+                className="rounded-xl border border-surface-200 bg-surface-50 px-4 py-4"
               >
-                <div className="text-sm font-medium text-stone-400">{inp.title}</div>
+                <div className="text-sm font-medium text-surface-600">{inp.title}</div>
                 <div
                   className={
                     inp.type === "string-multiline"
-                      ? "mt-2 whitespace-pre-wrap break-all font-mono text-sm leading-relaxed text-stone-200 [&_a]:text-sky-400 [&_a:hover]:underline [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_p]:mb-2"
-                      : "mt-2 text-stone-200 [&_a]:text-sky-400 [&_a:hover]:underline [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_p]:mb-2"
+                      ? "mt-2 whitespace-pre-wrap break-all font-mono text-sm leading-relaxed text-surface-800 [&_a]:text-primary-600 [&_a:hover]:underline [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_p]:mb-2"
+                      : "mt-2 text-surface-800 [&_a]:text-primary-600 [&_a:hover]:underline [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_p]:mb-2"
                   }
                   aria-readonly
                   dangerouslySetInnerHTML={{
@@ -744,11 +744,11 @@ export default function ProcessStepPage() {
             ) : (
           <div
             key={inp.key}
-            className="rounded-xl border border-stone-700 bg-stone-900/50 px-4 py-4"
+            className="rounded-xl border border-surface-200 bg-surface-50 px-4 py-4"
           >
             {inp.type === "bool" ? (
               <label className="flex cursor-pointer items-center justify-between gap-4">
-                <span className="text-sm font-medium leading-snug text-stone-200">
+                <span className="text-sm font-medium leading-snug text-surface-800">
                   {inp.title}
                 </span>
                 <input
@@ -764,8 +764,8 @@ export default function ProcessStepPage() {
                 <span
                   className={`relative inline-flex h-6 w-11 shrink-0 rounded-full border transition-colors ${
                     formValues[inp.key]
-                      ? "border-stone-500 bg-stone-500"
-                      : "border-stone-600 bg-stone-800"
+                      ? "border-primary-500 bg-primary-500"
+                      : "border-surface-300 bg-surface-200"
                   }`}
                   aria-hidden
                 >
@@ -782,7 +782,7 @@ export default function ProcessStepPage() {
               <>
                 <label
                   htmlFor={inp.key}
-                  className="block text-sm font-medium text-stone-300"
+                  className="block text-sm font-medium text-surface-700"
                 >
                   {inp.title}
                 </label>
@@ -794,7 +794,7 @@ export default function ProcessStepPage() {
                     setFormValues(next);
                     scheduleStepContextUpdate(next);
                   }}
-                  className="mt-2 w-full rounded-lg border border-stone-600 bg-stone-900 px-3 py-2.5 text-stone-200 focus:border-stone-500 focus:outline-none focus:ring-1 focus:ring-stone-500"
+                  className="mt-2 w-full rounded-lg border border-surface-200 bg-white px-3 py-2.5 text-surface-900 focus:border-primary-300 focus:outline-none focus:ring-2 focus:ring-primary-100"
                 >
                   <option value="">Select…</option>
                   {(inp.values ?? []).map((val) => (
@@ -808,7 +808,7 @@ export default function ProcessStepPage() {
               <>
                 <label
                   htmlFor={inp.key}
-                  className="block text-sm font-medium text-stone-300"
+                  className="block text-sm font-medium text-surface-700"
                 >
                   {inp.title}
                 </label>
@@ -825,14 +825,14 @@ export default function ProcessStepPage() {
                     setFormValues(next);
                     scheduleStepContextUpdate(next);
                   }}
-                  className="mt-2 w-full rounded-lg border border-stone-600 bg-stone-900 px-3 py-2.5 text-stone-200 placeholder-stone-500 focus:border-stone-500 focus:outline-none focus:ring-1 focus:ring-stone-500"
+                  className="mt-2 w-full rounded-lg border border-surface-200 bg-white px-3 py-2.5 text-surface-900 placeholder-surface-400 focus:border-primary-300 focus:outline-none focus:ring-2 focus:ring-primary-100"
                 />
               </>
             ) : inp.type === "string-multiline" ? (
               <>
                 <label
                   htmlFor={inp.key}
-                  className="block text-sm font-medium text-stone-300"
+                  className="block text-sm font-medium text-surface-700"
                 >
                   {inp.title}
                 </label>
@@ -845,14 +845,14 @@ export default function ProcessStepPage() {
                     setFormValues(next);
                     scheduleStepContextUpdate(next);
                   }}
-                  className="mt-2 w-full rounded-lg border border-stone-600 bg-stone-900 px-3 py-2.5 text-stone-200 placeholder-stone-500 focus:border-stone-500 focus:outline-none focus:ring-1 focus:ring-stone-500"
+                  className="mt-2 w-full rounded-lg border border-surface-200 bg-white px-3 py-2.5 text-surface-900 placeholder-surface-400 focus:border-primary-300 focus:outline-none focus:ring-2 focus:ring-primary-100"
                 />
               </>
             ) : inp.type === "datetime" ? (
               <>
                 <label
                   htmlFor={inp.key}
-                  className="block text-sm font-medium text-stone-300"
+                  className="block text-sm font-medium text-surface-700"
                 >
                   {inp.title}
                 </label>
@@ -871,7 +871,7 @@ export default function ProcessStepPage() {
               <>
                 <label
                   htmlFor={inp.key}
-                  className="block text-sm font-medium text-stone-300"
+                  className="block text-sm font-medium text-surface-700"
                 >
                   {inp.title}
                 </label>
@@ -884,7 +884,7 @@ export default function ProcessStepPage() {
                     setFormValues(next);
                     scheduleStepContextUpdate(next);
                   }}
-                  className="mt-2 w-full rounded-lg border border-stone-600 bg-stone-900 px-3 py-2.5 text-stone-200 placeholder-stone-500 focus:border-stone-500 focus:outline-none focus:ring-1 focus:ring-stone-500"
+                  className="mt-2 w-full rounded-lg border border-surface-200 bg-white px-3 py-2.5 text-surface-900 placeholder-surface-400 focus:border-primary-300 focus:outline-none focus:ring-2 focus:ring-primary-100"
                 />
               </>
             )}
@@ -894,7 +894,7 @@ export default function ProcessStepPage() {
         <button
           type="submit"
           disabled={submitting}
-          className="rounded-lg bg-stone-600 px-4 py-2 text-stone-100 hover:bg-stone-500 disabled:opacity-50"
+          className="rounded-lg bg-primary-600 px-4 py-2 text-white hover:bg-primary-700 disabled:opacity-50"
         >
           {submitting ? "Submitting…" : isLastStepInTemplate ? "Finish" : "Continue"}
         </button>

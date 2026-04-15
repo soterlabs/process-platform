@@ -133,38 +133,38 @@ export function DateTimePicker({
         type="button"
         id={id}
         onClick={() => setOpen((o) => !o)}
-        className={`flex w-full items-center justify-between rounded-lg border border-stone-600 bg-stone-900 px-3 py-2.5 text-left text-stone-200 placeholder-stone-500 focus:border-stone-500 focus:outline-none focus:ring-1 focus:ring-stone-500 ${className}`}
+        className={`flex w-full items-center justify-between rounded-lg border border-surface-200 bg-white px-3 py-2.5 text-left text-surface-900 placeholder-surface-400 focus:border-primary-300 focus:outline-none focus:ring-2 focus:ring-primary-100 ${className}`}
       >
-        <span className={valid ? "text-stone-200" : "text-stone-500"}>
+        <span className={valid ? "text-surface-900" : "text-surface-500"}>
           {valid ? formatDisplay(selectedDate) : "Select date and time"}
         </span>
-        <span className="text-stone-500" aria-hidden>
+        <span className="text-surface-500" aria-hidden>
           {open ? "▲" : "▼"}
         </span>
       </button>
 
       {open && (
         <div
-          className="absolute left-0 right-0 top-full z-50 mt-1 rounded-xl border border-stone-600 bg-stone-900 p-4 shadow-xl"
+          className="absolute left-0 right-0 top-full z-50 mt-1 rounded-xl border border-surface-200 bg-white p-4 shadow-lg"
           role="dialog"
           aria-label="Pick date and time"
         >
-          <div className="flex items-center justify-between border-b border-stone-700 pb-3">
+          <div className="flex items-center justify-between border-b border-surface-200 pb-3">
             <button
               type="button"
               onClick={() => setViewDate(new Date(Date.UTC(year, month - 1, 1)))}
-              className="rounded p-1.5 text-stone-400 hover:bg-stone-700 hover:text-stone-200"
+              className="rounded p-1.5 text-surface-500 hover:bg-surface-100 hover:text-surface-900"
               aria-label="Previous month"
             >
               ←
             </button>
-            <span className="text-sm font-medium text-stone-200">
+            <span className="text-sm font-medium text-surface-900">
               {MONTHS[month]} {year}
             </span>
             <button
               type="button"
               onClick={() => setViewDate(new Date(Date.UTC(year, month + 1, 1)))}
-              className="rounded p-1.5 text-stone-400 hover:bg-stone-700 hover:text-stone-200"
+              className="rounded p-1.5 text-surface-500 hover:bg-surface-100 hover:text-surface-900"
               aria-label="Next month"
             >
               →
@@ -172,7 +172,7 @@ export function DateTimePicker({
           </div>
 
           <div className="mt-3">
-            <div className="grid grid-cols-7 gap-0.5 text-center text-[10px] uppercase tracking-wider text-stone-500">
+            <div className="grid grid-cols-7 gap-0.5 text-center text-[10px] uppercase tracking-wider text-surface-500">
               {WEEKDAYS.map((w) => (
                 <div key={w}>{w}</div>
               ))}
@@ -186,8 +186,8 @@ export function DateTimePicker({
                     onClick={() => handleSelectDay(d)}
                     className={`h-8 rounded text-sm transition-colors ${
                       isSameDay(d, selectedDate)
-                        ? "bg-amber-600 text-stone-900"
-                        : "text-stone-300 hover:bg-stone-700"
+                        ? "bg-primary-600 text-white"
+                        : "text-surface-700 hover:bg-surface-100"
                     }`}
                   >
                     {d.getUTCDate()}
@@ -199,13 +199,13 @@ export function DateTimePicker({
             </div>
           </div>
 
-          <div className="mt-4 flex items-center gap-3 border-t border-stone-700 pt-3">
-            <span className="text-xs text-stone-500">Time (UTC)</span>
+          <div className="mt-4 flex items-center gap-3 border-t border-surface-200 pt-3">
+            <span className="text-xs text-surface-500">Time (UTC)</span>
             <div className="flex items-center gap-2">
               <select
                 value={hour}
                 onChange={(e) => handleTimeChange(Number(e.target.value), minute)}
-                className="rounded border border-stone-600 bg-stone-800 px-2 py-1.5 text-sm text-stone-200 focus:border-stone-500 focus:outline-none"
+                className="rounded border border-surface-200 bg-white px-2 py-1.5 text-sm text-surface-900 focus:border-primary-300 focus:outline-none focus:ring-2 focus:ring-primary-100"
               >
                 {Array.from({ length: 24 }, (_, i) => (
                   <option key={i} value={i}>
@@ -213,11 +213,11 @@ export function DateTimePicker({
                   </option>
                 ))}
               </select>
-              <span className="text-stone-500">:</span>
+              <span className="text-surface-500">:</span>
               <select
                 value={minute}
                 onChange={(e) => handleTimeChange(hour, Number(e.target.value))}
-                className="rounded border border-stone-600 bg-stone-800 px-2 py-1.5 text-sm text-stone-200 focus:border-stone-500 focus:outline-none"
+                className="rounded border border-surface-200 bg-white px-2 py-1.5 text-sm text-surface-900 focus:border-primary-300 focus:outline-none focus:ring-2 focus:ring-primary-100"
               >
                 {[0, 15, 30, 45].map((m) => (
                   <option key={m} value={m}>
