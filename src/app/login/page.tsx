@@ -26,17 +26,17 @@ function LoginForm() {
   const googleHref = `/api/auth/login?returnUrl=${returnEnc}&connection=${encodeURIComponent(GOOGLE_CONNECTION)}`;
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-md flex-col items-center justify-center px-6">
-      <h1 className="text-2xl font-semibold text-stone-100">
-        Sign in to Process Platform
+    <main className="mx-auto flex min-h-screen max-w-md flex-col items-center justify-center bg-surface-50 px-6">
+      <h1 className="text-2xl font-semibold text-surface-900">
+        Sign in to processOS
       </h1>
-      <p className="mt-2 text-center text-stone-400">
+      <p className="mt-2 text-center text-surface-500">
         Sign in with Google or email and password
       </p>
       <div className="mt-8 flex w-full max-w-[280px] flex-col items-stretch gap-3">
         <a
           href={googleHref}
-          className="flex w-full items-center justify-center gap-3 border border-stone-600 bg-stone-700/80 px-6 text-center text-stone-100 transition hover:bg-stone-600/80"
+          className="flex w-full items-center justify-center gap-3 border border-surface-300 bg-white px-6 text-center text-surface-900 shadow-sm transition hover:border-surface-400 hover:bg-surface-50"
           style={{
             height: SIGNIN_BUTTON_HEIGHT_PX,
             borderRadius: SIGNIN_BUTTON_RADIUS_PX,
@@ -46,7 +46,7 @@ function LoginForm() {
         </a>
         <a
           href={passwordHref}
-          className="flex w-full items-center justify-center gap-3 border border-stone-600 bg-stone-800/60 px-6 text-center text-sm text-stone-300 transition hover:bg-stone-700/80"
+          className="flex w-full items-center justify-center gap-3 border border-surface-200 bg-surface-100 px-6 text-center text-sm text-surface-700 transition hover:bg-surface-200"
           style={{
             minHeight: SIGNIN_BUTTON_HEIGHT_PX,
             borderRadius: SIGNIN_BUTTON_RADIUS_PX,
@@ -56,13 +56,13 @@ function LoginForm() {
         </a>
       </div>
       {errorParam && (
-        <p className="mt-4 max-w-sm text-center text-sm text-red-400" role="alert">
+        <p className="mt-4 max-w-sm text-center text-sm text-red-600" role="alert">
           {errorParam}
         </p>
       )}
       <Link
         href="/"
-        className="mt-8 text-sm text-stone-500 hover:text-stone-400"
+        className="mt-8 text-sm text-surface-500 hover:text-surface-700"
       >
         ← Back to home
       </Link>
@@ -74,8 +74,8 @@ export default function LoginPage() {
   return (
     <Suspense
       fallback={
-        <main className="mx-auto flex min-h-screen max-w-md flex-col items-center justify-center px-6">
-          <p className="text-stone-400">Loading…</p>
+        <main className="mx-auto flex min-h-screen max-w-md flex-col items-center justify-center bg-surface-50 px-6">
+          <p className="text-surface-500">Loading…</p>
         </main>
       }
     >

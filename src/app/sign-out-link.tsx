@@ -12,7 +12,7 @@ export function SignOutLink({ className }: SignOutLinkProps) {
     <Link
       href="/login"
       onClick={() => removeToken()}
-      className={className ?? "text-sm text-stone-500 hover:text-stone-400"}
+      className={className ?? "text-sm text-surface-500 hover:text-surface-700"}
     >
       Sign out
     </Link>

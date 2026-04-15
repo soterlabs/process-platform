@@ -52,11 +52,11 @@ function TemplateRowMenu({
   return (
     <div
       ref={ref}
-      className="absolute right-0 top-full z-50 mt-1 min-w-[160px] rounded-lg border border-stone-600 bg-stone-800 py-1 shadow-xl"
+      className="absolute right-0 top-full z-50 mt-1 min-w-[160px] rounded-lg border border-surface-200 bg-white py-1 shadow-lg"
     >
       <Link
         href={`/templates/editor/${templateKey}`}
-        className="block px-4 py-2 text-sm text-stone-200 hover:bg-stone-700 hover:text-white"
+        className="block px-4 py-2 text-sm text-surface-800 hover:bg-surface-50"
         onClick={onClose}
       >
         Edit
@@ -68,14 +68,14 @@ function TemplateRowMenu({
           onClone(templateKey);
         }}
         disabled={isCloning}
-        className="block w-full px-4 py-2 text-left text-sm text-stone-200 hover:bg-stone-700 hover:text-white disabled:opacity-50"
+        className="block w-full px-4 py-2 text-left text-sm text-surface-800 hover:bg-surface-50 disabled:opacity-50"
       >
         {isCloning ? "Cloning…" : "Clone"}
       </button>
-      <div className="my-1 border-t border-stone-600" role="separator" />
+      <div className="my-1 border-t border-surface-100" role="separator" />
       <Link
         href={`/start/${templateKey}`}
-        className="block px-4 py-2 text-sm text-stone-200 hover:bg-stone-700 hover:text-white"
+        className="block px-4 py-2 text-sm text-surface-800 hover:bg-surface-50"
         onClick={onClose}
       >
         Start
@@ -152,10 +152,10 @@ export default function TemplatesPage() {
     return (
       <div className="mx-auto flex max-w-4xl flex-col items-center justify-center gap-4 px-6 py-24">
         <div
-          className="h-10 w-10 animate-spin rounded-full border-2 border-stone-500 border-t-stone-300"
+          className="h-10 w-10 animate-spin rounded-full border-2 border-surface-300 border-t-primary-600"
           aria-hidden
         />
-        <p className="text-stone-400">Loading…</p>
+        <p className="text-surface-500">Loading…</p>
       </div>
     );
   }
@@ -163,8 +163,8 @@ export default function TemplatesPage() {
   if (error) {
     return (
       <div className="mx-auto max-w-4xl px-6 py-12">
-        <p className="text-red-400">{error}</p>
-        <Link href="/" className="mt-4 inline-block text-stone-400 hover:text-stone-300">
+        <p className="text-red-600">{error}</p>
+        <Link href="/" className="mt-4 inline-block text-primary-600 hover:text-primary-700">
           ← Home
         </Link>
       </div>
@@ -172,19 +172,26 @@ export default function TemplatesPage() {
   }
 
   return (
-    <div className="mx-auto max-w-4xl px-6 py-10">
-      <div className="mb-10">
-        <h1 className="text-2xl font-semibold tracking-tight text-stone-100">
-          Templates
-        </h1>
-        <p className="mt-1 text-stone-400">
-          Start a process from a template or create and edit templates.
-        </p>
-      </div>
+    <div className="mx-auto max-w-5xl px-6 py-8 lg:px-8">
+      <header className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight text-surface-900">Process Templates</h1>
+          <p className="mt-1 text-surface-500">Browse and manage your process templates</p>
+        </div>
+        <Link
+          href="/templates/editor/new"
+          className="inline-flex shrink-0 items-center justify-center gap-2 rounded-lg bg-primary-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-primary-700"
+        >
+          <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+          </svg>
+          New Template
+        </Link>
+      </header>
 
-      <section className="rounded-xl border border-stone-700/80 bg-stone-900/50 p-6">
+      <section className="rounded-xl border border-surface-200 bg-white p-6 shadow-card">
         {cloneError && (
-          <p className="mb-4 rounded-lg bg-red-500/10 px-4 py-2 text-sm text-red-400">
+          <p className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-700">
             {cloneError}
           </p>
         )}
@@ -201,13 +208,11 @@ export default function TemplatesPage() {
                   router.push(`/templates/editor/${t.key}`);
                 }
               }}
-              className="flex cursor-pointer items-center justify-between gap-4 rounded-lg border border-stone-700/60 bg-stone-800/40 px-4 py-3 transition hover:border-stone-600 hover:bg-stone-800/60"
+              className="flex cursor-pointer items-center justify-between gap-4 rounded-lg border border-surface-200 bg-surface-50/50 px-4 py-3 transition hover:border-surface-300 hover:bg-white"
             >
               <div>
-                <span className="font-medium text-stone-200">
-                  {t.name ?? t.key}
-                </span>
-                <span className="mt-1 block text-xs text-stone-500">
+                <span className="font-medium text-surface-900">{t.name ?? t.key}</span>
+                <span className="mt-1 block text-xs text-surface-500">
                   Last updated {t.updatedAt ? formatDate(t.updatedAt) : "—"}
                 </span>
               </div>
@@ -221,7 +226,7 @@ export default function TemplatesPage() {
                     e.stopPropagation();
                     setOpenMenuKey((k) => (k === t.key ? null : t.key));
                   }}
-                  className="rounded p-1.5 text-stone-400 hover:bg-stone-600 hover:text-stone-200"
+                  className="rounded p-1.5 text-surface-500 hover:bg-surface-200 hover:text-surface-800"
                   aria-label="Actions"
                   aria-expanded={openMenuKey === t.key}
                 >
@@ -241,19 +246,7 @@ export default function TemplatesPage() {
             </li>
           ))}
         </ul>
-        <Link
-          href="/templates/editor/new"
-          className="mt-4 inline-flex items-center rounded-lg border border-stone-600 bg-stone-800/50 px-4 py-2.5 text-sm font-medium text-stone-200 transition hover:border-stone-500 hover:bg-stone-800"
-        >
-          New template
-        </Link>
       </section>
-
-      <div className="mt-10">
-        <Link href="/" className="text-sm text-stone-500 hover:text-stone-400">
-          ← Back to home
-        </Link>
-      </div>
     </div>
   );
 }

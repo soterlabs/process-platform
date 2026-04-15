@@ -1,17 +1,24 @@
 import type { Metadata } from "next";
+import { Inter } from "next/font/google";
 import { AuthGuard } from "./auth-guard";
 import { AppShell } from "./app-shell";
 import "./globals.css";
 
+const inter = Inter({
+  subsets: ["latin"],
+  variable: "--font-inter",
+  display: "swap",
+});
+
 export const metadata: Metadata = {
-  title: "Process Platform",
+  title: "processOS",
   description: "JSON-defined processes, state in your DB",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <body className="min-h-screen bg-stone-950 text-stone-100 antialiased">
+      <body className={`${inter.variable} min-h-screen font-sans antialiased`}>
         <AuthGuard>
           <AppShell>{children}</AppShell>
         </AuthGuard>
