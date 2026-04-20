@@ -23,7 +23,7 @@ export type FlowNodeData = {
     readOnly?: boolean;
     defaultValue?: string;
   }[];
-  allowedRoles?: string[];
+  permissions?: string[];
   // condition (required when type === "condition")
   expression?: string;
   thenStepKey?: string;
@@ -66,7 +66,7 @@ export function templateToFlow(template: Template): {
                 defaultValue: vc.data,
               })),
             ];
-      data.allowedRoles = inputStep.allowedRoles ?? [];
+      data.permissions = inputStep.permissions ?? [];
     }
     if (step.type === "condition") {
       const c = step as ConditionTemplateStep;
@@ -129,7 +129,7 @@ export function templateToFlow(template: Template): {
 
 export type TemplateOverrides = {
   resultViewControls?: { data: string; title: string; visibleExpression?: string }[];
-  allowedRoles?: string[];
+  permissions?: string[];
 };
 
 export function flowToTemplate(
@@ -168,7 +168,7 @@ export function flowToTemplate(
         type: "input",
         title: d.title,
         inputs: d.inputs ?? [],
-        allowedRoles: d.allowedRoles ?? [],
+        permissions: d.permissions ?? [],
         nextStepKey: nextEdge?.target ? (nextEdge.target as string) : null,
         confirmationMessage: d.confirmationMessage,
         editorProperties,
@@ -215,7 +215,7 @@ export function flowToTemplate(
     name: name || undefined,
     firstStepKey,
     steps,
-    allowedRoles: overrides?.allowedRoles ?? [],
+    permissions: overrides?.permissions ?? [],
     resultViewControls: overrides?.resultViewControls,
   };
 }

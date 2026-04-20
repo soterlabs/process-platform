@@ -12,8 +12,8 @@ export function ConfigPanel({
   allStepKeys,
   resultViewControls = [],
   onUpdateResultViewControls,
-  templateAllowedRoles = [],
-  onUpdateTemplateAllowedRoles,
+  templatePermissions = [],
+  onUpdateTemplatePermissions,
 }: {
   node: Node<FlowNodeData> | null;
   onUpdate: (nodeId: string, data: Partial<FlowNodeData>) => void;
@@ -21,23 +21,23 @@ export function ConfigPanel({
   allStepKeys: string[];
   resultViewControls?: ResultViewControl[];
   onUpdateResultViewControls?: (vc: ResultViewControl[]) => void;
-  templateAllowedRoles?: string[];
-  onUpdateTemplateAllowedRoles?: (roles: string[]) => void;
+  templatePermissions?: string[];
+  onUpdateTemplatePermissions?: (permissions: string[]) => void;
 }) {
   if (!node) {
     return (
       <aside className="flex w-80 shrink-0 flex-col border-l border-surface-200 bg-surface-50 p-4">
         <p className="mb-3 text-sm text-surface-500">Select a step to configure it.</p>
-        {onUpdateTemplateAllowedRoles && (
+        {onUpdateTemplatePermissions && (
           <label className="mb-4 block">
             <span className="text-xs text-surface-500">
               Permissions to start (comma-separated Auth0 permission names, empty = any authenticated user)
             </span>
             <input
               type="text"
-              value={(templateAllowedRoles ?? []).join(", ")}
+              value={(templatePermissions ?? []).join(", ")}
               onChange={(e) =>
-                onUpdateTemplateAllowedRoles(
+                onUpdateTemplatePermissions(
                   e.target.value
                     .split(",")
                     .map((s) => s.trim())
@@ -174,10 +174,10 @@ export function ConfigPanel({
               </span>
               <input
                 type="text"
-                value={(d.allowedRoles ?? []).join(", ")}
+                value={(d.permissions ?? []).join(", ")}
                 onChange={(e) =>
                   update({
-                    allowedRoles: e.target.value
+                    permissions: e.target.value
                       .split(",")
                       .map((s) => s.trim())
                       .filter(Boolean),

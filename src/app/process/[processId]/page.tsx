@@ -37,6 +37,7 @@ type CurrentStep = {
   title: string;
   type: string;
   inputs?: StepInput[];
+  permissions?: string[];
   nextStepKey: string | null;
   confirmationMessage?: string;
 };
@@ -208,6 +209,32 @@ function getCurrentStepIndex(process: ProcessState): number {
   if (!current) return -1;
   const i = process.template.steps.findIndex((s) => s.key === current.stepKey);
   return i >= 0 ? i : -1;
+}
+
+function StepRequiredPermissions({ permissions }: { permissions: string[] | undefined }) {
+  if (!permissions?.length) return null;
+  return (
+    <div
+      className="mt-3 rounded-lg border border-amber-200 bg-amber-50/80 px-3 py-2.5"
+      role="status"
+    >
+      <p className="text-xs font-medium uppercase tracking-wide text-amber-900/70">
+        Permission required
+      </p>
+      <p className="mt-1 text-sm text-amber-950/90">
+        This step can only be completed by an account with at least one of:
+      </p>
+      <ul className="mt-2 flex flex-wrap gap-2" aria-label="Required permissions">
+        {permissions.map((p) => (
+          <li key={p}>
+            <span className="inline-block rounded-md bg-white/90 px-2 py-0.5 font-mono text-xs text-amber-950 shadow-sm ring-1 ring-amber-200/80">
+              {p}
+            </span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
 }
 
 function StepProgress({
@@ -658,6 +685,7 @@ export default function ProcessStepPage() {
   }
 
   if ((!isUserStep || !canAct) && step && process && !isProcessCompleted) {
+    const showPermissionGate = isUserStep && !canAct;
     return (
       <main className="mx-auto max-w-2xl px-6 py-16">
         <Link href="/" className="text-surface-500 hover:text-surface-700">
@@ -667,16 +695,28 @@ export default function ProcessStepPage() {
           steps={process.template.steps.map((s) => ({ key: s.key, title: s.title }))}
           currentStepIndex={currentStepIndex}
         />
-        <div className="flex flex-col items-center gap-4">
-          <div
-            className="h-10 w-10 animate-spin rounded-full border-2 border-surface-300 border-t-primary-600"
-            aria-hidden
-          />
-          <p className="text-surface-500">Please wait…</p>
-          {!isUserStep && (
-            <p className="text-sm text-surface-500">{step.title}</p>
-          )}
-        </div>
+        {showPermissionGate ? (
+          <>
+            <h1 className="mt-6 text-2xl font-semibold text-surface-900">{step.title}</h1>
+            <StepRequiredPermissions permissions={step.permissions} />
+            <p className="mt-4 text-surface-600">
+              {step.permissions?.length
+                ? "Your current account doesn’t have permission to complete this step. Use an account with one of the permissions above, or ask an administrator to grant access."
+                : "You can’t complete this step with your current account."}
+            </p>
+          </>
+        ) : (
+          <div className="flex flex-col items-center gap-4">
+            <div
+              className="h-10 w-10 animate-spin rounded-full border-2 border-surface-300 border-t-primary-600"
+              aria-hidden
+            />
+            <p className="text-surface-500">Please wait…</p>
+            {!isUserStep && (
+              <p className="text-sm text-surface-500">{step.title}</p>
+            )}
+          </div>
+        )}
       </main>
     );
   }
@@ -708,6 +748,7 @@ export default function ProcessStepPage() {
         />
       )}
       <h1 className="mt-6 text-2xl font-semibold text-surface-900">{step?.title}</h1>
+      <StepRequiredPermissions permissions={step?.permissions} />
       <form onSubmit={handleSubmit} className="mt-8 space-y-6">
         {step?.inputs
           ?.filter(

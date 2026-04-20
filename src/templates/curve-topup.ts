@@ -17,7 +17,7 @@ export const curveTopupTemplate: Template = {
       key: "execution",
       type: "input",
       title: "Execution",
-      allowedRoles: [],
+      permissions: [],
       nextStepKey: "post_execution",
       inputs: [
         {
@@ -160,7 +160,7 @@ export const curveTopupTemplate: Template = {
       key: "post_execution",
       type: "input",
       title: "Post-Execution",
-      allowedRoles: [],
+      permissions: [],
       nextStepKey: null,
       inputs: [
         { key: "tx_hash", type: "string", title: "Record Transaction Hash / Etherscan link" },
@@ -175,6 +175,6 @@ export const curveTopupTemplate: Template = {
       ],
     },
   ],
-  allowedRoles: [],
+  permissions: [],
   resultViewControls: [],
 };

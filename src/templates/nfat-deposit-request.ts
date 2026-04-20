@@ -4,13 +4,13 @@ export const nfatDepositRequestTemplate: Template = {
   key: "nfat-deposit-request",
   name: "NFAT Deposit Request",
   firstStepKey: "input_submit",
-  allowedRoles: ["Prime"],
+  permissions: ["Prime"],
   steps: [
     {
       key: "input_submit",
       type: "input",
       title: "Submit Deposit Request",
-      allowedRoles: ["Prime"],
+      permissions: ["Prime"],
       nextStepKey: "input_halo_review",
       confirmationMessage: "Your deposit request has been submitted. A Halo operator will review it shortly.",
       inputs: [
@@ -82,7 +82,7 @@ export const nfatDepositRequestTemplate: Template = {
       key: "input_halo_review",
       type: "input",
       title: "Halo Review",
-      allowedRoles: ["Halo"],
+      permissions: ["Halo"],
       nextStepKey: "condition_halo_decision",
       inputs: [
         {
@@ -171,7 +171,7 @@ export const nfatDepositRequestTemplate: Template = {
       key: "input_govops_review",
       type: "input",
       title: "GovOps Review",
-      allowedRoles: ["GovOps"],
+      permissions: ["GovOps"],
       nextStepKey: "condition_govops_decision",
       inputs: [
         {
@@ -226,7 +226,7 @@ export const nfatDepositRequestTemplate: Template = {
       key: "input_execute",
       type: "input",
       title: "Record On-Chain Execution",
-      allowedRoles: ["GovOps"],
+      permissions: ["GovOps"],
       nextStepKey: null,
       inputs: [
         {
@@ -254,7 +254,7 @@ export const nfatDepositRequestTemplate: Template = {
       key: "input_rejected_by_halo",
       type: "input",
       title: "Rejected by Halo",
-      allowedRoles: ["Prime"],
+      permissions: ["Prime"],
       nextStepKey: null,
       inputs: [
         {
@@ -275,7 +275,7 @@ export const nfatDepositRequestTemplate: Template = {
       key: "input_rejected_by_govops",
       type: "input",
       title: "Rejected by GovOps",
-      allowedRoles: ["Prime"],
+      permissions: ["Prime"],
       nextStepKey: null,
       inputs: [
         {

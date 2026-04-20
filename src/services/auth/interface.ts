@@ -38,9 +38,9 @@ export interface IAuthenticationService {
 export interface IAuthorizationService {
   userHasPermission(permissions: string[], permission: string): boolean;
   canUserActOnStep(
-    permissions: string[],
+    userPermissions: string[],
     /** Template field: permission strings required to act on this step (empty = any authenticated user). */
-    allowedRoles: string[] | undefined
+    requiredPermissions: string[] | undefined
   ): boolean;
   checkStepAuth(
     processId: string,

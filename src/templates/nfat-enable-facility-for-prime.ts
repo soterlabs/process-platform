@@ -4,13 +4,13 @@ export const nfatEnableFacilityForPrimeTemplate: Template = {
   key: "nfat-enable-facility-for-prime",
   name: "NFAT Enable Facility for Prime",
   firstStepKey: "setup",
-  allowedRoles: [],
+  permissions: [],
   steps: [
     {
       key: "setup",
       type: "input",
       title: "Enable Facility for Prime",
-      allowedRoles: [],
+      permissions: ["soter-l1:operate"],
       nextStepKey: null,
       inputs: [
         {

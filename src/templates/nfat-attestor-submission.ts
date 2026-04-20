@@ -4,13 +4,13 @@ export const nfatAttestorSubmissionTemplate: Template = {
   key: "nfat-attestor-submission",
   name: "NFAT Attestor Data Submission",
   firstStepKey: "input_submit",
-  allowedRoles: ["GovOps"],
+  permissions: ["GovOps"],
   steps: [
     {
       key: "input_submit",
       type: "input",
       title: "Submit Attestor Data",
-      allowedRoles: ["GovOps"],
+      permissions: ["GovOps"],
       nextStepKey: null,
       confirmationMessage:
         "Attestor data submission recorded. Call PATCH /attestors/{attestorId}/submit-data in the NFAT backend.",

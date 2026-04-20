@@ -4,13 +4,13 @@ export const nfatFacilityStatusUpdateTemplate: Template = {
   key: "nfat-facility-status-update",
   name: "NFAT Facility Status Update",
   firstStepKey: "input_update",
-  allowedRoles: ["GovOps"],
+  permissions: ["GovOps"],
   steps: [
     {
       key: "input_update",
       type: "input",
       title: "Update Facility Status",
-      allowedRoles: ["GovOps"],
+      permissions: ["GovOps"],
       nextStepKey: null,
       confirmationMessage:
         "Facility status update recorded. Call PATCH /facilities/{facilityId}/status in the NFAT backend.",

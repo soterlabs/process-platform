@@ -4,13 +4,13 @@ export const nfatSetupFacilityTemplate: Template = {
   key: "nfat-setup-facility",
   name: "NFAT Setup Facility",
   firstStepKey: "setup",
-  allowedRoles: [],
+  permissions: [],
   steps: [
     {
       key: "setup",
       type: "input",
       title: "Deploy NFAT Facility",
-      allowedRoles: [],
+      permissions: ["soter-l1:operate"],
       nextStepKey: null,
       inputs: [
         {

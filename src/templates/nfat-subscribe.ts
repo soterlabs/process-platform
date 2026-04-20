@@ -4,13 +4,13 @@ export const nfatSubscribeTemplate: Template = {
   key: "nfat-subscribe",
   name: "NFAT Subscribe to Facility",
   firstStepKey: "subscription_tx",
-  allowedRoles: [],
+  permissions: [],
   steps: [
     {
       key: "subscription_tx",
       type: "input",
       title: "Enable Facility for Prime",
-      allowedRoles: [],
+      permissions: ["soter-l1:operate"],
       nextStepKey: null,
       inputs: [
         {

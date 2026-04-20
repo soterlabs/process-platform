@@ -4,13 +4,13 @@ export const nfatHaloOnboardingTemplate: Template = {
   key: "nfat-halo-onboarding",
   name: "NFAT Halo Onboarding",
   firstStepKey: "input_onboard",
-  allowedRoles: ["GovOps"],
+  permissions: ["GovOps"],
   steps: [
     {
       key: "input_onboard",
       type: "input",
       title: "Onboard Halo",
-      allowedRoles: ["GovOps"],
+      permissions: ["GovOps"],
       nextStepKey: null,
       confirmationMessage:
         "Halo onboarding recorded. Call POST /halos and POST /halos/{haloId}/documents in the NFAT backend.",

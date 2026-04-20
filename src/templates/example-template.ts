@@ -9,7 +9,7 @@ export const exampleTemplate: Template = {
       key: "input_description",
       type: "input",
       title: "Provide Description",
-      allowedRoles: [],
+      permissions: [],
       nextStepKey: "review_description",
       inputs: [
         { key: "_view_0", type: "string", title: "Feedback from OEA", readOnly: true, defaultValue: "${review_description.description_review}" },
@@ -21,7 +21,7 @@ export const exampleTemplate: Template = {
       key: "review_description",
       type: "input",
       title: "Review Description",
-      allowedRoles: [],
+      permissions: [],
       nextStepKey: "review_description_condition",
       inputs: [
         { key: "_view_0", type: "string", title: "Description from Prime", readOnly: true, defaultValue: "${input_description.description}" },
@@ -42,7 +42,7 @@ export const exampleTemplate: Template = {
       key: "input_risk_model_availability",
       type: "input",
       title: "Indicate Risk Model Availability",
-      allowedRoles: [],
+      permissions: [],
       nextStepKey: "agent_recommendation",
       inputs: [
         { key: "availability", type: "dropdown", title: "Is a risk model available?", values: ["Not Available", "Partially Available", "Available"] },
@@ -58,7 +58,7 @@ export const exampleTemplate: Template = {
         "You are assisting with new Halo requests. You will receive the Prime's description of why they need a new Halo, OEA's review, and the Risk Council's risk model availability. Write a short recommendation (2–4 sentences): whether to proceed, defer, or request more information, and why. Be concise and practical.",
     },
   ],
-  allowedRoles: [],
+  permissions: [],
   resultViewControls: [
     { data: "${agent_recommendation.response}", title: "Recommendation" },
   ],

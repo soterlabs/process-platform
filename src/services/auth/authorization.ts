@@ -11,12 +11,12 @@ function userHasPermission(permissions: string[], permission: string): boolean {
 }
 
 function canUserActOnStep(
-  permissions: string[],
-  allowedRoles: string[] | undefined
+  userPermissions: string[],
+  requiredPermissions: string[] | undefined
 ): boolean {
-  if (!allowedRoles || allowedRoles.length === 0) return true;
-  const allowedSet = new Set(allowedRoles.map((r) => r.toLowerCase()));
-  return permissions.some((p) => allowedSet.has(p.toLowerCase()));
+  if (!requiredPermissions || requiredPermissions.length === 0) return true;
+  const allowedSet = new Set(requiredPermissions.map((r) => r.toLowerCase()));
+  return userPermissions.some((p) => allowedSet.has(p.toLowerCase()));
 }
 
 async function checkStepAuth(
@@ -40,11 +40,11 @@ async function checkStepAuth(
   if (!templateStep) {
     return { authorized: false, status: 404, body: { error: "Template step not found" } };
   }
-  const allowedRoles =
+  const requiredPermissions =
     templateStep.type === "input"
-      ? (templateStep as InputTemplateStep).allowedRoles
+      ? (templateStep as InputTemplateStep).permissions
       : undefined;
-  const allowed = canUserActOnStep(permissions, allowedRoles);
+  const allowed = canUserActOnStep(permissions, requiredPermissions);
   if (!allowed) {
     return { authorized: false, status: 403, body: { error: "Not authorized to act on this step" } };
   }
@@ -62,7 +62,7 @@ function canUserActOnCurrentStep(
   if (!currentStep) return false;
   const templateStep = getStepByKey(process.template, currentStep.stepKey);
   if (!templateStep || templateStep.type !== "input") return false;
-  return canUserActOnStep(permissions, (templateStep as InputTemplateStep).allowedRoles);
+  return canUserActOnStep(permissions, (templateStep as InputTemplateStep).permissions);
 }
 
 export const authorizationService: IAuthorizationService = {

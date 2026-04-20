@@ -4,13 +4,13 @@ export const nfatFacilityRegistrationTemplate: Template = {
   key: "nfat-facility-registration",
   name: "NFAT Facility Registration",
   firstStepKey: "input_register",
-  allowedRoles: ["GovOps"],
+  permissions: ["GovOps"],
   steps: [
     {
       key: "input_register",
       type: "input",
       title: "Register Facility",
-      allowedRoles: ["GovOps"],
+      permissions: ["GovOps"],
       nextStepKey: null,
       confirmationMessage:
         "Facility registration recorded. Call POST /facilities/register in the NFAT backend with this data.",

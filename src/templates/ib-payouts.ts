@@ -14,7 +14,7 @@ export const ibPayoutsTemplate: Template = {
       key: "execution",
       type: "input",
       title: "Execution",
-      allowedRoles: [],
+      permissions: [],
       nextStepKey: "post_execution",
       inputs: [
         {
@@ -76,7 +76,7 @@ export const ibPayoutsTemplate: Template = {
       key: "post_execution",
       type: "input",
       title: "Post-execution",
-      allowedRoles: [],
+      permissions: [],
       nextStepKey: null,
       inputs: [
         {
@@ -109,6 +109,6 @@ export const ibPayoutsTemplate: Template = {
       ],
     },
   ],
-  allowedRoles: [],
+  permissions: [],
   resultViewControls: [],
 };

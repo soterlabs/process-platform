@@ -9,13 +9,11 @@ export type TemplateStatus = "active" | "draft" | "archived";
 export type Template = {
   key: string;
   name?: string;
-  /** Optional marketing-style blurb for list cards; generated in UI if omitted. */
   description?: string;
-  /** Optional state for filters and badges; treated as active when omitted. */
   status?: TemplateStatus;
   firstStepKey: string;
   steps: (InputTemplateStep | ConditionTemplateStep | RequestTemplateStep | AutomaticTemplateStep)[];
-  allowedRoles: string[];
+  permissions: string[];
   resultViewControls?: TemplateStepViewControl[];
   updatedAt?: string;
 };

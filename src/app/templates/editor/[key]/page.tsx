@@ -125,7 +125,7 @@ function TemplateEditorInner() {
   const [resultViewControls, setResultViewControls] = useState<
     { data: string; title: string; visibleExpression?: string }[]
   >([]);
-  const [templateAllowedRoles, setTemplateAllowedRoles] = useState<string[]>([]);
+  const [templatePermissions, setTemplatePermissions] = useState<string[]>([]);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "ok" | "error">("idle");
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -145,7 +145,7 @@ function TemplateEditorInner() {
       setNodes([]);
       setEdges([]);
       setResultViewControls([]);
-      setTemplateAllowedRoles([]);
+      setTemplatePermissions([]);
       setLoadError(null);
       return;
     }
@@ -161,7 +161,7 @@ function TemplateEditorInner() {
         setTemplateKey(t.key);
         setTemplateName(t.name ?? "");
         setResultViewControls(t.resultViewControls ?? []);
-        setTemplateAllowedRoles(t.allowedRoles ?? []);
+        setTemplatePermissions(t.permissions ?? []);
         const { nodes: n, edges: e } = templateToFlow(t);
         setNodes(n);
         setEdges(e);
@@ -272,7 +272,7 @@ function TemplateEditorInner() {
     try {
       const template = flowToTemplate(nodes, edges, key, templateName.trim() || undefined, {
         resultViewControls,
-        allowedRoles: templateAllowedRoles,
+        permissions: templatePermissions,
       });
       const res = await authFetch(`/api/templates/${encodeURIComponent(key)}`, {
         method: "PUT",
@@ -289,7 +289,7 @@ function TemplateEditorInner() {
       setSaveStatus("error");
       console.error(err);
     }
-  }, [templateKey, templateName, nodes, edges, resultViewControls, templateAllowedRoles, isNew, router]);
+  }, [templateKey, templateName, nodes, edges, resultViewControls, templatePermissions, isNew, router]);
 
   if (meLoading || (me && !hasPermission(me.permissions, PERMISSIONS.TEMPLATES_WRITE))) {
     return (
@@ -386,8 +386,8 @@ function TemplateEditorInner() {
           allStepKeys={nodes.map((n) => n.id)}
           resultViewControls={resultViewControls}
           onUpdateResultViewControls={setResultViewControls}
-          templateAllowedRoles={templateAllowedRoles}
-          onUpdateTemplateAllowedRoles={setTemplateAllowedRoles}
+          templatePermissions={templatePermissions}
+          onUpdateTemplatePermissions={setTemplatePermissions}
         />
       </div>
     </div>
@@ -427,7 +427,7 @@ function defaultStepData(
   if (type === "input") {
     return {
       inputs: [{ key: "field_1", type: "string", title: "Field" }],
-      allowedRoles: [],
+      permissions: [],
       nextStepKey: null,
     };
   }
