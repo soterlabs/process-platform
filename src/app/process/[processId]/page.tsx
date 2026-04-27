@@ -247,24 +247,6 @@ function StepRequiredPermissions({ permissions }: { permissions: string[] | unde
   );
 }
 
-function StepCompleteRuleHint({ completeExpression }: { completeExpression: string | undefined }) {
-  if (!completeExpression?.trim()) return null;
-  return (
-    <div
-      className="mt-3 rounded-lg border border-surface-200 bg-surface-100/80 px-3 py-2.5"
-      role="note"
-    >
-      <p className="text-xs font-medium uppercase tracking-wide text-surface-600">
-        Finishing this step
-      </p>
-      <p className="mt-1 text-sm text-surface-800">
-        A completion rule controls who may use Continue or Finish. You can still edit fields; if the
-        button is hidden, ask someone who satisfies the rule to submit.
-      </p>
-    </div>
-  );
-}
-
 function StepProgress({
   steps,
   currentStepIndex,
@@ -810,7 +792,6 @@ export default function ProcessStepPage() {
       )}
       <h1 className="mt-6 text-2xl font-semibold text-surface-900">{step?.title}</h1>
       <StepRequiredPermissions permissions={step?.permissions} />
-      <StepCompleteRuleHint completeExpression={step?.completeExpression} />
       <form onSubmit={handleSubmit} className="mt-8 space-y-6">
         {step?.inputs
           ?.filter(
