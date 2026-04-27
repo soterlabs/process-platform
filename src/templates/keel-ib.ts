@@ -9,7 +9,7 @@ export const keelIbTemplate: Template = {
     {
       key: "values",
       type: "input",
-      title: "Collaborative review",
+      title: "Input Values",
       permissions: [],
       completeExpression: 'hasPermission("soter-l1:operate")',
       nextStepKey: null,
