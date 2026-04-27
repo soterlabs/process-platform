@@ -15,6 +15,7 @@ import {
   LIMIT_SUBSCRIBE,
   makeAddressKey as ethMakeAddressKey,
 } from "@/lib/eth-expression-vm";
+import { hasPermission as userHasPermission } from "@/lib/permissions";
 
 type EstreeExpression = acorn.Node & {
   type: string;
@@ -41,7 +42,12 @@ const ALLOWED_NODE_TYPES = new Set([
   "CallExpression",
 ]);
 
-const ALLOWED_CALLEE_NAMES = new Set(["keccak256", "generatePayload", "makeAddressKey"]);
+const ALLOWED_CALLEE_NAMES = new Set([
+  "keccak256",
+  "generatePayload",
+  "makeAddressKey",
+  "hasPermission",
+]);
 
 const EXPR_GLOBALS: Record<string, unknown> = {
   LIMIT_SUBSCRIBE,
@@ -61,7 +67,7 @@ function walkAndValidate(node: EstreeExpression): void {
       };
       if (c.callee.type !== "Identifier") {
         throw new Error(
-          "Only direct calls to keccak256, generatePayload, or makeAddressKey are allowed"
+          "Only direct calls to keccak256, generatePayload, makeAddressKey, or hasPermission are allowed"
         );
       }
       const calleeName = (c.callee as EstreeExpression & { name: string }).name;
@@ -333,7 +339,7 @@ function safeEval(
       };
       if (c.callee.type !== "Identifier") {
         throw new Error(
-          "Only keccak256, generatePayload, and makeAddressKey calls are supported"
+          "Only keccak256, generatePayload, makeAddressKey, or hasPermission calls are supported"
         );
       }
       const calleeName = (c.callee as EstreeExpression & { name: string }).name;
@@ -355,6 +361,16 @@ function safeEval(
           throw new Error("makeAddressKey expects (bytes32 key, address)");
         }
         return ethMakeAddressKey(argValues[0], argValues[1]);
+      }
+      if (calleeName === "hasPermission") {
+        if (argValues.length !== 1) {
+          throw new Error('hasPermission expects one permission string, e.g. hasPermission("soter-l1:operate")');
+        }
+        const raw = context["__userPermissions"];
+        const perms = Array.isArray(raw)
+          ? (raw as unknown[]).filter((p): p is string => typeof p === "string")
+          : [];
+        return userHasPermission(perms, String(argValues[0]));
       }
       throw new Error(`Unsupported callee: ${calleeName}`);
     }
@@ -391,13 +407,20 @@ export function isValid(expression: string): boolean {
   }
 }
 
+export type EvaluateExpressionOptions = {
+  /** Auth0-style permission strings for the current user; enables `hasPermission("…")` in expressions. */
+  userPermissions?: string[];
+};
+
 /**
  * Evaluates an expression against the given context.
- * Only side-effect-free expressions are allowed. In scope: "context" and any key of context (e.g. context.foo or just foo).
+ * Only side-effect-free expressions are allowed. In scope: "context" and any key of context (e.g. context.foo or just foo),
+ * plus `hasPermission("permissionName")` when `userPermissions` is passed in options.
  */
 export function evaluate(
   context: Record<string, unknown>,
-  expression: string
+  expression: string,
+  options?: EvaluateExpressionOptions
 ): unknown {
   const trimmed = expression.trim();
   if (!trimmed) return undefined;
@@ -413,7 +436,11 @@ export function evaluate(
     }
 
     walkAndValidate(ast);
-    const merged = { ...context, ...EXPR_GLOBALS };
+    const merged: Record<string, unknown> = {
+      ...context,
+      ...EXPR_GLOBALS,
+      __userPermissions: options?.userPermissions ?? [],
+    };
     return safeEval(ast, merged);
   } catch (err) {
     console.error("[expression-service] evaluate failed", {

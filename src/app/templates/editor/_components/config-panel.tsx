@@ -187,9 +187,32 @@ export function ConfigPanel({
                 className="mt-0.5 w-full rounded border border-surface-200 bg-white px-2 py-1.5 text-sm text-surface-900"
               />
             </label>
+            <label className="block">
+              <span className="text-xs text-surface-500">
+                Complete when (optional expression — if set, Continue/Finish only when truthy; same
+                rules as conditions, plus{" "}
+                <code className="rounded bg-surface-200 px-0.5">hasPermission(&quot;…&quot;)</code>)
+              </span>
+              <textarea
+                value={d.completeExpression ?? ""}
+                onChange={(e) =>
+                  update({
+                    completeExpression: e.target.value.trim() ? e.target.value : undefined,
+                  })
+                }
+                placeholder='e.g. hasPermission("soter-l1:operate")'
+                rows={2}
+                className="mt-0.5 w-full rounded border border-surface-200 bg-white px-2 py-1.5 font-mono text-xs text-surface-900"
+              />
+            </label>
             <div>
               <span className="text-xs text-surface-500">Inputs & view controls (order is preserved)</span>
-              <p className="mt-0.5 text-xs text-surface-600">View controls: read-only string. Use {"${stepKey.fieldKey}"} for context or {"{{ expression }}" } for JavaScript (step keys, keccak256, generatePayload, Date/Math/JSON).</p>
+              <p className="mt-0.5 text-xs text-surface-600">
+                View controls: read-only string. Use {"${stepKey.fieldKey}"} for context or{" "}
+                {"{{ expression }}"} for JavaScript (step keys, keccak256, generatePayload,
+                hasPermission, Date/Math/JSON). Input visibility expressions may use{" "}
+                <code className="rounded bg-surface-200 px-0.5">hasPermission(&quot;…&quot;)</code>.
+              </p>
               <div className="mt-1 space-y-2">
                 {(d.inputs ?? []).map((input, i) => (
                   <div

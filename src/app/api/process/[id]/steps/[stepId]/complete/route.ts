@@ -19,12 +19,15 @@ export async function POST(
   const { userId, permissions } = principal;
   try {
     const { id, stepId } = params;
-    const auth = await authorizationService.checkStepAuth(id, stepId, userId, permissions);
+    const body = await request.json().catch(() => null);
+    const payload = (body as CompleteStepBody | null) ?? {};
+    const auth = await authorizationService.checkStepAuth(id, stepId, userId, permissions, {
+      intent: "complete",
+      mergeStepContextPayload: payload,
+    });
     if (!auth.authorized) {
       return NextResponse.json(auth.body, { status: auth.status });
     }
-    const body = await request.json().catch(() => null);
-    const payload = (body as CompleteStepBody | null) ?? {};
     if (Object.keys(payload).length > 0) {
       await executionService.updateStepById(id, stepId, payload, userId);
     }

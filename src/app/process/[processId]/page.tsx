@@ -4,6 +4,8 @@ import { useParams } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { authFetch } from "@/lib/auth-client";
+import { hasPermission } from "@/lib/permissions";
+import { useMe } from "@/hooks/use-me";
 import {
   generatePayload,
   keccak256,
@@ -38,6 +40,7 @@ type CurrentStep = {
   type: string;
   inputs?: StepInput[];
   permissions?: string[];
+  completeExpression?: string;
   nextStepKey: string | null;
   confirmationMessage?: string;
 };
@@ -52,6 +55,7 @@ type ProcessState = {
   result?: Record<string, unknown>;
   status: string;
   canActOnCurrentStep?: boolean;
+  canCompleteCurrentStep?: boolean;
 };
 
 const POLL_INTERVAL_MS = 3000;
@@ -86,6 +90,7 @@ const TEMPLATE_EXPR_RESERVED_KEYS = new Set([
   "keccak256",
   "generatePayload",
   "makeAddressKey",
+  "hasPermission",
   "LIMIT_SUBSCRIBE",
   "LIMIT_COLLECT",
   "Date",
@@ -98,17 +103,20 @@ const TEMPLATE_EXPR_RESERVED_KEYS = new Set([
 
 function evalTemplateExpression(
   expr: string,
-  context: Record<string, unknown>
+  context: Record<string, unknown>,
+  userPermissions: string[] = []
 ): string {
   try {
     const keys = Object.keys(context).filter(
       (k) => /^[a-zA-Z_$][\w$]*$/.test(k) && !TEMPLATE_EXPR_RESERVED_KEYS.has(k)
     );
+    const hasPermissionBound = (p: string) => hasPermission(userPermissions, p);
     const fn = new Function(
       "context",
       "keccak256",
       "generatePayload",
       "makeAddressKey",
+      "hasPermission",
       "LIMIT_SUBSCRIBE",
       "LIMIT_COLLECT",
       ...keys,
@@ -125,6 +133,7 @@ function evalTemplateExpression(
       keccak256,
       generatePayload,
       makeAddressKey,
+      hasPermissionBound,
       LIMIT_SUBSCRIBE,
       LIMIT_COLLECT,
       ...keys.map((k) => context[k]),
@@ -157,12 +166,13 @@ function evalTemplateExpression(
  */
 function resolveContextTemplate(
   data: string,
-  context: Record<string, unknown>
+  context: Record<string, unknown>,
+  userPermissions: string[] = []
 ): string {
   let out = data;
   // First: replace {{ expression }} with eval result
   out = out.replace(/\{\{([\s\S]*?)\}\}/g, (_, expr: string) =>
-    evalTemplateExpression(expr, context)
+    evalTemplateExpression(expr, context, userPermissions)
   );
   // Then: replace ${ path } with context lookup (backward compatible)
   if (/\$\{[^}]+\}/.test(out)) {
@@ -237,6 +247,24 @@ function StepRequiredPermissions({ permissions }: { permissions: string[] | unde
   );
 }
 
+function StepCompleteRuleHint({ completeExpression }: { completeExpression: string | undefined }) {
+  if (!completeExpression?.trim()) return null;
+  return (
+    <div
+      className="mt-3 rounded-lg border border-surface-200 bg-surface-100/80 px-3 py-2.5"
+      role="note"
+    >
+      <p className="text-xs font-medium uppercase tracking-wide text-surface-600">
+        Finishing this step
+      </p>
+      <p className="mt-1 text-sm text-surface-800">
+        A completion rule controls who may use Continue or Finish. You can still edit fields; if the
+        button is hidden, ask someone who satisfies the rule to submit.
+      </p>
+    </div>
+  );
+}
+
 function StepProgress({
   steps,
   currentStepIndex,
@@ -287,6 +315,7 @@ function StepProgress({
 }
 
 export default function ProcessStepPage() {
+  const { me } = useMe();
   const params = useParams();
   const processId = params.processId as string;
   const [process, setProcess] = useState<ProcessState | null>(null);
@@ -346,7 +375,11 @@ export default function ProcessStepPage() {
                 return;
               }
               if (inp.defaultValue != null && inp.defaultValue !== "") {
-                const resolved = resolveContextTemplate(inp.defaultValue, context);
+                const resolved = resolveContextTemplate(
+                  inp.defaultValue,
+                  context,
+                  me?.permissions ?? []
+                );
                 if (inp.type === "bool") {
                   next[inp.key] = /^(yes|true|1)$/i.test(resolved.trim());
                 } else {
@@ -367,7 +400,7 @@ export default function ProcessStepPage() {
     return () => {
       cancelled = true;
     };
-  }, [processId, fetchProcess]);
+  }, [processId, fetchProcess, me?.permissions]);
 
   // Poll when current step is non-user (waiting for agent/backend)
   const step = process ? getCurrentStep(process) : null;
@@ -454,6 +487,24 @@ export default function ProcessStepPage() {
     e.preventDefault();
     const currentProcessStep = process ? getCurrentProcessStepFromState(process) : null;
     if (!step?.inputs?.length || submitting || !process || !currentProcessStep) return;
+    const userPerms = me?.permissions ?? [];
+    const completeExpr = step.completeExpression?.trim();
+    if (completeExpr) {
+      const ctx = process
+        ? (() => {
+            const base = { ...process.context };
+            if (step?.key) {
+              const cur = (base[step.key] as Record<string, unknown>) ?? {};
+              base[step.key] = { ...cur, ...formValues };
+            }
+            return deserializeProcessContextNumericFields(process.template, base);
+          })()
+        : {};
+      if (!evaluate(ctx, completeExpr, { userPermissions: userPerms })) {
+        setError("You are not allowed to finish this step with the current account or data.");
+        return;
+      }
+    }
     setSubmitting(true);
     try {
       const payload: Record<string, unknown> = {};
@@ -580,7 +631,11 @@ export default function ProcessStepPage() {
       .filter(
         (vc) =>
           (!vc.visibleExpression ||
-            Boolean(evaluate(process.context, vc.visibleExpression))) &&
+            Boolean(
+              evaluate(process.context, vc.visibleExpression, {
+                userPermissions: me?.permissions ?? [],
+              })
+            )) &&
           shouldShowViewControl(vc.data, process.context)
       );
     const showResultViewControls = resolvedResultViewControls.length > 0;
@@ -736,6 +791,12 @@ export default function ProcessStepPage() {
       })()
     : {};
 
+  const userPerms = me?.permissions ?? [];
+  const completeExprLive = step?.completeExpression?.trim();
+  const canShowCompleteButton =
+    !completeExprLive ||
+    Boolean(evaluate(evaluationContext, completeExprLive, { userPermissions: userPerms }));
+
   return (
     <main className="mx-auto max-w-2xl px-6 py-16">
       <Link href="/" className="text-surface-500 hover:text-surface-700">
@@ -749,12 +810,18 @@ export default function ProcessStepPage() {
       )}
       <h1 className="mt-6 text-2xl font-semibold text-surface-900">{step?.title}</h1>
       <StepRequiredPermissions permissions={step?.permissions} />
+      <StepCompleteRuleHint completeExpression={step?.completeExpression} />
       <form onSubmit={handleSubmit} className="mt-8 space-y-6">
         {step?.inputs
           ?.filter(
             (inp) =>
               (!inp.visibleExpression ||
-                Boolean(process && evaluate(evaluationContext, inp.visibleExpression))) &&
+                Boolean(
+                  process &&
+                    evaluate(evaluationContext, inp.visibleExpression, {
+                      userPermissions: userPerms,
+                    })
+                )) &&
               (inp.readOnly
                 ? process
                   ? shouldShowViewControl(inp.defaultValue ?? "", evaluationContext)
@@ -777,7 +844,7 @@ export default function ProcessStepPage() {
                   aria-readonly
                   dangerouslySetInnerHTML={{
                     __html: process
-                      ? resolveContextTemplate(inp.defaultValue ?? "", evaluationContext)
+                      ? resolveContextTemplate(inp.defaultValue ?? "", evaluationContext, userPerms)
                       : inp.defaultValue ?? "",
                   }}
                 />
@@ -932,13 +999,20 @@ export default function ProcessStepPage() {
           </div>
             )
           )}
-        <button
-          type="submit"
-          disabled={submitting}
-          className="rounded-lg bg-primary-600 px-4 py-2 text-white hover:bg-primary-700 disabled:opacity-50"
-        >
-          {submitting ? "Submitting…" : isLastStepInTemplate ? "Finish" : "Continue"}
-        </button>
+        {canShowCompleteButton ? (
+          <button
+            type="submit"
+            disabled={submitting}
+            className="rounded-lg bg-primary-600 px-4 py-2 text-white hover:bg-primary-700 disabled:opacity-50"
+          >
+            {submitting ? "Submitting…" : isLastStepInTemplate ? "Finish" : "Continue"}
+          </button>
+        ) : (
+          <p className="text-sm text-surface-600" role="status">
+            Continue or Finish is hidden because your account does not satisfy this step&apos;s
+            completion rule. You can still edit the fields above; changes are saved automatically.
+          </p>
+        )}
       </form>
     </main>
   );

@@ -46,9 +46,20 @@ export interface IAuthorizationService {
     processId: string,
     stepId: string,
     userId: string | null,
-    permissions: string[]
+    permissions: string[],
+    options?: {
+      intent?: "update" | "complete";
+      /** Merged into the step’s context when evaluating `completeExpression` on complete. */
+      mergeStepContextPayload?: Record<string, unknown>;
+    }
   ): Promise<{ authorized: boolean; status?: number; body?: unknown }>;
   canUserActOnCurrentStep(
+    process: Process,
+    userId: string | null,
+    permissions: string[]
+  ): boolean;
+  /** Whether the user may call complete on the current input step (edit + optional `completeExpression`). */
+  canCompleteCurrentStep(
     process: Process,
     userId: string | null,
     permissions: string[]

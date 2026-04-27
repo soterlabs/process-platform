@@ -24,6 +24,7 @@ export type FlowNodeData = {
     defaultValue?: string;
   }[];
   permissions?: string[];
+  completeExpression?: string;
   // condition (required when type === "condition")
   expression?: string;
   thenStepKey?: string;
@@ -67,6 +68,7 @@ export function templateToFlow(template: Template): {
               })),
             ];
       data.permissions = inputStep.permissions ?? [];
+      data.completeExpression = inputStep.completeExpression;
     }
     if (step.type === "condition") {
       const c = step as ConditionTemplateStep;
@@ -169,6 +171,9 @@ export function flowToTemplate(
         title: d.title,
         inputs: d.inputs ?? [],
         permissions: d.permissions ?? [],
+        completeExpression: d.completeExpression?.trim()
+          ? d.completeExpression.trim()
+          : undefined,
         nextStepKey: nextEdge?.target ? (nextEdge.target as string) : null,
         confirmationMessage: d.confirmationMessage,
         editorProperties,

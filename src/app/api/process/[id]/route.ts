@@ -30,6 +30,11 @@ export async function GET(
       userId,
       permissions
     );
+    const canCompleteCurrentStep = authorizationService.canCompleteCurrentStep(
+      result,
+      userId,
+      permissions
+    );
     /** Use latest template definition from storage so readOnly defaultValue / inputs stay current. */
     let template = result.template;
     try {
@@ -38,7 +43,12 @@ export async function GET(
     } catch {
       // keep embedded template
     }
-    return NextResponse.json({ ...result, template, canActOnCurrentStep });
+    return NextResponse.json({
+      ...result,
+      template,
+      canActOnCurrentStep,
+      canCompleteCurrentStep,
+    });
   } catch (err) {
     console.error(err);
     return NextResponse.json(
