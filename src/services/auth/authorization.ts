@@ -1,5 +1,6 @@
 import type { Process } from "@/entities/process";
 import type { InputTemplateStep } from "@/entities/template";
+import { expressionEvaluateOptionsFromProcess } from "@/lib/expression-process-context";
 import { deserializeProcessContextNumericFields } from "@/lib/numeric-field";
 import { evaluate } from "@/services/expression-service";
 import { getCurrentProcessStep, getProcessStepById, getStepByKey } from "@/services/template-helpers";
@@ -74,7 +75,10 @@ async function checkStepAuth(
         process.template,
         mergedContext
       );
-      const ok = evaluate(evalCtx, completeExpr, { userPermissions: permissions });
+      const ok = evaluate(evalCtx, completeExpr, {
+        userPermissions: permissions,
+        ...expressionEvaluateOptionsFromProcess(process),
+      });
       if (!Boolean(ok)) {
         return {
           authorized: false,
@@ -119,7 +123,12 @@ function canCompleteCurrentStep(
   const completeExpr = inputStep.completeExpression?.trim();
   if (!completeExpr) return true;
   const evalCtx = deserializeProcessContextNumericFields(process.template, process.context);
-  return Boolean(evaluate(evalCtx, completeExpr, { userPermissions: permissions }));
+  return Boolean(
+    evaluate(evalCtx, completeExpr, {
+      userPermissions: permissions,
+      ...expressionEvaluateOptionsFromProcess(process),
+    })
+  );
 }
 
 export const authorizationService: IAuthorizationService = {

@@ -21,7 +21,8 @@ import {
   serializeNumericFieldFromForm,
   withDeserializedNumericContext,
 } from "@/lib/numeric-field";
-import { evaluate } from "@/services/expression-service";
+import { buildCurrentProcessExpressionContext } from "@/lib/expression-process-context";
+import { evaluate, type EvaluateExpressionOptions } from "@/services/expression-service";
 import { DateTimePicker } from "./_components/DateTimePicker";
 
 type StepInput = {
@@ -49,16 +50,40 @@ type ResultViewControl = { data: string; title: string; visibleExpression?: stri
 
 type ProcessState = {
   processId: string;
-  template: { steps: CurrentStep[]; resultViewControls?: ResultViewControl[] };
+  template: {
+    key?: string;
+    steps: CurrentStep[];
+    resultViewControls?: ResultViewControl[];
+  };
   steps: { id: string; processId?: string; stepKey: string }[];
   context: Record<string, unknown>;
   result?: Record<string, unknown>;
   status: string;
+  startedAt?: string;
+  updatedAt?: string;
   canActOnCurrentStep?: boolean;
   canCompleteCurrentStep?: boolean;
 };
 
 const POLL_INTERVAL_MS = 3000;
+
+type ClientExpressionProcessOptions = Pick<
+  EvaluateExpressionOptions,
+  "processId" | "templateKey" | "processStatus" | "processStartedAt" | "processUpdatedAt"
+>;
+
+function clientExpressionProcessOptions(
+  proc: ProcessState | null,
+  routeProcessId: string
+): ClientExpressionProcessOptions {
+  return {
+    processId: proc?.processId ?? routeProcessId,
+    templateKey: proc?.template?.key,
+    processStatus: proc?.status,
+    processStartedAt: proc?.startedAt,
+    processUpdatedAt: proc?.updatedAt,
+  };
+}
 
 /** Get value from context by dot path, e.g. "stepKey.fieldKey" */
 function getContextValue(context: Record<string, unknown>, path: string): unknown {
@@ -99,18 +124,27 @@ const TEMPLATE_EXPR_RESERVED_KEYS = new Set([
   "Number",
   "String",
   "Boolean",
+  "currentProcess",
 ]);
 
 function evalTemplateExpression(
   expr: string,
   context: Record<string, unknown>,
-  userPermissions: string[] = []
+  userPermissions: string[] = [],
+  processOpts?: ClientExpressionProcessOptions
 ): string {
   try {
     const keys = Object.keys(context).filter(
       (k) => /^[a-zA-Z_$][\w$]*$/.test(k) && !TEMPLATE_EXPR_RESERVED_KEYS.has(k)
     );
     const hasPermissionBound = (p: string) => hasPermission(userPermissions, p);
+    const currentProcessValue = buildCurrentProcessExpressionContext({
+      id: processOpts?.processId,
+      templateKey: processOpts?.templateKey,
+      status: processOpts?.processStatus,
+      startedAt: processOpts?.processStartedAt,
+      updatedAt: processOpts?.processUpdatedAt,
+    });
     const fn = new Function(
       "context",
       "keccak256",
@@ -119,6 +153,7 @@ function evalTemplateExpression(
       "hasPermission",
       "LIMIT_SUBSCRIBE",
       "LIMIT_COLLECT",
+      "currentProcess",
       ...keys,
       "Date",
       "Math",
@@ -136,6 +171,7 @@ function evalTemplateExpression(
       hasPermissionBound,
       LIMIT_SUBSCRIBE,
       LIMIT_COLLECT,
+      currentProcessValue,
       ...keys.map((k) => context[k]),
       Date,
       Math,
@@ -167,12 +203,13 @@ function evalTemplateExpression(
 function resolveContextTemplate(
   data: string,
   context: Record<string, unknown>,
-  userPermissions: string[] = []
+  userPermissions: string[] = [],
+  processOpts?: ClientExpressionProcessOptions
 ): string {
   let out = data;
   // First: replace {{ expression }} with eval result
   out = out.replace(/\{\{([\s\S]*?)\}\}/g, (_, expr: string) =>
-    evalTemplateExpression(expr, context, userPermissions)
+    evalTemplateExpression(expr, context, userPermissions, processOpts)
   );
   // Then: replace ${ path } with context lookup (backward compatible)
   if (/\$\{[^}]+\}/.test(out)) {
@@ -360,7 +397,8 @@ export default function ProcessStepPage() {
                 const resolved = resolveContextTemplate(
                   inp.defaultValue,
                   context,
-                  me?.permissions ?? []
+                  me?.permissions ?? [],
+                  clientExpressionProcessOptions(proc, proc.processId)
                 );
                 if (inp.type === "bool") {
                   next[inp.key] = /^(yes|true|1)$/i.test(resolved.trim());
@@ -482,7 +520,12 @@ export default function ProcessStepPage() {
             return deserializeProcessContextNumericFields(process.template, base);
           })()
         : {};
-      if (!evaluate(ctx, completeExpr, { userPermissions: userPerms })) {
+      if (
+        !evaluate(ctx, completeExpr, {
+          userPermissions: userPerms,
+          ...clientExpressionProcessOptions(process, processId),
+        })
+      ) {
         setError("You are not allowed to finish this step with the current account or data.");
         return;
       }
@@ -616,6 +659,7 @@ export default function ProcessStepPage() {
             Boolean(
               evaluate(process.context, vc.visibleExpression, {
                 userPermissions: me?.permissions ?? [],
+                ...clientExpressionProcessOptions(process, process.processId),
               })
             )) &&
           shouldShowViewControl(vc.data, process.context)
@@ -644,7 +688,12 @@ export default function ProcessStepPage() {
               Result
             </h2>
             {resolvedResultViewControls.map((vc, i) => {
-              const display = resolveContextTemplate(vc.data, process.context);
+              const display = resolveContextTemplate(
+                vc.data,
+                process.context,
+                me?.permissions ?? [],
+                clientExpressionProcessOptions(process, process.processId)
+              );
               return (
                 <div
                   key={`${vc.data}-${vc.title}-${i}`}
@@ -777,7 +826,12 @@ export default function ProcessStepPage() {
   const completeExprLive = step?.completeExpression?.trim();
   const canShowCompleteButton =
     !completeExprLive ||
-    Boolean(evaluate(evaluationContext, completeExprLive, { userPermissions: userPerms }));
+    Boolean(
+      evaluate(evaluationContext, completeExprLive, {
+        userPermissions: userPerms,
+        ...clientExpressionProcessOptions(process, processId),
+      })
+    );
 
   return (
     <main className="mx-auto max-w-2xl px-6 py-16">
@@ -801,6 +855,7 @@ export default function ProcessStepPage() {
                   process &&
                     evaluate(evaluationContext, inp.visibleExpression, {
                       userPermissions: userPerms,
+                      ...clientExpressionProcessOptions(process, processId),
                     })
                 )) &&
               (inp.readOnly
@@ -825,7 +880,12 @@ export default function ProcessStepPage() {
                   aria-readonly
                   dangerouslySetInnerHTML={{
                     __html: process
-                      ? resolveContextTemplate(inp.defaultValue ?? "", evaluationContext, userPerms)
+                      ? resolveContextTemplate(
+                          inp.defaultValue ?? "",
+                          evaluationContext,
+                          userPerms,
+                          clientExpressionProcessOptions(process, processId)
+                        )
                       : inp.defaultValue ?? "",
                   }}
                 />

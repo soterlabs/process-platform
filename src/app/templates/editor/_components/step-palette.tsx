@@ -5,12 +5,13 @@ const STEP_TYPES = [
   { type: "condition" as const, label: "Condition", desc: "Branch on expression" },
   { type: "request" as const, label: "Request", desc: "Agent / LLM call" },
   { type: "automatic" as const, label: "Set context", desc: "Set context from expression (automatic)" },
+  { type: "slack_notify" as const, label: "Slack notify", desc: "Channel + emails/U… → @mentions; body from expression" },
 ];
 
 export function StepPalette() {
   function onDragStart(
     event: React.DragEvent,
-    nodeType: "input" | "condition" | "request" | "automatic"
+    nodeType: "input" | "condition" | "request" | "automatic" | "slack_notify"
   ) {
     event.dataTransfer.setData("application/reactflow-type", nodeType);
     event.dataTransfer.effectAllowed = "move";

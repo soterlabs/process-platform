@@ -191,7 +191,9 @@ export function ConfigPanel({
               <span className="text-xs text-surface-500">
                 Complete when (optional expression — if set, Continue/Finish only when truthy; same
                 rules as conditions, plus{" "}
-                <code className="rounded bg-surface-200 px-0.5">hasPermission(&quot;…&quot;)</code>)
+                <code className="rounded bg-surface-200 px-0.5">hasPermission(&quot;…&quot;)</code> and{" "}
+                <code className="rounded bg-surface-200 px-0.5">currentProcess</code> (e.g.{" "}
+                <code className="rounded bg-surface-200 px-0.5">.url</code>).
               </span>
               <textarea
                 value={d.completeExpression ?? ""}
@@ -210,7 +212,7 @@ export function ConfigPanel({
               <p className="mt-0.5 text-xs text-surface-600">
                 View controls: read-only string. Use {"${stepKey.fieldKey}"} for context or{" "}
                 {"{{ expression }}"} for JavaScript (step keys, keccak256, generatePayload,
-                hasPermission, Date/Math/JSON). Input visibility expressions may use{" "}
+                hasPermission, Date/Math/JSON, currentProcess). Input visibility expressions may use{" "}
                 <code className="rounded bg-surface-200 px-0.5">hasPermission(&quot;…&quot;)</code>.
               </p>
               <div className="mt-1 space-y-2">
@@ -401,7 +403,11 @@ export function ConfigPanel({
         {d.type === "condition" && (
           <>
             <label className="block">
-              <span className="text-xs text-surface-500">Expression (e.g. context.stepKey.field)</span>
+              <span className="text-xs text-surface-500">
+                Expression (e.g. context.stepKey.field). During a run,{" "}
+                <code className="rounded bg-surface-200 px-0.5">currentProcess</code> (e.g.{" "}
+                <code className="rounded bg-surface-200 px-0.5">currentProcess.url</code>) is in scope.
+              </span>
               <input
                 type="text"
                 value={d.expression ?? ""}
@@ -427,13 +433,70 @@ export function ConfigPanel({
               />
             </label>
             <label className="block">
-              <span className="text-xs text-surface-500">Expression (path to read value from context)</span>
+              <span className="text-xs text-surface-500">
+                Expression (path to read value from context). During a run,{" "}
+                <code className="rounded bg-surface-200 px-0.5">currentProcess</code> is available.
+              </span>
               <input
                 type="text"
                 value={d.expression ?? ""}
                 onChange={(e) => update({ expression: e.target.value })}
                 placeholder="e.g. context.stepKey.field"
                 className="mt-0.5 w-full rounded border border-surface-200 bg-white px-2 py-1.5 text-sm text-surface-900"
+              />
+            </label>
+          </>
+        )}
+
+        {d.type === "slack_notify" && (
+          <>
+            <p className="text-xs text-surface-600">
+              One post in the channel; each entry is a workspace email (resolved to a Slack user) or a raw U… id.
+              Only users who are members of this channel are @-mentioned. Message body uses the same expression rules
+              as conditions. Bot needs <code className="rounded bg-surface-200 px-0.5">SLACK_BOT_TOKEN</code> with{" "}
+              <code className="rounded bg-surface-200 px-0.5">users:read.email</code> for email lookup and read access
+              for <code className="rounded bg-surface-200 px-0.5">conversations.members</code>.
+            </p>
+            <label className="block">
+              <span className="text-xs text-surface-500">Channel id (C… or G…)</span>
+              <input
+                type="text"
+                value={d.channelId ?? ""}
+                onChange={(e) => update({ channelId: e.target.value })}
+                placeholder="e.g. C01234567"
+                className="mt-0.5 w-full rounded border border-surface-200 bg-white px-2 py-1.5 font-mono text-sm text-surface-900"
+              />
+            </label>
+            <label className="block">
+              <span className="text-xs text-surface-500">Users to @mention (comma-separated: email or U… id)</span>
+              <input
+                type="text"
+                value={(d.mentionUsers ?? []).join(", ")}
+                onChange={(e) =>
+                  update({
+                    mentionUsers: e.target.value
+                      .split(",")
+                      .map((s) => s.trim())
+                      .filter(Boolean),
+                  })
+                }
+                placeholder="e.g. ada@company.com, bob@company.com, U01234567"
+                className="mt-0.5 w-full rounded border border-surface-200 bg-white px-2 py-1.5 font-mono text-sm text-surface-900"
+              />
+            </label>
+            <label className="block">
+              <span className="text-xs text-surface-500">
+                Message text (expression → string). Slack mrkdwn is on: use{" "}
+                <code className="rounded bg-surface-200 px-0.5">&lt;https://…|here&gt;</code> for a clickable label. Use{" "}
+                <code className="rounded bg-surface-200 px-0.5">currentProcess.url</code> (and other{" "}
+                <code className="rounded bg-surface-200 px-0.5">currentProcess.*</code>) when the process exists.
+              </span>
+              <textarea
+                value={d.messageExpression ?? ""}
+                onChange={(e) => update({ messageExpression: e.target.value })}
+                placeholder={'e.g. "See <" + currentProcess.url + "|link>"'}
+                rows={3}
+                className="mt-0.5 w-full rounded border border-surface-200 bg-white px-2 py-1.5 font-mono text-xs text-surface-900"
               />
             </label>
           </>

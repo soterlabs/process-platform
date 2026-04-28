@@ -4,16 +4,19 @@ import type {
   AutomaticTemplateStep,
   ConditionTemplateStep,
   RequestTemplateStep,
+  SlackNotifyTemplateStep,
 } from "@/entities/template";
 import { agentService } from "@/services/agent-service";
-import { evaluate } from "@/services/expression-service";
+import { evaluate, type EvaluateExpressionOptions } from "@/services/expression-service";
 import {
   getCurrentProcessStep,
   getNextStepKey,
   getProcessStepById,
   getStepByKey,
 } from "@/services/template-helpers";
+import { expressionEvaluateOptionsFromProcess } from "@/lib/expression-process-context";
 import { deserializeProcessContextNumericFields } from "@/lib/numeric-field";
+import { postSlackChannelNotification } from "@/services/slack-notify-service";
 import { storageService } from "@/services/storage";
 
 /** Context with template `number` fields as bigint | string (same as UI / expressions). */
@@ -31,19 +34,49 @@ function pushStep(process: Process, stepKey: string): void {
 
 function runAutomaticStep(
   step: AutomaticTemplateStep,
-  context: Record<string, unknown>
+  context: Record<string, unknown>,
+  evalOpts?: EvaluateExpressionOptions
 ): Record<string, unknown> {
-  const value = evaluate(context, step.expression);
+  const value = evaluate(context, step.expression, evalOpts);
   return { ...context, [step.contextKey]: value };
 }
 
 function runConditionalStep(
   step: ConditionTemplateStep,
-  context: Record<string, unknown>
+  context: Record<string, unknown>,
+  evalOpts?: EvaluateExpressionOptions
 ): string | null {
-  const value = evaluate(context, step.expression);
+  const value = evaluate(context, step.expression, evalOpts);
   if (value) return step.thenStepKey;
   else return step.elseStepKey;
+}
+
+async function runSlackNotifyStep(
+  step: SlackNotifyTemplateStep,
+  context: Record<string, unknown>,
+  evalOpts?: EvaluateExpressionOptions
+): Promise<Record<string, unknown>> {
+  const rawMessage = evaluate(context, step.messageExpression, evalOpts);
+  const bodyText =
+    rawMessage === undefined || rawMessage === null ? "" : String(rawMessage);
+  const result = await postSlackChannelNotification({
+    channelId: step.channelId,
+    mentionUsers: step.mentionUsers ?? [],
+    bodyText,
+  });
+  return {
+    slackNotify: {
+      at: new Date().toISOString(),
+      ok: result.ok,
+      error: result.error,
+      channelId: step.channelId,
+      mentionUsers: step.mentionUsers ?? [],
+      resolvedMentionUserIds: result.resolvedMentionUserIds,
+      mentionResolveErrors: result.resolveErrors,
+      skippedNotInChannel: result.skippedNotInChannel,
+      ts: result.ts,
+    },
+  };
 }
 
 function appendStepContextAudit(
@@ -162,7 +195,8 @@ export const executionService = {
     let nextStepKey = getNextStepKey(
       process.template,
       step.stepKey,
-      contextForEvaluation(process)
+      contextForEvaluation(process),
+      expressionEvaluateOptionsFromProcess(process)
     );
     if (nextStepKey === null) {
       await this.completeProcess(process);
@@ -197,10 +231,13 @@ export const executionService = {
 
     currentStep.updatedUTC = new Date().toISOString();
 
+    const exprOpts: EvaluateExpressionOptions = expressionEvaluateOptionsFromProcess(process);
+
     if (templateStep.type === "automatic") {
       const newContext = runAutomaticStep(
         templateStep as AutomaticTemplateStep,
-        contextForEvaluation(process)
+        contextForEvaluation(process),
+        exprOpts
       );
       const contextKey = (templateStep as AutomaticTemplateStep).contextKey;
       const value = newContext[contextKey];
@@ -222,7 +259,8 @@ export const executionService = {
     if (templateStep.type === "condition") {
       const nextKey = runConditionalStep(
         templateStep as ConditionTemplateStep,
-        contextForEvaluation(process)
+        contextForEvaluation(process),
+        exprOpts
       );
       if (nextKey && getStepByKey(process.template, nextKey)) {
         pushStep(process, nextKey);
@@ -230,6 +268,27 @@ export const executionService = {
       } else {
         await this.completeProcess(process);
       }
+      return;
+    }
+
+    if (templateStep.type === "slack_notify") {
+      const slackStep = templateStep as SlackNotifyTemplateStep;
+      const stepKey = currentStep.stepKey;
+      const updates = await runSlackNotifyStep(
+        slackStep,
+        contextForEvaluation(process),
+        exprOpts
+      );
+      const existing = (process.context[stepKey] as Record<string, unknown>) ?? {};
+      process.context[stepKey] = { ...existing, ...updates };
+      appendStepContextAudit(process, SYSTEM_STEP_CONTEXT_USER_ID, stepKey, updates);
+      const nextStepKey = slackStep.nextStepKey;
+      if (nextStepKey && getStepByKey(process.template, nextStepKey)) {
+        pushStep(process, nextStepKey);
+      } else {
+        await this.completeProcess(process);
+      }
+      await storageService.saveProcessState(process);
       return;
     }
 

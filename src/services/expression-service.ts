@@ -15,6 +15,7 @@ import {
   LIMIT_SUBSCRIBE,
   makeAddressKey as ethMakeAddressKey,
 } from "@/lib/eth-expression-vm";
+import { buildCurrentProcessExpressionContext } from "@/lib/expression-process-context";
 import { hasPermission as userHasPermission } from "@/lib/permissions";
 
 type EstreeExpression = acorn.Node & {
@@ -410,12 +411,19 @@ export function isValid(expression: string): boolean {
 export type EvaluateExpressionOptions = {
   /** Auth0-style permission strings for the current user; enables `hasPermission("…")` in expressions. */
   userPermissions?: string[];
+  /** Non-empty after trim → `currentProcess` in expressions (id, url, templateKey, status, dates). */
+  processId?: string;
+  templateKey?: string;
+  processStatus?: string;
+  processStartedAt?: string;
+  processUpdatedAt?: string;
 };
 
 /**
  * Evaluates an expression against the given context.
- * Only side-effect-free expressions are allowed. In scope: "context" and any key of context (e.g. context.foo or just foo),
- * plus `hasPermission("permissionName")` when `userPermissions` is passed in options.
+ * In scope: "context", keys of context, `currentProcess` (id, url, templateKey, status, startedAt, updatedAt)
+ * when process fields are passed in options, `hasPermission("…")` with `userPermissions`,
+ * plus keccak256 / generatePayload / makeAddressKey.
  */
 export function evaluate(
   context: Record<string, unknown>,
@@ -440,6 +448,13 @@ export function evaluate(
       ...context,
       ...EXPR_GLOBALS,
       __userPermissions: options?.userPermissions ?? [],
+      currentProcess: buildCurrentProcessExpressionContext({
+        id: options?.processId,
+        templateKey: options?.templateKey,
+        status: options?.processStatus,
+        startedAt: options?.processStartedAt,
+        updatedAt: options?.processUpdatedAt,
+      }),
     };
     return safeEval(ast, merged);
   } catch (err) {

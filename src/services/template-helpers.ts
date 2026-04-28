@@ -4,7 +4,7 @@ import type {
   TemplateStep,
   ConditionTemplateStep,
 } from "@/entities/template";
-import { evaluate } from "@/services/expression-service";
+import { evaluate, type EvaluateExpressionOptions } from "@/services/expression-service";
 
 export function getCurrentProcessStep(
   steps: ProcessStep[]
@@ -36,7 +36,16 @@ export function getStepIndex(template: Template, stepKey: string): number {
 export function getNextStepKey(
   template: Template,
   fromStepKey: string,
-  context: Record<string, unknown>
+  context: Record<string, unknown>,
+  evaluateOptions?: Pick<
+    EvaluateExpressionOptions,
+    | "processId"
+    | "templateKey"
+    | "processStatus"
+    | "processStartedAt"
+    | "processUpdatedAt"
+    | "userPermissions"
+  >
 ): string | null {
   const step = getStepByKey(template, fromStepKey);
   if (!step) return null;
@@ -45,7 +54,7 @@ export function getNextStepKey(
   if (step.type === "condition") {
     const cond = step as ConditionTemplateStep;
     if (cond.expression) {
-      const value = evaluate(context, cond.expression);
+      const value = evaluate(context, cond.expression, evaluateOptions);
       if (value && cond.thenStepKey && template.steps.some((s) => s.key === cond.thenStepKey)) {
         nextKey = cond.thenStepKey;
       } else if (cond.elseStepKey && template.steps.some((s) => s.key === cond.elseStepKey)) {

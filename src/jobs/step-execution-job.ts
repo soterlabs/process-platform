@@ -1,6 +1,6 @@
 /**
  * Polling job: every second, finds running processes whose current step
- * is automatic, condition, or request and executes that step via the execution service.
+ * is automatic, slack_notify, condition, or request and executes that step via the execution service.
  * Start with startStepExecutionJob(); stop with the returned stop function.
  */
 import { executionService } from "@/services/execution-service";
@@ -9,20 +9,30 @@ import { getCurrentProcessStep, getStepByKey } from "@/services/template-helpers
 
 const POLL_INTERVAL_MS = 1000;
 
+/** Prevents overlapping ticks: `setInterval` does not wait for async `tick()`, so a slow Slack/agent step could otherwise run twice. */
+let tickInFlight = false;
+
 async function tick(): Promise<void> {
-  const processes = await storageService.listProcesses();
-  const running = processes.filter((p) => p.status === "running");
-  for (const p of running) {
-    const currentStep = getCurrentProcessStep(p.steps);
-    if (!currentStep) continue;
-    const templateStep = getStepByKey(p.template, currentStep.stepKey);
-    const shouldAutoRun =
-      templateStep?.type === "automatic" ||
-      templateStep?.type === "condition" ||
-      templateStep?.type === "request";
-    if (shouldAutoRun) {
-      await executionService.executeStep(p);
+  if (tickInFlight) return;
+  tickInFlight = true;
+  try {
+    const processes = await storageService.listProcesses();
+    const running = processes.filter((p) => p.status === "running");
+    for (const p of running) {
+      const currentStep = getCurrentProcessStep(p.steps);
+      if (!currentStep) continue;
+      const templateStep = getStepByKey(p.template, currentStep.stepKey);
+      const shouldAutoRun =
+        templateStep?.type === "automatic" ||
+        templateStep?.type === "slack_notify" ||
+        templateStep?.type === "condition" ||
+        templateStep?.type === "request";
+      if (shouldAutoRun) {
+        await executionService.executeStep(p);
+      }
     }
+  } finally {
+    tickInFlight = false;
   }
 }
 

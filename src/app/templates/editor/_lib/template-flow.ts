@@ -5,11 +5,12 @@ import type {
   ConditionTemplateStep,
   RequestTemplateStep,
   AutomaticTemplateStep,
+  SlackNotifyTemplateStep,
 } from "@/entities/template";
 
 export type FlowNodeData = {
   stepKey: string;
-  type: "input" | "condition" | "request" | "automatic";
+  type: "input" | "condition" | "request" | "automatic" | "slack_notify";
   title: string;
   nextStepKey: string | null;
   confirmationMessage?: string;
@@ -34,6 +35,10 @@ export type FlowNodeData = {
   prompt?: string;
   // automatic
   contextKey?: string;
+  // slack_notify
+  channelId?: string;
+  mentionUsers?: string[];
+  messageExpression?: string;
 };
 
 export function templateToFlow(template: Template): {
@@ -84,6 +89,15 @@ export function templateToFlow(template: Template): {
       const auto = step as AutomaticTemplateStep;
       data.contextKey = auto.contextKey;
       data.expression = auto.expression;
+    }
+    if (step.type === "slack_notify") {
+      const sn = step as SlackNotifyTemplateStep & { mentionUserIds?: string[] };
+      data.channelId = sn.channelId ?? "";
+      const legacy = Array.isArray(sn.mentionUserIds) ? sn.mentionUserIds : [];
+      const next = Array.isArray(sn.mentionUsers) ? sn.mentionUsers : [];
+      const merged = [...legacy, ...next].map((s) => String(s).trim()).filter(Boolean);
+      data.mentionUsers = [...new Set(merged)];
+      data.messageExpression = sn.messageExpression ?? "";
     }
     const position =
       step.editorProperties != null
@@ -141,7 +155,13 @@ export function flowToTemplate(
   name?: string,
   overrides?: TemplateOverrides
 ): Template {
-  const steps: (InputTemplateStep | ConditionTemplateStep | RequestTemplateStep | AutomaticTemplateStep)[] = [];
+  const steps: (
+    | InputTemplateStep
+    | ConditionTemplateStep
+    | RequestTemplateStep
+    | AutomaticTemplateStep
+    | SlackNotifyTemplateStep
+  )[] = [];
   const nodeIds = new Set(nodes.map((n) => n.id));
   const incoming = new Map<string, number>();
   nodes.forEach((n) => incoming.set(n.id, 0));
@@ -197,6 +217,18 @@ export function flowToTemplate(
         title: d.title,
         contextKey: d.contextKey ?? "",
         expression: d.expression ?? "",
+        nextStepKey: nextEdge?.target ? (nextEdge.target as string) : null,
+        confirmationMessage: d.confirmationMessage,
+        editorProperties,
+      });
+    } else if (d.type === "slack_notify") {
+      steps.push({
+        key: d.stepKey,
+        type: "slack_notify",
+        title: d.title,
+        channelId: d.channelId ?? "",
+        mentionUsers: d.mentionUsers ?? [],
+        messageExpression: d.messageExpression ?? "",
         nextStepKey: nextEdge?.target ? (nextEdge.target as string) : null,
         confirmationMessage: d.confirmationMessage,
         editorProperties,

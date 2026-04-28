@@ -11,7 +11,7 @@ export const integrationBoostOnboardingTemplate: Template = {
       type: "input",
       title: "Enter Integration Boost Information",
       permissions: [],
-      nextStepKey: "approval",
+      nextStepKey: "notify",
       inputs: [
         {
           key: "name",
@@ -47,10 +47,21 @@ export const integrationBoostOnboardingTemplate: Template = {
       ],
     },
     {
+      key: "notify",
+      type: "slack_notify",
+      title: "Notify team",
+      channelId: "C0ALDU7QVHP",
+      mentionUsers: ["filip@soterlabs.com"],
+      messageExpression:
+        '"New integrator onboarding request for " + (input.name ?? "") + "\\n• Contact: " + (input.contact ?? "") + " (" + (input.contactPlatform ?? "") + ")\\n\\nYou can view this process by clicking <" + currentProcess.url + "|here>"',
+      nextStepKey: "approval",
+      confirmationMessage: "Slack notification sent.",
+    },
+    {
       key: "approval",
       type: "input",
       title: "Review and approve entered information",
-      permissions: ["nfat:operate"],
+      permissions: [],
       nextStepKey: "condition",
       inputs: [
         {

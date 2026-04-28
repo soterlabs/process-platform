@@ -47,11 +47,26 @@ function AutomaticStepNode({ data }: { data: FlowNodeData }) {
   );
 }
 
+function SlackNotifyStepNode({ data }: { data: FlowNodeData }) {
+  return (
+    <div className="relative rounded-lg border-2 border-purple-600 bg-white px-4 py-3 shadow-md">
+      <Handle type="target" position={Position.Left} className="!border-2 !border-surface-300 !bg-white" />
+      <div className="flex items-center gap-2">
+        <span className="text-purple-600">#</span>
+        <span className="font-medium text-surface-900">{data.title || "Slack notify"}</span>
+      </div>
+      <div className="mt-1 text-xs text-surface-500">{data.stepKey}</div>
+      <Handle type="source" position={Position.Right} className="!border-2 !border-surface-300 !bg-white" />
+    </div>
+  );
+}
+
 const nodeTypes: NodeTypes = {
   input: InputStepNode,
   condition: ConditionStepNode,
   request: RequestStepNode,
   automatic: AutomaticStepNode,
+  slack_notify: SlackNotifyStepNode,
 };
 
 function InputStepNode({ data }: { data: FlowNodeData }) {
@@ -186,7 +201,8 @@ function TemplateEditorInner() {
         | "input"
         | "condition"
         | "request"
-        | "automatic";
+        | "automatic"
+        | "slack_notify";
       if (!type) return;
       const position = screenToFlowPosition
         ? screenToFlowPosition({ x: event.clientX, y: event.clientY })
@@ -199,7 +215,9 @@ function TemplateEditorInner() {
             ? "Condition"
             : type === "request"
               ? "Request"
-              : "Set context";
+              : type === "slack_notify"
+                ? "Slack notify"
+                : "Set context";
       const defaultData = defaultStepData(type, stepKey);
       const newNode: Node<FlowNodeData> = {
         id: stepKey,
@@ -410,7 +428,9 @@ function uniqueStepKey(nodes: Node<FlowNodeData>[], type: string): string {
         ? "condition"
         : type === "request"
           ? "request"
-          : "automatic";
+          : type === "slack_notify"
+            ? "slack_notify"
+            : "automatic";
   let n = 1;
   let key = `${base}_${n}`;
   while (nodes.some((node) => node.id === key)) {
@@ -421,8 +441,8 @@ function uniqueStepKey(nodes: Node<FlowNodeData>[], type: string): string {
 }
 
 function defaultStepData(
-  type: "input" | "condition" | "request" | "automatic",
-  stepKey: string
+  type: "input" | "condition" | "request" | "automatic" | "slack_notify",
+  _stepKey: string
 ): Partial<FlowNodeData> {
   if (type === "input") {
     return {
@@ -443,6 +463,14 @@ function defaultStepData(
     return {
       contextKey: "",
       expression: "",
+      nextStepKey: null,
+    };
+  }
+  if (type === "slack_notify") {
+    return {
+      channelId: "",
+      mentionUsers: [],
+      messageExpression: "",
       nextStepKey: null,
     };
   }
