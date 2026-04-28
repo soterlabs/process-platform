@@ -4,6 +4,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { authFetch } from "@/lib/auth-client";
+import { useMe } from "@/hooks/use-me";
+import { hasPermission, PERMISSIONS } from "@/lib/permissions";
 import type { Process } from "@/entities/process";
 import type { Template } from "@/entities/template";
 import { getCurrentProcessStep, getStepByKey } from "@/services/template-helpers";
@@ -71,6 +73,8 @@ type SortKey = "activity-desc" | "activity-asc" | "started-desc" | "started-asc"
 
 export default function ProcessesPage() {
   const router = useRouter();
+  const { me } = useMe();
+  const canHardDelete = hasPermission(me?.permissions, PERMISSIONS.PROCESSES_DELETE);
   const [processes, setProcesses] = useState<Process[]>([]);
   const [templates, setTemplates] = useState<Template[]>([]);
   const [loading, setLoading] = useState(true);
@@ -81,6 +85,35 @@ export default function ProcessesPage() {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [templateFilter, setTemplateFilter] = useState<string>("all");
   const [sortKey, setSortKey] = useState<SortKey>("activity-desc");
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  const deleteProcess = useCallback(
+    async (processId: string) => {
+      if (
+        !window.confirm(
+          "Permanently delete this process? This removes it for everyone and cannot be undone."
+        )
+      ) {
+        return;
+      }
+      setDeletingId(processId);
+      try {
+        const res = await authFetch(`/api/process/${encodeURIComponent(processId)}`, {
+          method: "DELETE",
+        });
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}));
+          window.alert((data.error as string) ?? "Delete failed");
+          return;
+        }
+        setProcesses((prev) => prev.filter((p) => p.processId !== processId));
+        router.refresh();
+      } finally {
+        setDeletingId(null);
+      }
+    },
+    [router]
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -366,7 +399,9 @@ export default function ProcessesPage() {
                 <th className="px-4 py-3 text-xs font-medium uppercase tracking-wide text-surface-500">
                   Started
                 </th>
-                <th className="w-10 px-2 py-3" aria-hidden />
+                <th className="w-[4.5rem] px-2 py-3 text-right text-xs font-medium uppercase tracking-wide text-surface-500">
+                  <span className="sr-only">Actions</span>
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-surface-100">
@@ -443,10 +478,66 @@ export default function ProcessesPage() {
                     <td className="whitespace-nowrap px-4 py-4 align-top text-surface-600">
                       {formatStarted(p.startedAt)}
                     </td>
-                    <td className="px-2 py-4 align-middle text-surface-300">
-                      <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5l7 7-7 7" />
-                      </svg>
+                    <td className="px-2 py-4 align-middle">
+                      <div className="flex items-center justify-end gap-0.5">
+                        {canHardDelete && (
+                          <details
+                            className="relative"
+                            onClick={(e) => e.stopPropagation()}
+                            onKeyDown={(e) => e.stopPropagation()}
+                          >
+                            <summary
+                              className="flex h-8 w-8 cursor-pointer list-none items-center justify-center rounded-md text-surface-500 hover:bg-surface-100 hover:text-surface-800 [&::-webkit-details-marker]:hidden"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <span className="sr-only">Row actions</span>
+                              <svg
+                                className="h-5 w-5"
+                                fill="currentColor"
+                                viewBox="0 0 24 24"
+                                aria-hidden
+                              >
+                                <path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z" />
+                              </svg>
+                            </summary>
+                            <div
+                              className="absolute right-0 top-full z-30 mt-1 min-w-[11rem] rounded-lg border border-surface-200 bg-white py-1 shadow-lg"
+                              role="menu"
+                            >
+                              <button
+                                type="button"
+                                role="menuitem"
+                                disabled={deletingId === p.processId}
+                                className="w-full px-3 py-2 text-left text-sm text-red-700 hover:bg-red-50 disabled:opacity-50"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  (
+                                    e.currentTarget.closest("details") as HTMLDetailsElement | null
+                                  )?.removeAttribute("open");
+                                  void deleteProcess(p.processId);
+                                }}
+                              >
+                                {deletingId === p.processId ? "Deleting…" : "Delete permanently"}
+                              </button>
+                            </div>
+                          </details>
+                        )}
+                        <span className="pointer-events-none text-surface-300" aria-hidden>
+                          <svg
+                            className="h-5 w-5"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={1.5}
+                              d="M9 5l7 7-7 7"
+                            />
+                          </svg>
+                        </span>
+                      </div>
                     </td>
                   </tr>
                 );
