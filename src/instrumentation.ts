@@ -10,6 +10,8 @@ export async function register() {
   const keys = [
     "GEMINI_API_KEY",
     "APP_BASE_URL",
+    "NEXT_PUBLIC_APP_BASE_URL",
+    "SLACK_BOT_TOKEN",
     "AUTH0_AUDIENCE",
     "AUTH0_DOMAIN",
     "AUTH0_CLIENT_ID",
