@@ -10,4 +10,6 @@ export interface IStorageService {
   getProcessState(processId: string): Promise<Process | null>;
   saveProcessState(state: Process): Promise<void>;
   listProcesses(): Promise<Process[]>;
+  /** Removes the process document. Returns whether a row existed and was deleted. */
+  deleteProcess(processId: string): Promise<boolean>;
 }

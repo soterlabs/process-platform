@@ -7,6 +7,7 @@ export const PERMISSIONS = {
   TEMPLATES_WRITE: "templates:write",
   PROCESSES_READ: "processes:read",
   PROCESSES_WRITE: "processes:write",
+  PROCESSES_DELETE: "processes:delete",
 } as const;
 
 export type Permission = (typeof PERMISSIONS)[keyof typeof PERMISSIONS];

@@ -1,10 +1,10 @@
 "use client";
 
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { authFetch } from "@/lib/auth-client";
-import { hasPermission } from "@/lib/permissions";
+import { hasPermission, PERMISSIONS } from "@/lib/permissions";
 import { useMe } from "@/hooks/use-me";
 import {
   generatePayload,
@@ -293,6 +293,58 @@ function StepProgress({
         );
       })}
     </nav>
+  );
+}
+
+function HardDeleteProcessButton({ processId }: { processId: string }) {
+  const router = useRouter();
+  const { me } = useMe();
+  const [busy, setBusy] = useState(false);
+  if (!hasPermission(me?.permissions, PERMISSIONS.PROCESSES_DELETE)) return null;
+
+  const handleClick = async () => {
+    if (
+      !window.confirm(
+        "Permanently delete this process instance? This cannot be undone."
+      )
+    ) {
+      return;
+    }
+    setBusy(true);
+    try {
+      const res = await authFetch(`/api/process/${encodeURIComponent(processId)}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        window.alert((data.error as string) ?? "Delete failed");
+        return;
+      }
+      router.push("/");
+      router.refresh();
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="mt-10 rounded-lg border border-red-200 bg-red-50/60 px-4 py-3">
+      <p className="text-xs font-medium uppercase tracking-wide text-red-900/80">
+        Danger zone
+      </p>
+      <p className="mt-1 text-sm text-red-950/90">
+        Remove this process from storage. Requires{" "}
+        <span className="font-mono">processes:delete</span>.
+      </p>
+      <button
+        type="button"
+        onClick={handleClick}
+        disabled={busy}
+        className="mt-3 rounded-md border border-red-300 bg-white px-3 py-1.5 text-sm font-medium text-red-800 hover:bg-red-50 disabled:opacity-50"
+      >
+        {busy ? "Deleting…" : "Delete process permanently"}
+      </button>
+    </div>
   );
 }
 
@@ -586,6 +638,7 @@ export default function ProcessStepPage() {
           <p className="text-surface-500">Please wait…</p>
           <p className="text-sm text-surface-500">{nextStepTitle}</p>
         </div>
+        <HardDeleteProcessButton processId={processId} />
       </main>
     );
   }
@@ -693,6 +746,7 @@ export default function ProcessStepPage() {
         >
           Back to home
         </Link>
+        <HardDeleteProcessButton processId={processId} />
       </main>
     );
   }
@@ -717,6 +771,7 @@ export default function ProcessStepPage() {
         >
           Back to home
         </Link>
+        <HardDeleteProcessButton processId={processId} />
       </main>
     );
   }
@@ -754,6 +809,7 @@ export default function ProcessStepPage() {
             )}
           </div>
         )}
+        <HardDeleteProcessButton processId={processId} />
       </main>
     );
   }
@@ -995,6 +1051,7 @@ export default function ProcessStepPage() {
           </p>
         )}
       </form>
+      <HardDeleteProcessButton processId={processId} />
     </main>
   );
 }

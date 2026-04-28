@@ -108,4 +108,9 @@ export const storageServiceMongo: IStorageService = {
       return { ...rest, processId: _id } as Process;
     });
   },
+  async deleteProcess(processId) {
+    const c = await col<Process & { _id: string }>(COLL.processes);
+    const r = await c.deleteOne({ _id: processId } as Filter<Process & { _id: string }>);
+    return r.deletedCount > 0;
+  },
 };

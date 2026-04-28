@@ -102,4 +102,11 @@ export const fileStorageService: IStorageService = {
     const states = await readProcessStates();
     return Object.values(states);
   },
+  async deleteProcess(processId) {
+    const states = await readProcessStates();
+    if (!(processId in states)) return false;
+    delete states[processId];
+    await writeProcessStates(states);
+    return true;
+  },
 };

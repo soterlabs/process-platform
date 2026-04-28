@@ -6,6 +6,28 @@ import { authorizationService } from "@/services/auth";
 import { executionService } from "@/services/execution-service";
 import { storageService } from "@/services/storage";
 
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  const denied = requirePermission(request, PERMISSIONS.PROCESSES_DELETE, {
+    message: "processes:delete permission required",
+  });
+  if (denied) return denied;
+  try {
+    const { id } = params;
+    await executionService.deleteProcessById(id);
+    return NextResponse.json({ ok: true });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    if (message.includes("not found")) {
+      return NextResponse.json({ error: message }, { status: 404 });
+    }
+    console.error(err);
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
+}
+
 export async function GET(
   request: NextRequest,
   { params }: { params: { id: string } }

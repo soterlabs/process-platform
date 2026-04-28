@@ -66,6 +66,11 @@ export const executionService = {
     return storageService.getProcessState(processId);
   },
 
+  async deleteProcessById(processId: string): Promise<void> {
+    const removed = await storageService.deleteProcess(processId);
+    if (!removed) throw new Error(`Process not found: ${processId}`);
+  },
+
   async startProcess(templateKey: string): Promise<Process> {
     const template = await storageService.getTemplate(templateKey);
     if (!template) {

@@ -101,6 +101,19 @@ export const openApiSpec = {
           "500": { description: "Server error" },
         },
       },
+      delete: {
+        summary: "Hard-delete process instance",
+        description:
+          "Permanently removes the process from storage. Requires Auth0 permission processes:delete.",
+        parameters: [{ name: "id", in: "path", required: true, schema: { type: "string" } }],
+        responses: {
+          "200": { description: "Deleted" },
+          "401": { description: "Unauthorized" },
+          "403": { description: "Missing processes:delete" },
+          "404": { description: "Process not found" },
+          "500": { description: "Server error" },
+        },
+      },
     },
     "/api/process/{id}/steps/{stepId}": {
       put: {
