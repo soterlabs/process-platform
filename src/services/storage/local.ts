@@ -11,7 +11,7 @@ import { ibPayoutsTemplate } from "@/templates/ib-payouts";
 import { nfatSubscribeTemplate } from "@/templates/nfat-subscribe";
 import { nfatSetupFacilityTemplate } from "@/templates/nfat-setup-facility";
 import { nfatEnableFacilityForPrimeTemplate } from "@/templates/nfat-enable-facility-for-prime";
-import { keelIbTemplate } from "@/templates/keel-ib";
+import { integrationBoostOnboardingTemplate } from "@/templates/integrator-onboarding";
 import type { IStorageService } from "./interface";
 
 const STORE_DIR = join(process.cwd(), ".process-platform");
@@ -30,7 +30,10 @@ function seedTemplatesRecord(): Record<string, Template> {
     [nfatSetupFacilityTemplate.key]: { ...nfatSetupFacilityTemplate, updatedAt: now },
     [nfatEnableFacilityForPrimeTemplate.key]: { ...nfatEnableFacilityForPrimeTemplate, updatedAt: now },
     [nfatSubscribeTemplate.key]: { ...nfatSubscribeTemplate, updatedAt: now },
-    [keelIbTemplate.key]: { ...keelIbTemplate, updatedAt: now },
+    [integrationBoostOnboardingTemplate.key]: {
+      ...integrationBoostOnboardingTemplate,
+      updatedAt: now,
+    },
   };
 }
 
