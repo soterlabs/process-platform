@@ -364,7 +364,7 @@ function safeEval(
       }
       if (calleeName === "hasPermission") {
         if (argValues.length !== 1) {
-          throw new Error('hasPermission expects one permission string, e.g. hasPermission("soter-l1:operate")');
+          throw new Error('hasPermission expects one permission string, e.g. hasPermission("nfat:operate")');
         }
         const raw = context["__userPermissions"];
         const perms = Array.isArray(raw)

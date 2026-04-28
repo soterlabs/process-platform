@@ -50,7 +50,7 @@ export const integrationBoostOnboardingTemplate: Template = {
       key: "approval",
       type: "input",
       title: "Review and approve entered information",
-      permissions: ["soter-l1:operate"],
+      permissions: ["nfat:operate"],
       nextStepKey: "condition",
       inputs: [
         {

@@ -200,7 +200,7 @@ export function ConfigPanel({
                     completeExpression: e.target.value.trim() ? e.target.value : undefined,
                   })
                 }
-                placeholder='e.g. hasPermission("soter-l1:operate")'
+                placeholder='e.g. hasPermission("nfat:operate")'
                 rows={2}
                 className="mt-0.5 w-full rounded border border-surface-200 bg-white px-2 py-1.5 font-mono text-xs text-surface-900"
               />
