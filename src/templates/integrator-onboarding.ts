@@ -12,6 +12,13 @@ export const integrationBoostOnboardingTemplate: Template = {
       title: "Enter Integration Boost Information",
       permissions: [],
       nextStepKey: "notify",
+      completeExpression:
+        "(input.name ?? '').trim().length > 0 && " +
+        "(input.contractAddress ?? '').trim().length > 0 && " +
+        "(input.contactPlatform ?? '').trim().length > 0 && " +
+        "(input.contact ?? '').trim().length > 0 && " +
+        "(input.agent ?? '').trim().length > 0 && " +
+        "(input.wallet ?? '').trim().length > 0",
       inputs: [
         {
           key: "name",
