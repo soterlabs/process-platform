@@ -104,7 +104,7 @@ export const executionService = {
     if (!removed) throw new Error(`Process not found: ${processId}`);
   },
 
-  async startProcess(templateKey: string): Promise<Process> {
+  async startProcess(templateKey: string, triggeredBy?: string): Promise<Process> {
     const template = await storageService.getTemplate(templateKey);
     if (!template) {
       throw new Error(`Template not found: ${templateKey}`);
@@ -119,6 +119,7 @@ export const executionService = {
       context: {},
       stepContextAudit: [],
       result: {},
+      ...(triggeredBy ? { triggeredBy } : {}),
       startedAt: now,
       updatedAt: now,
     };

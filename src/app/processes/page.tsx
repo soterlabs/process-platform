@@ -178,7 +178,14 @@ export default function ProcessesPage() {
       const pid = p.processId.toLowerCase();
       const cs = currentStepInfo(p);
       const stepText = cs?.title.toLowerCase() ?? "";
-      return tName.includes(q) || pid.includes(q) || shortProcessId(p.processId).includes(q) || stepText.includes(q);
+      const triggeredByText = (p.triggeredBy ?? "").toLowerCase();
+      return (
+        tName.includes(q) ||
+        pid.includes(q) ||
+        shortProcessId(p.processId).includes(q) ||
+        stepText.includes(q) ||
+        triggeredByText.includes(q)
+      );
     });
 
     list = [...list].sort((a, b) => {
@@ -397,6 +404,9 @@ export default function ProcessesPage() {
                   Progress
                 </th>
                 <th className="px-4 py-3 text-xs font-medium uppercase tracking-wide text-surface-500">
+                  Triggered by
+                </th>
+                <th className="px-4 py-3 text-xs font-medium uppercase tracking-wide text-surface-500">
                   Started
                 </th>
                 <th className="w-[4.5rem] px-2 py-3 text-right text-xs font-medium uppercase tracking-wide text-surface-500">
@@ -474,6 +484,11 @@ export default function ProcessesPage() {
                           {prog.num}/{prog.den}
                         </span>
                       </div>
+                    </td>
+                    <td className="max-w-[220px] px-4 py-4 align-top font-mono text-sm text-surface-600">
+                      <span className="line-clamp-2" title={p.triggeredBy}>
+                        {p.triggeredBy ?? "—"}
+                      </span>
                     </td>
                     <td className="whitespace-nowrap px-4 py-4 align-top text-surface-600">
                       {formatStarted(p.startedAt)}

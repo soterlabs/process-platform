@@ -9,9 +9,9 @@ export type Process = {
   status: ProcessStatus;
   steps: ProcessStep[];
   context: Record<string, unknown>;
-  /** Append-only log of step context field updates (see execution service). */
   stepContextAudit: StepContextAuditEntry[];
   result: Record<string, unknown>;
+  triggeredBy?: string;
   startedAt: string;
   updatedAt: string;
   error?: string;
