@@ -128,11 +128,43 @@ export const integrationBoostOnboardingTemplate: Template = {
       title: "Verification",
       permissions: [],
       nextStepKey: null,
+      completeExpression:
+        "verification.verifyDataIntegratedIntoTrackingSystems === true && " +
+        "verification.verifyPaymentsScheduledInProcessOS === true && " +
+        "verification.verifyAtlasEditsRequestedFromFacilitators === true && " +
+        "(verification.walletTestTransactionHash1 ?? '').trim().length > 0 && " +
+        "(verification.walletTestTransactionHash2 ?? '').trim().length > 0 && " +
+        "verification.verifyRunWalletPennyTest === true",
       inputs: [
         {
-          key: "verified",
+          key: "verifyDataIntegratedIntoTrackingSystems",
           type: "bool",
-          title: "Verification complete",
+          title: "Verify: Data Integrated Into Tracking Systems",
+        },
+        {
+          key: "verifyPaymentsScheduledInProcessOS",
+          type: "bool",
+          title: "Verify: Payments Scheduled in ProcessOS",
+        },
+        {
+          key: "verifyAtlasEditsRequestedFromFacilitators",
+          type: "bool",
+          title: "Verify: Atlas Edits Requested From Facilitators",
+        },
+        {
+          key: "walletTestTransactionHash1",
+          type: "string",
+          title: "Run Wallet Penny Test — Leg 1: Transaction hash",
+        },
+        {
+          key: "walletTestTransactionHash2",
+          type: "string",
+          title: "Run Wallet Penny Test — Leg 2: Transaction hash",
+        },
+        {
+          key: "verifyRunWalletPennyTest",
+          type: "bool",
+          title: "Verify: Wallet Penny Test Ran Successfully",
         },
       ],
     },
