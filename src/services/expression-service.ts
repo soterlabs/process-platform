@@ -4,7 +4,7 @@
  *
  * Security: we parse the string as an expression, validate the AST to allow only
  * side-effect-free expression nodes (no arbitrary calls; only keccak256,
- * generatePayload, and makeAddressKey), then evaluate with `context` and its keys in scope.
+ * generatePayload, makeAddressKey, hasPermission, and trim), then evaluate with `context` and its keys in scope.
  */
 
 import * as acorn from "acorn";
@@ -43,11 +43,13 @@ const ALLOWED_NODE_TYPES = new Set([
   "CallExpression",
 ]);
 
+/** Allowed callees: crypto helpers, RBAC, and `trim(value)` for non-empty checks in template expressions. */
 const ALLOWED_CALLEE_NAMES = new Set([
   "keccak256",
   "generatePayload",
   "makeAddressKey",
   "hasPermission",
+  "trim",
 ]);
 
 const EXPR_GLOBALS: Record<string, unknown> = {
@@ -68,7 +70,7 @@ function walkAndValidate(node: EstreeExpression): void {
       };
       if (c.callee.type !== "Identifier") {
         throw new Error(
-          "Only direct calls to keccak256, generatePayload, makeAddressKey, or hasPermission are allowed"
+          "Only direct calls to keccak256, generatePayload, makeAddressKey, hasPermission, or trim are allowed"
         );
       }
       const calleeName = (c.callee as EstreeExpression & { name: string }).name;
@@ -340,7 +342,7 @@ function safeEval(
       };
       if (c.callee.type !== "Identifier") {
         throw new Error(
-          "Only keccak256, generatePayload, makeAddressKey, or hasPermission calls are supported"
+          "Only keccak256, generatePayload, makeAddressKey, hasPermission, or trim calls are supported"
         );
       }
       const calleeName = (c.callee as EstreeExpression & { name: string }).name;
@@ -372,6 +374,14 @@ function safeEval(
           ? (raw as unknown[]).filter((p): p is string => typeof p === "string")
           : [];
         return userHasPermission(perms, String(argValues[0]));
+      }
+      if (calleeName === "trim") {
+        if (argValues.length !== 1) {
+          throw new Error("trim expects one string-like value");
+        }
+        const v = argValues[0];
+        if (v === null || v === undefined) return "";
+        return String(v).trim();
       }
       throw new Error(`Unsupported callee: ${calleeName}`);
     }
@@ -423,7 +433,7 @@ export type EvaluateExpressionOptions = {
  * Evaluates an expression against the given context.
  * In scope: "context", keys of context, `currentProcess` (id, url, templateKey, status, startedAt, updatedAt)
  * when process fields are passed in options, `hasPermission("…")` with `userPermissions`,
- * plus keccak256 / generatePayload / makeAddressKey.
+ * plus keccak256 / generatePayload / makeAddressKey / trim (single-arg string trim).
  */
 export function evaluate(
   context: Record<string, unknown>,

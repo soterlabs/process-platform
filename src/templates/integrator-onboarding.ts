@@ -13,12 +13,12 @@ export const integrationBoostOnboardingTemplate: Template = {
       permissions: [],
       nextStepKey: "notify",
       completeExpression:
-        "(input.name ?? '').trim().length > 0 && " +
-        "(input.contractAddress ?? '').trim().length > 0 && " +
-        "(input.contactPlatform ?? '').trim().length > 0 && " +
-        "(input.contact ?? '').trim().length > 0 && " +
-        "(input.agent ?? '').trim().length > 0 && " +
-        "(input.wallet ?? '').trim().length > 0",
+        "trim(input.name).length > 0 && " +
+        "trim(input.contractAddress).length > 0 && " +
+        "trim(input.contactPlatform).length > 0 && " +
+        "trim(input.contact).length > 0 && " +
+        "trim(input.agent).length > 0 && " +
+        "trim(input.wallet).length > 0",
       inputs: [
         {
           key: "name",
@@ -139,8 +139,8 @@ export const integrationBoostOnboardingTemplate: Template = {
         "verification.verifyDataIntegratedIntoTrackingSystems === true && " +
         "verification.verifyPaymentsScheduledInProcessOS === true && " +
         "verification.verifyAtlasEditsRequestedFromFacilitators === true && " +
-        "(verification.walletTestTransactionHash1 ?? '').trim().length > 0 && " +
-        "(verification.walletTestTransactionHash2 ?? '').trim().length > 0 && " +
+        "trim(verification.walletTestTransactionHash1).length > 0 && " +
+        "trim(verification.walletTestTransactionHash2).length > 0 && " +
         "verification.verifyRunWalletPennyTest === true",
       inputs: [
         {
