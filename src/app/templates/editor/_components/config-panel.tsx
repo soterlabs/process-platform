@@ -318,16 +318,18 @@ export function ConfigPanel({
                                 type: "item_list",
                                 title: input.title,
                                 visibleExpression: input.visibleExpression,
-                                linesFromKey: "",
                                 subInputs: [
-                                  { key: `col_${(input.subInputs?.length ?? 0) + 1}`, type: "string", title: "Column" },
+                                  { key: "item", type: "string", title: "Item" },
+                                  { key: "details", type: "string", title: "Details" },
                                 ],
                               };
                               update({ inputs });
                               return;
                             }
                             if (input.type === "item_list") {
-                              const { linesFromKey: _lk, subInputs: _si, ...rest } = input;
+                              const { subInputs: _si, linesFromKey: _lk, ...rest } = input as typeof input & {
+                                linesFromKey?: string;
+                              };
                               inputs[i] = {
                                 ...rest,
                                 type: newType,
@@ -352,23 +354,14 @@ export function ConfigPanel({
                           <option value="decimal_string">decimal string (exact text)</option>
                           <option value="bool">bool</option>
                           <option value="dropdown">dropdown</option>
-                          <option value="item_list">Item list (one row per multiline line)</option>
+                          <option value="item_list">Item list (repeating rows)</option>
                         </select>
                         {input.type === "item_list" && (
                           <div className="mb-1 space-y-2 rounded border border-amber-200 bg-amber-50/50 p-2">
-                            <label className="block text-[10px] text-surface-600">
-                              Multiline field key (lines become rows)
-                              <input
-                                value={input.linesFromKey ?? ""}
-                                onChange={(e) => {
-                                  const inputs = [...(d.inputs ?? [])];
-                                  inputs[i] = { ...input, linesFromKey: e.target.value.trim() || undefined };
-                                  update({ inputs });
-                                }}
-                                placeholder="e.g. addresses"
-                                className="mt-0.5 w-full rounded border border-surface-200 bg-white px-2 py-1 font-mono text-xs text-surface-900"
-                              />
-                            </label>
+                            <p className="text-[10px] text-surface-600">
+                              Sub-fields repeat for each row. On the process form, an extra empty row is always
+                              shown so users can add the next item.
+                            </p>
                             <div className="text-[10px] font-medium text-surface-600">Sub-fields per row</div>
                             {(input.subInputs ?? []).map((sub, si) => (
                               <div key={si} className="space-y-1 rounded border border-surface-200 bg-white p-2">

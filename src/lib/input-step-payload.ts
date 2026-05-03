@@ -52,31 +52,149 @@ function serializeInputValue(
   return raw ?? "";
 }
 
-function nonEmptyLinesFromMultiline(formValues: Record<string, boolean | string>, linesFromKey: string): string[] {
-  const raw = formValues[linesFromKey];
-  const s = raw === undefined || raw === true || raw === false ? "" : String(raw);
-  return s.split("\n").map((t) => t.trim()).filter(Boolean);
+/** True when every writable sub-field on this row is “empty” (no user meaning). */
+export function itemListRowIsEmpty(
+  listKey: string,
+  subs: TemplateStepInput[],
+  rowIndex: number,
+  formValues: Record<string, boolean | string>
+): boolean {
+  for (const sub of subs) {
+    if (sub.readOnly || sub.type === "item_list") continue;
+    const fk = itemListFormKey(listKey, rowIndex, sub.key);
+    const raw = formValues[fk];
+    if (sub.type === "bool") {
+      if (raw === true) return false;
+      continue;
+    }
+    if (raw !== undefined && raw !== true && raw !== false && String(raw).trim() !== "") {
+      return false;
+    }
+  }
+  return true;
+}
+
+/**
+ * How many rows to render: every non-empty row plus one trailing empty row for the next item
+ * (minimum 1 when there is at least one sub-field).
+ */
+export function itemListRenderRowCount(
+  listKey: string,
+  subs: TemplateStepInput[] | undefined,
+  formValues: Record<string, boolean | string>
+): number {
+  const list = subs ?? [];
+  if (list.length === 0) return 0;
+  let lastNonEmpty = -1;
+  for (let r = 0; r < 500; r++) {
+    if (!itemListRowIsEmpty(listKey, list, r, formValues)) lastNonEmpty = r;
+  }
+  return Math.max(1, lastNonEmpty + 2);
+}
+
+/** Last row index that has any writable data (for compaction). */
+function itemListLastFilledRowIndex(
+  listKey: string,
+  subs: TemplateStepInput[],
+  formValues: Record<string, boolean | string>
+): number {
+  let high = -1;
+  for (let r = 0; r < 500; r++) {
+    if (!itemListRowIsEmpty(listKey, subs, r, formValues)) high = r;
+  }
+  return high;
+}
+
+/**
+ * Remove one item row: shift following rows up and clear the last filled row.
+ * `subs` must be the full template `subInputs` (same keys used in form state).
+ */
+export function removeItemListRow(
+  listKey: string,
+  subs: TemplateStepInput[],
+  removedIndex: number,
+  formValues: Record<string, boolean | string>
+): Record<string, boolean | string> {
+  const next = { ...formValues };
+  const high = itemListLastFilledRowIndex(listKey, subs, next);
+  if (removedIndex < 0 || removedIndex > high || high < 0) return next;
+
+  const writableSubs = subs.filter((s) => !s.readOnly && s.type !== "item_list");
+
+  for (let r = removedIndex; r < high; r++) {
+    for (const sub of writableSubs) {
+      const fromFk = itemListFormKey(listKey, r + 1, sub.key);
+      const toFk = itemListFormKey(listKey, r, sub.key);
+      next[toFk] = fromFk in next ? next[fromFk]! : sub.type === "bool" ? false : "";
+    }
+  }
+  for (const sub of writableSubs) {
+    const fk = itemListFormKey(listKey, high, sub.key);
+    next[fk] = sub.type === "bool" ? false : "";
+  }
+  return next;
+}
+
+/**
+ * Reorder item-list rows (including the trailing empty row slot) by moving `fromIndex` to `toIndex`.
+ */
+export function reorderItemListRows(
+  listKey: string,
+  subs: TemplateStepInput[],
+  fromIndex: number,
+  toIndex: number,
+  formValues: Record<string, boolean | string>
+): Record<string, boolean | string> {
+  if (fromIndex === toIndex) return formValues;
+  const rowCount = itemListRenderRowCount(listKey, subs, formValues);
+  if (fromIndex < 0 || fromIndex >= rowCount || toIndex < 0 || toIndex >= rowCount) {
+    return formValues;
+  }
+
+  const writableSubs = subs.filter((s) => !s.readOnly && s.type !== "item_list");
+  const snapshots: Record<string, boolean | string>[] = [];
+  for (let r = 0; r < rowCount; r++) {
+    const snap: Record<string, boolean | string> = {};
+    for (const sub of writableSubs) {
+      const fk = itemListFormKey(listKey, r, sub.key);
+      snap[sub.key] = fk in formValues ? formValues[fk]! : sub.type === "bool" ? false : "";
+    }
+    snapshots.push(snap);
+  }
+
+  const [moved] = snapshots.splice(fromIndex, 1);
+  snapshots.splice(toIndex, 0, moved);
+
+  const next = { ...formValues };
+  for (let r = 0; r < rowCount; r++) {
+    for (const sub of writableSubs) {
+      const fk = itemListFormKey(listKey, r, sub.key);
+      next[fk] = snapshots[r][sub.key];
+    }
+  }
+  return next;
 }
 
 function serializeItemList(
   list: TemplateStepInput,
   formValues: Record<string, boolean | string>
 ): unknown[] {
-  if (list.type !== "item_list" || !list.linesFromKey || !Array.isArray(list.subInputs)) {
+  if (list.type !== "item_list" || !Array.isArray(list.subInputs) || list.subInputs.length === 0) {
     return [];
   }
-  const lines = nonEmptyLinesFromMultiline(formValues, list.linesFromKey);
-  const subInputs = list.subInputs;
-  return lines.map((_, rowIndex) => {
+  const subs = list.subInputs;
+  const out: Record<string, unknown>[] = [];
+  for (let rowIndex = 0; rowIndex < 500; rowIndex++) {
+    if (itemListRowIsEmpty(list.key, subs, rowIndex, formValues)) break;
     const row: Record<string, unknown> = {};
-    for (const sub of subInputs) {
+    for (const sub of subs) {
       if (sub.readOnly || sub.type === "item_list") continue;
       const fk = itemListFormKey(list.key, rowIndex, sub.key);
-      if (!(fk in formValues)) continue;
-      row[sub.key] = serializeInputValue(sub, formValues[fk]);
+      row[sub.key] = serializeInputValue(sub, fk in formValues ? formValues[fk] : undefined);
     }
-    return row;
-  });
+    out.push(row);
+  }
+  return out;
 }
 
 /**

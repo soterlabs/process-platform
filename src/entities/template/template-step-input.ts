@@ -4,8 +4,9 @@ export type TemplateStepInput = {
    * `number`: stored as a JSON number (IEEE double). Use `decimal_string` when you need exact
    * decimal text without floating-point rounding.
    *
-   * `item_list`: repeating sub-fields — one row per non-empty line of the `string-multiline` input
-   * named by `linesFromKey`. Stored as `context[stepKey][key]` = array of row objects.
+   * `item_list`: repeating rows of `subInputs` (each row is an object in `context[stepKey][key]`).
+   * Rows are contiguous from index 0; serialization stops at the first fully empty row. The UI
+   * always shows one extra empty row so you can add the next item.
    */
   type:
     | "bool"
@@ -23,8 +24,6 @@ export type TemplateStepInput = {
   readOnly?: boolean;
   /** For readOnly: template with ${path} and {{ expression }}. For editable: initial value (same syntax). */
   defaultValue?: string;
-  /** Required when `type === "item_list"`: key of another input with type `string-multiline`. */
-  linesFromKey?: string;
-  /** Required when `type === "item_list"`: fields per line (must not be `item_list`). */
+  /** Required when `type === "item_list"`: fields per row (must not be `item_list`). */
   subInputs?: TemplateStepInput[];
 };

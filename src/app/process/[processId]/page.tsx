@@ -16,7 +16,11 @@ import {
 import {
   buildInputStepContextPayload,
   itemListFormKey,
+  itemListRenderRowCount,
+  itemListRowIsEmpty,
   numberContextToFormString,
+  removeItemListRow,
+  reorderItemListRows,
 } from "@/lib/input-step-payload";
 import { buildCurrentProcessExpressionContext } from "@/lib/expression-process-context";
 import { evaluate, type EvaluateExpressionOptions } from "@/services/expression-service";
@@ -410,18 +414,10 @@ export default function ProcessStepPage() {
               next[inp.key] = inp.type === "bool" ? false : "";
             });
             step.inputs?.forEach((inp) => {
-              if (inp.type !== "item_list" || !inp.linesFromKey || !inp.subInputs?.length) return;
+              if (inp.type !== "item_list" || !inp.subInputs?.length) return;
               const saved = stepContext?.[inp.key];
-              const lineText = stepContext?.[inp.linesFromKey];
-              const linesFromContext =
-                lineText === undefined || lineText === null
-                  ? []
-                  : String(lineText)
-                      .split("\n")
-                      .map((t) => t.trim())
-                      .filter(Boolean);
               const rows = Array.isArray(saved) ? saved : [];
-              const n = Math.max(linesFromContext.length, rows.length);
+              const n = Math.max(rows.length, 1);
               for (let rowIndex = 0; rowIndex < n; rowIndex++) {
                 inp.subInputs.forEach((sub) => {
                   if (sub.readOnly || sub.type === "item_list") return;
@@ -873,21 +869,9 @@ export default function ProcessStepPage() {
           )
           .map((inp, i) => {
             if (inp.type === "item_list" && !inp.readOnly) {
-              const linesFromKey = inp.linesFromKey;
               const subInputs = inp.subInputs ?? [];
-              const multilineInp =
-                linesFromKey && step.inputs
-                  ? step.inputs.find((x) => x.key === linesFromKey)
-                  : undefined;
-              const rawLines = linesFromKey ? formValues[linesFromKey] : "";
-              const lines =
-                rawLines === undefined || rawLines === true || rawLines === false
-                  ? []
-                  : String(rawLines)
-                      .split("\n")
-                      .map((t) => t.trim())
-                      .filter(Boolean);
-              if (!linesFromKey || subInputs.length === 0) {
+              const rowCount = itemListRenderRowCount(inp.key, subInputs, formValues);
+              if (subInputs.length === 0 || rowCount === 0) {
                 return (
                   <div
                     key={inp.key}
@@ -895,11 +879,110 @@ export default function ProcessStepPage() {
                   >
                     <div className="text-sm font-medium text-surface-800">{inp.title}</div>
                     <p className="mt-1 text-xs text-surface-600">
-                      This item list is missing a multiline source key or sub-fields in the template.
+                      This item list has no sub-fields in the template.
                     </p>
                   </div>
                 );
               }
+              const visibleSubs = subInputs.filter(
+                (sub) =>
+                  (!sub.visibleExpression ||
+                    Boolean(
+                      process &&
+                        evaluate(evaluationContext, sub.visibleExpression, {
+                          userPermissions: userPerms,
+                          ...clientExpressionProcessOptions(process, processId),
+                        })
+                    )) &&
+                  (sub.readOnly
+                    ? process
+                      ? shouldShowViewControl(sub.defaultValue ?? "", evaluationContext)
+                      : true
+                    : true)
+              );
+              const primarySub =
+                visibleSubs.find((s) => !s.readOnly && s.type !== "item_list") ?? visibleSubs[0];
+              const otherSubs = primarySub
+                ? visibleSubs.filter((s) => s !== primarySub)
+                : visibleSubs;
+
+              if (visibleSubs.length === 0) {
+                return (
+                  <div
+                    key={inp.key}
+                    className="rounded-xl border border-amber-200 bg-amber-50/40 px-4 py-4"
+                  >
+                    <div className="text-sm font-medium text-surface-800">{inp.title}</div>
+                    <p className="mt-1 text-xs text-surface-600">
+                      No visible sub-fields for this list (check visibility expressions).
+                    </p>
+                  </div>
+                );
+              }
+
+              const renderSubControl = (
+                sub: TemplateStepInput,
+                rowIndex: number,
+                j?: number,
+                hideFieldTitle?: boolean
+              ) =>
+                sub.readOnly ? (
+                  <div
+                    key={`${inp.key}-${rowIndex}-${sub.key}-${j ?? "ro"}`}
+                    className="rounded-lg border border-surface-200 bg-surface-50 px-3 py-3"
+                  >
+                    <div className="text-sm font-medium text-surface-600">{sub.title}</div>
+                    <div
+                      className={
+                        sub.type === "string-multiline" || sub.type === "decimal_string"
+                          ? "mt-2 whitespace-pre-wrap break-all font-mono text-sm leading-relaxed text-surface-800 [&_a]:text-primary-600 [&_a:hover]:underline [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_p]:mb-2"
+                          : "mt-2 text-surface-800 [&_a]:text-primary-600 [&_a:hover]:underline [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_p]:mb-2"
+                      }
+                      aria-readonly
+                      dangerouslySetInnerHTML={{
+                        __html: process
+                          ? resolveContextTemplate(
+                              sub.defaultValue ?? "",
+                              evaluationContext,
+                              userPerms,
+                              clientExpressionProcessOptions(process, processId)
+                            )
+                          : sub.defaultValue ?? "",
+                      }}
+                    />
+                  </div>
+                ) : (
+                  <div key={`${inp.key}-${rowIndex}-${sub.key}`} className="min-w-0">
+                    <StepInputControl
+                      inp={sub}
+                      formKey={itemListFormKey(inp.key, rowIndex, sub.key)}
+                      htmlId={`il-${inp.key}-${rowIndex}-${sub.key}`}
+                      formValues={formValues}
+                      hideTitle={Boolean(hideFieldTitle)}
+                      onValuesChange={(next) => {
+                        setFormValues(next);
+                        scheduleStepContextUpdate(next);
+                      }}
+                    />
+                  </div>
+                );
+
+              const onRemoveRow = (rowIndex: number) => {
+                setFormValues((prev) => {
+                  const next = removeItemListRow(inp.key, subInputs, rowIndex, prev);
+                  scheduleStepContextUpdate(next);
+                  return next;
+                });
+              };
+
+              const onReorderRow = (fromIndex: number, toIndex: number) => {
+                setFormValues((prev) => {
+                  const next = reorderItemListRows(inp.key, subInputs, fromIndex, toIndex, prev);
+                  scheduleStepContextUpdate(next);
+                  return next;
+                });
+              };
+
               return (
                 <section
                   key={inp.key}
@@ -909,92 +992,103 @@ export default function ProcessStepPage() {
                   <h2 id={`il-head-${inp.key}`} className="text-sm font-medium text-primary-950">
                     {inp.title}
                   </h2>
-                  <p className="mt-0.5 text-xs text-primary-800/80">
-                    One row per non-empty line in {multilineInp?.title ?? linesFromKey}.
-                  </p>
-                  {lines.length === 0 ? (
-                    <p className="mt-4 text-sm text-surface-600">
-                      Add non-empty lines in &quot;{multilineInp?.title ?? linesFromKey}&quot; above to
-                      fill rows.
-                    </p>
-                  ) : (
-                    <div className="mt-4 space-y-4">
-                      {lines.map((line, rowIndex) => (
-                        <div
-                          key={rowIndex}
-                          className="rounded-lg border border-surface-200 bg-white px-3 py-3"
-                        >
-                          <div className="text-xs font-mono text-surface-600">{line}</div>
-                          <div className="mt-3 space-y-4">
-                            {subInputs
-                              .filter(
-                                (sub) =>
-                                  (!sub.visibleExpression ||
-                                    Boolean(
-                                      process &&
-                                        evaluate(evaluationContext, sub.visibleExpression, {
-                                          userPermissions: userPerms,
-                                          ...clientExpressionProcessOptions(process, processId),
-                                        })
-                                    )) &&
-                                  (sub.readOnly
-                                    ? process
-                                      ? shouldShowViewControl(
-                                          sub.defaultValue ?? "",
-                                          evaluationContext
-                                        )
-                                      : true
-                                    : true)
-                              )
-                              .map((sub, j) =>
-                                sub.readOnly ? (
-                                  <div
-                                    key={`${inp.key}-${rowIndex}-${sub.key}-${j}`}
-                                    className="rounded-lg border border-surface-200 bg-surface-50 px-3 py-3"
-                                  >
-                                    <div className="text-sm font-medium text-surface-600">
-                                      {sub.title}
-                                    </div>
-                                    <div
-                                      className={
-                                        sub.type === "string-multiline" || sub.type === "decimal_string"
-                                          ? "mt-2 whitespace-pre-wrap break-all font-mono text-sm leading-relaxed text-surface-800 [&_a]:text-primary-600 [&_a:hover]:underline [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_p]:mb-2"
-                                          : "mt-2 text-surface-800 [&_a]:text-primary-600 [&_a:hover]:underline [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_p]:mb-2"
-                                      }
-                                      aria-readonly
-                                      dangerouslySetInnerHTML={{
-                                        __html: process
-                                          ? resolveContextTemplate(
-                                              sub.defaultValue ?? "",
-                                              evaluationContext,
-                                              userPerms,
-                                              clientExpressionProcessOptions(process, processId)
-                                            )
-                                          : sub.defaultValue ?? "",
-                                      }}
-                                    />
-                                  </div>
-                                ) : (
-                                  <div
-                                    key={`${inp.key}-${rowIndex}-${sub.key}`}
-                                    className="rounded-lg border border-surface-200 bg-white px-3 py-3"
-                                  >
-                                    <StepInputControl
-                                      inp={sub}
-                                      formKey={itemListFormKey(inp.key, rowIndex, sub.key)}
-                                      htmlId={`il-${inp.key}-${rowIndex}-${sub.key}`}
-                                      formValues={formValues}
-                                      onValuesChange={(next) => {
-                                        setFormValues(next);
-                                        scheduleStepContextUpdate(next);
-                                      }}
-                                    />
-                                  </div>
-                                )
-                              )}
+
+                  {primarySub && (
+                    <div className="mt-4 rounded-lg border border-surface-200 bg-white px-3 py-4 shadow-sm">
+                      <div className="mb-3 text-xs font-semibold uppercase tracking-wide text-surface-500">
+                        {primarySub.title}
+                      </div>
+                      <div className="space-y-2">
+                        {Array.from({ length: rowCount }, (_, rowIndex) => (
+                          <div
+                            key={`pri-${rowIndex}`}
+                            className="flex items-center gap-2 rounded-lg border border-surface-100 bg-surface-50/60 px-2 py-2"
+                            onDragOver={(e) => {
+                              e.preventDefault();
+                              e.dataTransfer.dropEffect = "move";
+                            }}
+                            onDrop={(e) => {
+                              e.preventDefault();
+                              const from = parseInt(e.dataTransfer.getData("text/plain"), 10);
+                              if (!Number.isInteger(from)) return;
+                              onReorderRow(from, rowIndex);
+                            }}
+                          >
+                            <button
+                              type="button"
+                              draggable
+                              onDragStart={(e) => {
+                                e.dataTransfer.setData("text/plain", String(rowIndex));
+                                e.dataTransfer.effectAllowed = "move";
+                              }}
+                              className="flex h-9 w-7 shrink-0 cursor-grab flex-col items-center justify-center rounded border border-transparent text-surface-400 hover:border-surface-200 hover:bg-white active:cursor-grabbing"
+                              aria-label="Drag to reorder row"
+                            >
+                              <span className="text-[10px] leading-none" aria-hidden>
+                                ⋮⋮
+                              </span>
+                            </button>
+                            <span className="w-6 shrink-0 text-right text-[11px] font-medium text-surface-400">
+                              {rowIndex + 1}
+                            </span>
+                            <div className="min-w-0 flex-1">
+                              {renderSubControl(primarySub, rowIndex, 0, true)}
+                            </div>
+                            {!itemListRowIsEmpty(inp.key, subInputs, rowIndex, formValues) && (
+                              <button
+                                type="button"
+                                onClick={() => onRemoveRow(rowIndex)}
+                                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-transparent text-xl leading-none text-surface-400 hover:border-red-200 hover:bg-red-50 hover:text-red-700"
+                                aria-label="Remove row"
+                              >
+                                <span aria-hidden>×</span>
+                              </button>
+                            )}
                           </div>
-                        </div>
-                      ))}
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {otherSubs.length > 0 && (
+                    <div className="mt-6 rounded-lg border border-surface-200 bg-white px-3 py-4 shadow-sm">
+                      <div className="divide-y divide-surface-100">
+                        {Array.from({ length: rowCount }, (_, rowIndex) => {
+                          const primaryRaw = primarySub
+                            ? formValues[itemListFormKey(inp.key, rowIndex, primarySub.key)]
+                            : undefined;
+                          const primaryLabel =
+                            primarySub?.type === "bool"
+                              ? primaryRaw === true
+                                ? "Yes"
+                                : primaryRaw === false
+                                  ? "No"
+                                  : ""
+                              : primaryRaw !== undefined &&
+                                  primaryRaw !== true &&
+                                  primaryRaw !== false
+                                ? String(primaryRaw).trim()
+                                : "";
+                          return (
+                            <div
+                              key={`rest-row-${rowIndex}`}
+                              className="space-y-3 py-3 first:pt-0"
+                            >
+                              <p
+                                className={`truncate text-sm font-medium ${primaryLabel ? "text-surface-900" : "text-surface-500"}`}
+                                title={primaryLabel || undefined}
+                              >
+                                {primaryLabel || `Row ${rowIndex + 1}`}
+                              </p>
+                              {otherSubs.map((sub) => (
+                                <div key={`${rowIndex}-${sub.key}`} className="min-w-0">
+                                  {renderSubControl(sub, rowIndex)}
+                                </div>
+                              ))}
+                            </div>
+                          );
+                        })}
+                      </div>
                     </div>
                   )}
                 </section>

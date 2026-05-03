@@ -1,9 +1,9 @@
 import type { Template } from "@/entities/template";
 
 /**
- * One-step review: paste GitHub commit URLs (one per line), then a checkbox + string per URL.
- * Saved context: `spell_review.commit_urls` (text) and `spell_review.reviews` (array of
- * `{ spelling_ok, comment }` per non-empty line).
+ * One-step review: each row is a commit URL plus checkbox + comment.
+ * Saved context: `spell_review.prs` = array of `{ commit_url, spelling_ok, comment }`, plus
+ * `spell_review.solc_version_verified` (bool).
  */
 export const agentSpellReviewTemplate: Template = {
   key: "agent-spell-review",
@@ -17,19 +17,17 @@ export const agentSpellReviewTemplate: Template = {
       title: "Review commit messages",
       permissions: [],
       nextStepKey: null,
-      confirmationMessage: "Thanks — your spell review has been saved.",
       inputs: [
         {
-          key: "commit_urls",
-          type: "string-multiline",
-          title: "GitHub commit URLs (one per line)",
-        },
-        {
-          key: "reviews",
+          key: "prs",
           type: "item_list",
-          title: "Per commit",
-          linesFromKey: "commit_urls",
+          title: "Commits",
           subInputs: [
+            {
+              key: "commit_url",
+              type: "string",
+              title: "GitHub commit URL",
+            },
             {
               key: "spelling_ok",
               type: "bool",
@@ -38,9 +36,20 @@ export const agentSpellReviewTemplate: Template = {
             {
               key: "comment",
               type: "string",
-              title: "Comment (optional if OK)",
+              title: "Comment (optional)",
             },
           ],
+        },
+        {
+          key: "solc_version_verified",
+          type: "bool",
+          title:
+            "Verify solc version matches the Prime Agent protocol standard based on prior contracts.",
+        },
+        {
+          key: "solc_version_verified_comment",
+          type: "string",
+          title: "Comment (optional)",
         },
       ],
     },
