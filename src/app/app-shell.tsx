@@ -94,7 +94,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const isPublic = PUBLIC_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`));
 
   if (isPublic) {
-    return <>{children}</>;
+    /** Own scroll root so login (etc.) still scrolls while document stays overflow-hidden. */
+    return <div className="h-full min-h-0 overflow-y-auto">{children}</div>;
   }
 
   const showTemplates = hasPermission(me?.permissions, PERMISSIONS.TEMPLATES_READ);
@@ -107,7 +108,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     }`;
 
   return (
-    <div className="flex h-screen min-h-0 overflow-hidden">
+    <div className="flex h-full min-h-0 overflow-hidden">
       <aside className="flex h-full min-h-0 w-[260px] shrink-0 flex-col overflow-hidden border-r border-surface-200 bg-white">
         <div className="flex h-16 shrink-0 items-center gap-2.5 border-b border-surface-100 px-5">
           <LogoIcon />
@@ -172,7 +173,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       </aside>
 
       <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-surface-50">
-        <main className="min-h-0 flex-1 overflow-y-auto">{children}</main>
+        <div className="relative min-h-0 flex-1 overflow-y-auto overscroll-y-contain [overflow-anchor:none]">
+          {children}
+        </div>
       </div>
     </div>
   );

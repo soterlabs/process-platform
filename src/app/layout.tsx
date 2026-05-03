@@ -17,8 +17,10 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
-      <body className={`${inter.variable} min-h-screen font-sans antialiased`}>
+    <html lang="en" className="h-full min-h-0 overflow-hidden">
+      <body
+        className={`${inter.variable} h-full min-h-0 overflow-hidden font-sans antialiased`}
+      >
         <AuthGuard>
           <AppShell>{children}</AppShell>
         </AuthGuard>
