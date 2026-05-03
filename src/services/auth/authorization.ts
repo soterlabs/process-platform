@@ -1,7 +1,6 @@
 import type { Process } from "@/entities/process";
 import type { InputTemplateStep } from "@/entities/template";
 import { expressionEvaluateOptionsFromProcess } from "@/lib/expression-process-context";
-import { deserializeProcessContextNumericFields } from "@/lib/numeric-field";
 import { evaluate } from "@/services/expression-service";
 import { getCurrentProcessStep, getProcessStepById, getStepByKey } from "@/services/template-helpers";
 import { storageService } from "@/services/storage";
@@ -71,11 +70,7 @@ async function checkStepAuth(
         ...existing,
         ...(options?.mergeStepContextPayload ?? {}),
       };
-      const evalCtx = deserializeProcessContextNumericFields(
-        process.template,
-        mergedContext
-      );
-      const ok = evaluate(evalCtx, completeExpr, {
+      const ok = evaluate(mergedContext, completeExpr, {
         userPermissions: permissions,
         ...expressionEvaluateOptionsFromProcess(process),
       });
@@ -122,9 +117,8 @@ function canCompleteCurrentStep(
   const inputStep = templateStep as InputTemplateStep;
   const completeExpr = inputStep.completeExpression?.trim();
   if (!completeExpr) return true;
-  const evalCtx = deserializeProcessContextNumericFields(process.template, process.context);
   return Boolean(
-    evaluate(evalCtx, completeExpr, {
+    evaluate(process.context, completeExpr, {
       userPermissions: permissions,
       ...expressionEvaluateOptionsFromProcess(process),
     })

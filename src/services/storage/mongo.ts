@@ -12,6 +12,7 @@ import { nfatSetupFacilityTemplate } from "@/templates/nfat-setup-facility";
 import type { IStorageService } from "./interface";
 import { nfatEnableFacilityForPrimeTemplate } from "@/templates/nfat-enable-facility-for-prime";
 import { integrationBoostOnboardingTemplate } from "@/templates/integrator-onboarding";
+import { agentSpellReviewTemplate } from "@/templates/agent-spell-review";
 
 const MONGO_URL = process.env.MONGO_URL ?? "";
 const DB_NAME = "process-platform";
@@ -48,7 +49,9 @@ const SEED_TEMPLATES: Template[] = [
   nfatSetupFacilityTemplate,
   nfatEnableFacilityForPrimeTemplate,
   nfatSubscribeTemplate,
-  integrationBoostOnboardingTemplate];
+  integrationBoostOnboardingTemplate,
+  agentSpellReviewTemplate,
+];
 
 async function ensureInitialTemplates(): Promise<void> {
   const c = await col<Template & DocWithStringId>(COLL.templates);

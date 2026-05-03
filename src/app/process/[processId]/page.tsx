@@ -13,38 +13,38 @@ import {
   LIMIT_SUBSCRIBE,
   makeAddressKey,
 } from "@/lib/eth-expression-vm";
-import type { NumericFieldValue } from "@/lib/numeric-field";
 import {
-  deserializeProcessContextNumericFields,
-  numericFieldToFormString,
-  sanitizeNumericFormInput,
-  serializeNumericFieldFromForm,
-  withDeserializedNumericContext,
-} from "@/lib/numeric-field";
+  buildInputStepContextPayload,
+  itemListFormKey,
+  numberContextToFormString,
+} from "@/lib/input-step-payload";
 import { buildCurrentProcessExpressionContext } from "@/lib/expression-process-context";
 import { evaluate, type EvaluateExpressionOptions } from "@/services/expression-service";
-import { DateTimePicker } from "./_components/DateTimePicker";
-
-type StepInput = {
-  key: string;
-  type: "bool" | "string" | "string-multiline" | "number" | "datetime" | "dropdown";
-  title: string;
-  visibleExpression?: string;
-  values?: string[];
-  readOnly?: boolean;
-  defaultValue?: string;
-};
+import type { TemplateStepInput } from "@/entities/template";
+import { StepInputControl, expansionFieldInitialFormValue } from "./_components/StepInputControl";
 
 type CurrentStep = {
   key: string;
   title: string;
   type: string;
-  inputs?: StepInput[];
+  inputs?: TemplateStepInput[];
   permissions?: string[];
   completeExpression?: string;
   nextStepKey: string | null;
   confirmationMessage?: string;
 };
+
+function mergeLiveStepContextSlice(
+  processContext: Record<string, unknown>,
+  stepKey: string,
+  step: CurrentStep,
+  formValues: Record<string, boolean | string>
+): Record<string, unknown> {
+  const base = { ...processContext };
+  const cur = (base[stepKey] as Record<string, unknown>) ?? {};
+  const slice = buildInputStepContextPayload(step.inputs ?? [], formValues);
+  return { ...base, [stepKey]: { ...cur, ...slice } };
+}
 
 type ResultViewControl = { data: string; title: string; visibleExpression?: string };
 
@@ -98,7 +98,6 @@ function contextValueToDisplayString(val: unknown): string {
   if (val === undefined || val === null) return "";
   if (typeof val === "string") return val;
   if (typeof val === "boolean") return val ? "Yes" : "No";
-  if (typeof val === "bigint") return val.toString();
   if (typeof val === "number") return Number.isFinite(val) ? String(val) : "";
   if (typeof val === "object") return JSON.stringify(val);
   return String(val);
@@ -183,7 +182,6 @@ function evalTemplateExpression(
     if (result === undefined || result === null) return "";
     if (typeof result === "string") return result;
     if (typeof result === "boolean") return result ? "Yes" : "No";
-    if (typeof result === "bigint") return result.toString();
     if (typeof result === "number" && !Number.isFinite(result)) return "";
     return String(result);
   } catch (err) {
@@ -371,25 +369,27 @@ export default function ProcessStepPage() {
           setProcess(null);
           return;
         }
-        const proc = withDeserializedNumericContext(result.process);
+        const proc = result.process;
         setProcess(proc);
         const step = getCurrentStep(proc);
         const currentProcessStep = getCurrentProcessStepFromState(proc);
         const stepContext = currentProcessStep
           ? (proc.context[currentProcessStep.stepKey] as Record<string, unknown>)
           : undefined;
-        if (step?.inputs) {
+        if (step?.inputs?.length) {
           const context = proc.context;
           setFormValues((prev) => {
             const next = { ...prev };
             step.inputs?.forEach((inp) => {
+              if (inp.type === "item_list") return;
               if (inp.readOnly) return;
               if (inp.key in next) return;
               const raw = stepContext?.[inp.key];
               if (raw !== undefined && raw !== null) {
                 if (inp.type === "bool") next[inp.key] = Boolean(raw);
-                else if (inp.type === "number")
-                  next[inp.key] = numericFieldToFormString(raw as NumericFieldValue);
+                else if (inp.type === "number") next[inp.key] = numberContextToFormString(raw);
+                else if (inp.type === "decimal_string")
+                  next[inp.key] = typeof raw === "string" ? raw : "";
                 else next[inp.key] = String(raw);
                 return;
               }
@@ -408,6 +408,51 @@ export default function ProcessStepPage() {
                 return;
               }
               next[inp.key] = inp.type === "bool" ? false : "";
+            });
+            step.inputs?.forEach((inp) => {
+              if (inp.type !== "item_list" || !inp.linesFromKey || !inp.subInputs?.length) return;
+              const saved = stepContext?.[inp.key];
+              const lineText = stepContext?.[inp.linesFromKey];
+              const linesFromContext =
+                lineText === undefined || lineText === null
+                  ? []
+                  : String(lineText)
+                      .split("\n")
+                      .map((t) => t.trim())
+                      .filter(Boolean);
+              const rows = Array.isArray(saved) ? saved : [];
+              const n = Math.max(linesFromContext.length, rows.length);
+              for (let rowIndex = 0; rowIndex < n; rowIndex++) {
+                inp.subInputs.forEach((sub) => {
+                  if (sub.readOnly || sub.type === "item_list") return;
+                  const fk = itemListFormKey(inp.key, rowIndex, sub.key);
+                  if (fk in next) return;
+                  const rowObj = rows[rowIndex];
+                  const raw =
+                    rowObj && typeof rowObj === "object" && !Array.isArray(rowObj)
+                      ? (rowObj as Record<string, unknown>)[sub.key]
+                      : undefined;
+                  if (raw !== undefined && raw !== null) {
+                    next[fk] = expansionFieldInitialFormValue(sub, raw);
+                    return;
+                  }
+                  if (sub.defaultValue != null && sub.defaultValue !== "") {
+                    const resolved = resolveContextTemplate(
+                      sub.defaultValue,
+                      context,
+                      me?.permissions ?? [],
+                      clientExpressionProcessOptions(proc, proc.processId)
+                    );
+                    if (sub.type === "bool") {
+                      next[fk] = /^(yes|true|1)$/i.test(resolved.trim());
+                    } else {
+                      next[fk] = resolved;
+                    }
+                    return;
+                  }
+                  next[fk] = sub.type === "bool" ? false : "";
+                });
+              }
             });
             return next;
           });
@@ -431,44 +476,25 @@ export default function ProcessStepPage() {
     const t = setInterval(async () => {
       const result = await fetchProcess();
       if ("process" in result && result.process)
-        setProcess(withDeserializedNumericContext(result.process));
+        setProcess(result.process);
       else if ("process" in result) setProcess(null);
       if ("error" in result) setError(result.error ?? null);
     }, POLL_INTERVAL_MS);
     return () => clearInterval(t);
   }, [loading, error, process?.processId, step?.key, processId, fetchProcess]);
 
-  /** Build the same payload we send on complete (editable inputs only). */
-  const buildStepPayload = useCallback(
-    (values: Record<string, boolean | string>) => {
-      if (!step?.inputs?.length) return {};
-      const payload: Record<string, unknown> = {};
-      step.inputs.forEach((inp) => {
-        if (inp.readOnly) return;
-        if (inp.type === "bool") {
-          payload[inp.key] = values[inp.key] ?? false;
-        } else if (inp.type === "number") {
-          const v = values[inp.key];
-          payload[inp.key] =
-            v === undefined || v === "" ? "" : serializeNumericFieldFromForm(String(v));
-        } else {
-          payload[inp.key] = values[inp.key] ?? "";
-        }
-      });
-      return payload;
-    },
-    [step?.inputs]
-  );
-
   /** Debounced PUT to update step context when any input changes. */
   const scheduleStepContextUpdate = useCallback(
     (nextFormValues: Record<string, boolean | string>) => {
       const currentProcessStep = process ? getCurrentProcessStepFromState(process) : null;
-      if (!process || !step?.inputs?.length || !currentProcessStep) return;
+      if (!process || !step || !currentProcessStep) return;
+      const hasAnything = (step.inputs?.length ?? 0) > 0;
+      if (!hasAnything) return;
       if (updateStepContextTimerRef.current) clearTimeout(updateStepContextTimerRef.current);
       updateStepContextTimerRef.current = setTimeout(async () => {
         updateStepContextTimerRef.current = null;
-        const payload = buildStepPayload(nextFormValues);
+        const payload = buildInputStepContextPayload(step.inputs ?? [], nextFormValues);
+        if (Object.keys(payload).length === 0) return;
         try {
           const res = await authFetch(
             `/api/process/${processId}/steps/${encodeURIComponent(currentProcessStep.id)}`,
@@ -484,7 +510,7 @@ export default function ProcessStepPage() {
               prev
                 ? {
                     ...prev,
-                    context: deserializeProcessContextNumericFields(prev.template, data.context),
+                    context: data.context,
                   }
                 : null
             );
@@ -494,7 +520,7 @@ export default function ProcessStepPage() {
         }
       }, 400);
     },
-    [process, processId, step?.inputs, buildStepPayload]
+    [process, processId, step]
   );
 
   useEffect(() => {
@@ -506,19 +532,21 @@ export default function ProcessStepPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const currentProcessStep = process ? getCurrentProcessStepFromState(process) : null;
-    if (!step?.inputs?.length || submitting || !process || !currentProcessStep) return;
+    if (
+      !step ||
+      !(step.inputs?.length ?? 0) ||
+      submitting ||
+      !process ||
+      !currentProcessStep
+    )
+      return;
     const userPerms = me?.permissions ?? [];
-    const completeExpr = step.completeExpression?.trim();
+    const completeExpr = step?.completeExpression?.trim();
     if (completeExpr) {
       const ctx = process
-        ? (() => {
-            const base = { ...process.context };
-            if (step?.key) {
-              const cur = (base[step.key] as Record<string, unknown>) ?? {};
-              base[step.key] = { ...cur, ...formValues };
-            }
-            return deserializeProcessContextNumericFields(process.template, base);
-          })()
+        ? step?.key
+          ? mergeLiveStepContextSlice(process.context, step.key, step, formValues)
+          : process.context
         : {};
       if (
         !evaluate(ctx, completeExpr, {
@@ -532,19 +560,7 @@ export default function ProcessStepPage() {
     }
     setSubmitting(true);
     try {
-      const payload: Record<string, unknown> = {};
-      step.inputs.forEach((inp) => {
-        if (inp.readOnly) return;
-        if (inp.type === "bool") {
-          payload[inp.key] = formValues[inp.key] ?? false;
-        } else if (inp.type === "number") {
-          const v = formValues[inp.key];
-          payload[inp.key] =
-            v === undefined || v === "" ? "" : serializeNumericFieldFromForm(String(v));
-        } else {
-          payload[inp.key] = formValues[inp.key] ?? "";
-        }
-      });
+      const payload = buildInputStepContextPayload(step.inputs ?? [], formValues);
       const res = await authFetch(
         `/api/process/${processId}/steps/${encodeURIComponent(currentProcessStep.id)}/complete`,
         {
@@ -562,12 +578,9 @@ export default function ProcessStepPage() {
       const completedStepConfirmation = step.confirmationMessage?.trim();
       const result = await fetchProcess();
       if ("process" in result) {
-        const nextProcess = withDeserializedNumericContext(result.process!);
+        const nextProcess = result.process!;
         setProcess(nextProcess);
-        if (
-          completedStepConfirmation &&
-          nextProcess.canActOnCurrentStep === false
-        ) {
+        if (completedStepConfirmation && nextProcess.canActOnCurrentStep === false) {
           setConfirmationMessage(completedStepConfirmation);
         }
       } else if ("error" in result) {
@@ -809,17 +822,11 @@ export default function ProcessStepPage() {
 
   const isLastStepInTemplate = step != null && step.nextStepKey === null;
 
-  /** Merge live form values into the current step, then re-apply numeric deserialization
-   *  so readOnly {{ expressions }} (e.g. tx payload) update on every keystroke. */
+  /** Merge live form values into the current step for expressions / readOnly views. */
   const evaluationContext = process
-    ? (() => {
-        const base = { ...process.context };
-        if (step?.key) {
-          const current = (base[step.key] as Record<string, unknown>) ?? {};
-          base[step.key] = { ...current, ...formValues };
-        }
-        return deserializeProcessContextNumericFields(process.template, base);
-      })()
+    ? step?.key
+      ? mergeLiveStepContextSlice(process.context, step.key, step, formValues)
+      : process.context
     : {};
 
   const userPerms = me?.permissions ?? [];
@@ -864,182 +871,181 @@ export default function ProcessStepPage() {
                   : true
                 : true)
           )
-          .map((inp, i) =>
-            inp.readOnly ? (
+          .map((inp, i) => {
+            if (inp.type === "item_list" && !inp.readOnly) {
+              const linesFromKey = inp.linesFromKey;
+              const subInputs = inp.subInputs ?? [];
+              const multilineInp =
+                linesFromKey && step.inputs
+                  ? step.inputs.find((x) => x.key === linesFromKey)
+                  : undefined;
+              const rawLines = linesFromKey ? formValues[linesFromKey] : "";
+              const lines =
+                rawLines === undefined || rawLines === true || rawLines === false
+                  ? []
+                  : String(rawLines)
+                      .split("\n")
+                      .map((t) => t.trim())
+                      .filter(Boolean);
+              if (!linesFromKey || subInputs.length === 0) {
+                return (
+                  <div
+                    key={inp.key}
+                    className="rounded-xl border border-amber-200 bg-amber-50/40 px-4 py-4"
+                  >
+                    <div className="text-sm font-medium text-surface-800">{inp.title}</div>
+                    <p className="mt-1 text-xs text-surface-600">
+                      This item list is missing a multiline source key or sub-fields in the template.
+                    </p>
+                  </div>
+                );
+              }
+              return (
+                <section
+                  key={inp.key}
+                  className="rounded-xl border border-primary-200 bg-primary-50/50 px-4 py-4"
+                  aria-labelledby={`il-head-${inp.key}`}
+                >
+                  <h2 id={`il-head-${inp.key}`} className="text-sm font-medium text-primary-950">
+                    {inp.title}
+                  </h2>
+                  <p className="mt-0.5 text-xs text-primary-800/80">
+                    One row per non-empty line in {multilineInp?.title ?? linesFromKey}.
+                  </p>
+                  {lines.length === 0 ? (
+                    <p className="mt-4 text-sm text-surface-600">
+                      Add non-empty lines in &quot;{multilineInp?.title ?? linesFromKey}&quot; above to
+                      fill rows.
+                    </p>
+                  ) : (
+                    <div className="mt-4 space-y-4">
+                      {lines.map((line, rowIndex) => (
+                        <div
+                          key={rowIndex}
+                          className="rounded-lg border border-surface-200 bg-white px-3 py-3"
+                        >
+                          <div className="text-xs font-mono text-surface-600">{line}</div>
+                          <div className="mt-3 space-y-4">
+                            {subInputs
+                              .filter(
+                                (sub) =>
+                                  (!sub.visibleExpression ||
+                                    Boolean(
+                                      process &&
+                                        evaluate(evaluationContext, sub.visibleExpression, {
+                                          userPermissions: userPerms,
+                                          ...clientExpressionProcessOptions(process, processId),
+                                        })
+                                    )) &&
+                                  (sub.readOnly
+                                    ? process
+                                      ? shouldShowViewControl(
+                                          sub.defaultValue ?? "",
+                                          evaluationContext
+                                        )
+                                      : true
+                                    : true)
+                              )
+                              .map((sub, j) =>
+                                sub.readOnly ? (
+                                  <div
+                                    key={`${inp.key}-${rowIndex}-${sub.key}-${j}`}
+                                    className="rounded-lg border border-surface-200 bg-surface-50 px-3 py-3"
+                                  >
+                                    <div className="text-sm font-medium text-surface-600">
+                                      {sub.title}
+                                    </div>
+                                    <div
+                                      className={
+                                        sub.type === "string-multiline" || sub.type === "decimal_string"
+                                          ? "mt-2 whitespace-pre-wrap break-all font-mono text-sm leading-relaxed text-surface-800 [&_a]:text-primary-600 [&_a:hover]:underline [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_p]:mb-2"
+                                          : "mt-2 text-surface-800 [&_a]:text-primary-600 [&_a:hover]:underline [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_p]:mb-2"
+                                      }
+                                      aria-readonly
+                                      dangerouslySetInnerHTML={{
+                                        __html: process
+                                          ? resolveContextTemplate(
+                                              sub.defaultValue ?? "",
+                                              evaluationContext,
+                                              userPerms,
+                                              clientExpressionProcessOptions(process, processId)
+                                            )
+                                          : sub.defaultValue ?? "",
+                                      }}
+                                    />
+                                  </div>
+                                ) : (
+                                  <div
+                                    key={`${inp.key}-${rowIndex}-${sub.key}`}
+                                    className="rounded-lg border border-surface-200 bg-white px-3 py-3"
+                                  >
+                                    <StepInputControl
+                                      inp={sub}
+                                      formKey={itemListFormKey(inp.key, rowIndex, sub.key)}
+                                      htmlId={`il-${inp.key}-${rowIndex}-${sub.key}`}
+                                      formValues={formValues}
+                                      onValuesChange={(next) => {
+                                        setFormValues(next);
+                                        scheduleStepContextUpdate(next);
+                                      }}
+                                    />
+                                  </div>
+                                )
+                              )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </section>
+              );
+            }
+            if (inp.readOnly) {
+              return (
+                <div
+                  key={`${inp.key}-${i}`}
+                  className="rounded-xl border border-surface-200 bg-surface-50 px-4 py-4"
+                >
+                  <div className="text-sm font-medium text-surface-600">{inp.title}</div>
+                  <div
+                    className={
+                      inp.type === "string-multiline" || inp.type === "decimal_string"
+                        ? "mt-2 whitespace-pre-wrap break-all font-mono text-sm leading-relaxed text-surface-800 [&_a]:text-primary-600 [&_a:hover]:underline [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_p]:mb-2"
+                        : "mt-2 text-surface-800 [&_a]:text-primary-600 [&_a:hover]:underline [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_p]:mb-2"
+                    }
+                    aria-readonly
+                    dangerouslySetInnerHTML={{
+                      __html: process
+                        ? resolveContextTemplate(
+                            inp.defaultValue ?? "",
+                            evaluationContext,
+                            userPerms,
+                            clientExpressionProcessOptions(process, processId)
+                          )
+                        : inp.defaultValue ?? "",
+                    }}
+                  />
+                </div>
+              );
+            }
+            return (
               <div
-                key={`${inp.key}-${i}`}
+                key={inp.key}
                 className="rounded-xl border border-surface-200 bg-surface-50 px-4 py-4"
               >
-                <div className="text-sm font-medium text-surface-600">{inp.title}</div>
-                <div
-                  className={
-                    inp.type === "string-multiline"
-                      ? "mt-2 whitespace-pre-wrap break-all font-mono text-sm leading-relaxed text-surface-800 [&_a]:text-primary-600 [&_a:hover]:underline [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_p]:mb-2"
-                      : "mt-2 text-surface-800 [&_a]:text-primary-600 [&_a:hover]:underline [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_p]:mb-2"
-                  }
-                  aria-readonly
-                  dangerouslySetInnerHTML={{
-                    __html: process
-                      ? resolveContextTemplate(
-                          inp.defaultValue ?? "",
-                          evaluationContext,
-                          userPerms,
-                          clientExpressionProcessOptions(process, processId)
-                        )
-                      : inp.defaultValue ?? "",
+                <StepInputControl
+                  inp={inp}
+                  formKey={inp.key}
+                  htmlId={inp.key}
+                  formValues={formValues}
+                  onValuesChange={(next) => {
+                    setFormValues(next);
+                    scheduleStepContextUpdate(next);
                   }}
                 />
               </div>
-            ) : (
-          <div
-            key={inp.key}
-            className="rounded-xl border border-surface-200 bg-surface-50 px-4 py-4"
-          >
-            {inp.type === "bool" ? (
-              <label className="flex cursor-pointer items-center justify-between gap-4">
-                <span className="text-sm font-medium leading-snug text-surface-800">
-                  {inp.title}
-                </span>
-                <input
-                  type="checkbox"
-                  checked={Boolean(formValues[inp.key])}
-                  onChange={(e) => {
-                    const next = { ...formValues, [inp.key]: e.target.checked };
-                    setFormValues(next);
-                    scheduleStepContextUpdate(next);
-                  }}
-                  className="sr-only"
-                />
-                <span
-                  className={`relative inline-flex h-6 w-11 shrink-0 rounded-full border transition-colors ${
-                    formValues[inp.key]
-                      ? "border-primary-500 bg-primary-500"
-                      : "border-surface-300 bg-surface-200"
-                  }`}
-                  aria-hidden
-                >
-                <span
-                  className={`pointer-events-none absolute top-0.5 inline-block h-5 w-5 rounded-full bg-white shadow transition-transform ${
-                    formValues[inp.key]
-                      ? "translate-x-[1.375rem]"
-                      : "translate-x-0.5"
-                  }`}
-                />
-                </span>
-              </label>
-            ) : inp.type === "dropdown" ? (
-              <>
-                <label
-                  htmlFor={inp.key}
-                  className="block text-sm font-medium text-surface-700"
-                >
-                  {inp.title}
-                </label>
-                <select
-                  id={inp.key}
-                  value={String(formValues[inp.key] ?? "")}
-                  onChange={(e) => {
-                    const next = { ...formValues, [inp.key]: e.target.value };
-                    setFormValues(next);
-                    scheduleStepContextUpdate(next);
-                  }}
-                  className="mt-2 w-full rounded-lg border border-surface-200 bg-white px-3 py-2.5 text-surface-900 focus:border-primary-300 focus:outline-none focus:ring-2 focus:ring-primary-100"
-                >
-                  <option value="">Select…</option>
-                  {(inp.values ?? []).map((val) => (
-                    <option key={val} value={val}>
-                      {val}
-                    </option>
-                  ))}
-                </select>
-              </>
-            ) : inp.type === "number" ? (
-              <>
-                <label
-                  htmlFor={inp.key}
-                  className="block text-sm font-medium text-surface-700"
-                >
-                  {inp.title}
-                </label>
-                <input
-                  id={inp.key}
-                  type="text"
-                  inputMode="decimal"
-                  autoComplete="off"
-                  pattern="[-0-9.]*"
-                  value={String(formValues[inp.key] ?? "")}
-                  onChange={(e) => {
-                    const v = sanitizeNumericFormInput(e.target.value);
-                    const next = { ...formValues, [inp.key]: v };
-                    setFormValues(next);
-                    scheduleStepContextUpdate(next);
-                  }}
-                  className="mt-2 w-full rounded-lg border border-surface-200 bg-white px-3 py-2.5 text-surface-900 placeholder-surface-400 focus:border-primary-300 focus:outline-none focus:ring-2 focus:ring-primary-100"
-                />
-              </>
-            ) : inp.type === "string-multiline" ? (
-              <>
-                <label
-                  htmlFor={inp.key}
-                  className="block text-sm font-medium text-surface-700"
-                >
-                  {inp.title}
-                </label>
-                <textarea
-                  id={inp.key}
-                  rows={4}
-                  value={String(formValues[inp.key] ?? "")}
-                  onChange={(e) => {
-                    const next = { ...formValues, [inp.key]: e.target.value };
-                    setFormValues(next);
-                    scheduleStepContextUpdate(next);
-                  }}
-                  className="mt-2 w-full rounded-lg border border-surface-200 bg-white px-3 py-2.5 text-surface-900 placeholder-surface-400 focus:border-primary-300 focus:outline-none focus:ring-2 focus:ring-primary-100"
-                />
-              </>
-            ) : inp.type === "datetime" ? (
-              <>
-                <label
-                  htmlFor={inp.key}
-                  className="block text-sm font-medium text-surface-700"
-                >
-                  {inp.title}
-                </label>
-                <DateTimePicker
-                  id={inp.key}
-                  value={String(formValues[inp.key] ?? "")}
-                  onChange={(v) => {
-                    const next = { ...formValues, [inp.key]: v };
-                    setFormValues(next);
-                    scheduleStepContextUpdate(next);
-                  }}
-                  className="mt-2"
-                />
-              </>
-            ) : (
-              <>
-                <label
-                  htmlFor={inp.key}
-                  className="block text-sm font-medium text-surface-700"
-                >
-                  {inp.title}
-                </label>
-                <input
-                  id={inp.key}
-                  type="text"
-                  value={String(formValues[inp.key] ?? "")}
-                  onChange={(e) => {
-                    const next = { ...formValues, [inp.key]: e.target.value };
-                    setFormValues(next);
-                    scheduleStepContextUpdate(next);
-                  }}
-                  className="mt-2 w-full rounded-lg border border-surface-200 bg-white px-3 py-2.5 text-surface-900 placeholder-surface-400 focus:border-primary-300 focus:outline-none focus:ring-2 focus:ring-primary-100"
-                />
-              </>
-            )}
-          </div>
-            )
-          )}
+            );
+          })}
         {canShowCompleteButton ? (
           <button
             type="submit"

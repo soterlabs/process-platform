@@ -71,6 +71,7 @@ const nodeTypes: NodeTypes = {
 
 function InputStepNode({ data }: { data: FlowNodeData }) {
   const readOnlyInputs = (data.inputs ?? []).filter((inp) => inp.readOnly);
+  const itemLists = (data.inputs ?? []).filter((inp) => inp.type === "item_list");
   return (
     <div className="relative min-w-[180px] rounded-lg border-2 border-amber-500 bg-white px-4 py-3 shadow-md">
       <Handle type="target" position={Position.Left} className="!border-2 !border-surface-300 !bg-white" />
@@ -79,6 +80,11 @@ function InputStepNode({ data }: { data: FlowNodeData }) {
         <span className="font-medium text-surface-900">{data.title || "Input"}</span>
       </div>
       <div className="mt-1 text-xs text-surface-500">{data.stepKey}</div>
+      {itemLists.length > 0 && (
+        <div className="mt-1 text-xs text-amber-800">
+          {itemLists.length} item list{itemLists.length === 1 ? "" : "s"}
+        </div>
+      )}
       {readOnlyInputs.length > 0 && (
         <div className="mt-2 border-t border-surface-200 pt-2">
           <div className="text-[10px] uppercase tracking-wider text-surface-500">View controls</div>

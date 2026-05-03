@@ -12,6 +12,7 @@ import { nfatSubscribeTemplate } from "@/templates/nfat-subscribe";
 import { nfatSetupFacilityTemplate } from "@/templates/nfat-setup-facility";
 import { nfatEnableFacilityForPrimeTemplate } from "@/templates/nfat-enable-facility-for-prime";
 import { integrationBoostOnboardingTemplate } from "@/templates/integrator-onboarding";
+import { agentSpellReviewTemplate } from "@/templates/agent-spell-review";
 import type { IStorageService } from "./interface";
 
 const STORE_DIR = join(process.cwd(), ".process-platform");
@@ -34,6 +35,7 @@ function seedTemplatesRecord(): Record<string, Template> {
       ...integrationBoostOnboardingTemplate,
       updatedAt: now,
     },
+    [agentSpellReviewTemplate.key]: { ...agentSpellReviewTemplate, updatedAt: now },
   };
 }
 

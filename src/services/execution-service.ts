@@ -15,14 +15,8 @@ import {
   getStepByKey,
 } from "@/services/template-helpers";
 import { expressionEvaluateOptionsFromProcess } from "@/lib/expression-process-context";
-import { deserializeProcessContextNumericFields } from "@/lib/numeric-field";
 import { postSlackChannelNotification } from "@/services/slack-notify-service";
 import { storageService } from "@/services/storage";
-
-/** Context with template `number` fields as bigint | string (same as UI / expressions). */
-function contextForEvaluation(process: Process): Record<string, unknown> {
-  return deserializeProcessContextNumericFields(process.template, process.context);
-}
 
 function pushStep(process: Process, stepKey: string): void {
   process.steps.push({
@@ -196,7 +190,7 @@ export const executionService = {
     let nextStepKey = getNextStepKey(
       process.template,
       step.stepKey,
-      contextForEvaluation(process),
+      process.context,
       expressionEvaluateOptionsFromProcess(process)
     );
     if (nextStepKey === null) {
@@ -237,7 +231,7 @@ export const executionService = {
     if (templateStep.type === "automatic") {
       const newContext = runAutomaticStep(
         templateStep as AutomaticTemplateStep,
-        contextForEvaluation(process),
+        process.context,
         exprOpts
       );
       const contextKey = (templateStep as AutomaticTemplateStep).contextKey;
@@ -260,7 +254,7 @@ export const executionService = {
     if (templateStep.type === "condition") {
       const nextKey = runConditionalStep(
         templateStep as ConditionTemplateStep,
-        contextForEvaluation(process),
+        process.context,
         exprOpts
       );
       if (nextKey && getStepByKey(process.template, nextKey)) {
@@ -275,11 +269,7 @@ export const executionService = {
     if (templateStep.type === "slack_notify") {
       const slackStep = templateStep as SlackNotifyTemplateStep;
       const stepKey = currentStep.stepKey;
-      const updates = await runSlackNotifyStep(
-        slackStep,
-        contextForEvaluation(process),
-        exprOpts
-      );
+      const updates = await runSlackNotifyStep(slackStep, process.context, exprOpts);
       const existing = (process.context[stepKey] as Record<string, unknown>) ?? {};
       process.context[stepKey] = { ...existing, ...updates };
       appendStepContextAudit(process, SYSTEM_STEP_CONTEXT_USER_ID, stepKey, updates);
@@ -298,7 +288,7 @@ export const executionService = {
       const stepKey = currentStep.stepKey;
       const response = await agentService.runAgent({
         systemPrompt: requestStep.prompt ?? "",
-        context: contextForEvaluation(process),
+        context: process.context,
       });
       const updates = { response };
       process.context[stepKey] = updates;

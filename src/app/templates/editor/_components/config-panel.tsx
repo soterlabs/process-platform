@@ -303,7 +303,39 @@ export function ConfigPanel({
                           value={input.type}
                           onChange={(e) => {
                             const inputs = [...(d.inputs ?? [])];
-                            const newType = e.target.value as "bool" | "string" | "string-multiline" | "number" | "datetime" | "dropdown";
+                            const newType = e.target.value as
+                              | "bool"
+                              | "string"
+                              | "string-multiline"
+                              | "number"
+                              | "decimal_string"
+                              | "datetime"
+                              | "dropdown"
+                              | "item_list";
+                            if (newType === "item_list") {
+                              inputs[i] = {
+                                key: input.key,
+                                type: "item_list",
+                                title: input.title,
+                                visibleExpression: input.visibleExpression,
+                                linesFromKey: "",
+                                subInputs: [
+                                  { key: `col_${(input.subInputs?.length ?? 0) + 1}`, type: "string", title: "Column" },
+                                ],
+                              };
+                              update({ inputs });
+                              return;
+                            }
+                            if (input.type === "item_list") {
+                              const { linesFromKey: _lk, subInputs: _si, ...rest } = input;
+                              inputs[i] = {
+                                ...rest,
+                                type: newType,
+                                values: newType === "dropdown" ? [] : undefined,
+                              };
+                              update({ inputs });
+                              return;
+                            }
                             inputs[i] = {
                               ...input,
                               type: newType,
@@ -316,10 +348,139 @@ export function ConfigPanel({
                           <option value="string">string</option>
                           <option value="string-multiline">string-multiline</option>
                           <option value="datetime">datetime</option>
-                          <option value="number">number</option>
+                          <option value="number">number (JSON number)</option>
+                          <option value="decimal_string">decimal string (exact text)</option>
                           <option value="bool">bool</option>
                           <option value="dropdown">dropdown</option>
+                          <option value="item_list">Item list (one row per multiline line)</option>
                         </select>
+                        {input.type === "item_list" && (
+                          <div className="mb-1 space-y-2 rounded border border-amber-200 bg-amber-50/50 p-2">
+                            <label className="block text-[10px] text-surface-600">
+                              Multiline field key (lines become rows)
+                              <input
+                                value={input.linesFromKey ?? ""}
+                                onChange={(e) => {
+                                  const inputs = [...(d.inputs ?? [])];
+                                  inputs[i] = { ...input, linesFromKey: e.target.value.trim() || undefined };
+                                  update({ inputs });
+                                }}
+                                placeholder="e.g. addresses"
+                                className="mt-0.5 w-full rounded border border-surface-200 bg-white px-2 py-1 font-mono text-xs text-surface-900"
+                              />
+                            </label>
+                            <div className="text-[10px] font-medium text-surface-600">Sub-fields per row</div>
+                            {(input.subInputs ?? []).map((sub, si) => (
+                              <div key={si} className="space-y-1 rounded border border-surface-200 bg-white p-2">
+                                <input
+                                  placeholder="Sub key"
+                                  value={sub.key}
+                                  onChange={(e) => {
+                                    const inputs = [...(d.inputs ?? [])];
+                                    const subInputs = [...(input.subInputs ?? [])];
+                                    subInputs[si] = { ...sub, key: e.target.value };
+                                    inputs[i] = { ...input, subInputs };
+                                    update({ inputs });
+                                  }}
+                                  className="w-full rounded border border-surface-200 px-2 py-1 font-mono text-xs text-surface-900"
+                                />
+                                <select
+                                  value={sub.type}
+                                  onChange={(e) => {
+                                    const inputs = [...(d.inputs ?? [])];
+                                    const subInputs = [...(input.subInputs ?? [])];
+                                    const st = e.target.value as
+                                      | "bool"
+                                      | "string"
+                                      | "string-multiline"
+                                      | "number"
+                                      | "decimal_string"
+                                      | "datetime"
+                                      | "dropdown";
+                                    subInputs[si] = {
+                                      ...sub,
+                                      type: st,
+                                      values: st === "dropdown" ? sub.values ?? [] : undefined,
+                                    };
+                                    inputs[i] = { ...input, subInputs };
+                                    update({ inputs });
+                                  }}
+                                  className="w-full rounded border border-surface-200 px-2 py-1 text-xs text-surface-900"
+                                >
+                                  <option value="string">string</option>
+                                  <option value="string-multiline">string-multiline</option>
+                                  <option value="datetime">datetime</option>
+                                  <option value="number">number</option>
+                                  <option value="decimal_string">decimal string</option>
+                                  <option value="bool">bool</option>
+                                  <option value="dropdown">dropdown</option>
+                                </select>
+                                {sub.type === "dropdown" && (
+                                  <input
+                                    placeholder="Options (comma-separated)"
+                                    value={(sub.values ?? []).join(", ")}
+                                    onChange={(e) => {
+                                      const inputs = [...(d.inputs ?? [])];
+                                      const subInputs = [...(input.subInputs ?? [])];
+                                      subInputs[si] = {
+                                        ...sub,
+                                        values: e.target.value
+                                          .split(",")
+                                          .map((s) => s.trim())
+                                          .filter(Boolean),
+                                      };
+                                      inputs[i] = { ...input, subInputs };
+                                      update({ inputs });
+                                    }}
+                                    className="w-full rounded border border-surface-200 px-2 py-1 text-xs text-surface-900"
+                                  />
+                                )}
+                                <input
+                                  placeholder="Title"
+                                  value={sub.title}
+                                  onChange={(e) => {
+                                    const inputs = [...(d.inputs ?? [])];
+                                    const subInputs = [...(input.subInputs ?? [])];
+                                    subInputs[si] = { ...sub, title: e.target.value };
+                                    inputs[i] = { ...input, subInputs };
+                                    update({ inputs });
+                                  }}
+                                  className="w-full rounded border border-surface-200 px-2 py-1 text-xs text-surface-900"
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const inputs = [...(d.inputs ?? [])];
+                                    const subInputs = (input.subInputs ?? []).filter((_, j) => j !== si);
+                                    inputs[i] = { ...input, subInputs };
+                                    update({ inputs });
+                                  }}
+                                  className="text-xs text-red-600 hover:text-red-700"
+                                >
+                                  Remove sub-field
+                                </button>
+                              </div>
+                            ))}
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const inputs = [...(d.inputs ?? [])];
+                                const n = (input.subInputs?.length ?? 0) + 1;
+                                inputs[i] = {
+                                  ...input,
+                                  subInputs: [
+                                    ...(input.subInputs ?? []),
+                                    { key: `col_${n}`, type: "string", title: "Column" },
+                                  ],
+                                };
+                                update({ inputs });
+                              }}
+                              className="text-xs text-primary-600 hover:text-primary-700"
+                            >
+                              + Add sub-field
+                            </button>
+                          </div>
+                        )}
                         {input.type === "dropdown" && (
                           <input
                             type="text"

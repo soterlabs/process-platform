@@ -1,5 +1,5 @@
 import type { Node, Edge } from "@xyflow/react";
-import type { Template } from "@/entities/template";
+import type { Template, TemplateStepInput } from "@/entities/template";
 import type {
   InputTemplateStep,
   ConditionTemplateStep,
@@ -15,15 +15,7 @@ export type FlowNodeData = {
   nextStepKey: string | null;
   confirmationMessage?: string;
   // input (ordered: editable inputs and read-only view controls)
-  inputs?: {
-    key: string;
-    type: "bool" | "string" | "string-multiline" | "number" | "datetime" | "dropdown";
-    title: string;
-    visibleExpression?: string;
-    values?: string[];
-    readOnly?: boolean;
-    defaultValue?: string;
-  }[];
+  inputs?: TemplateStepInput[];
   permissions?: string[];
   completeExpression?: string;
   // condition (required when type === "condition")
@@ -55,23 +47,7 @@ export function templateToFlow(template: Template): {
     };
     if (step.type === "input") {
       const inputStep = step as InputTemplateStep;
-      const inputs = inputStep.inputs ?? [];
-      const viewControls = (inputStep as { viewControls?: { data: string; title: string; visibleExpression?: string }[] }).viewControls ?? [];
-      // Backward compat: merge legacy viewControls into inputs (appended as readOnly)
-      data.inputs =
-        viewControls.length === 0
-          ? inputs
-          : [
-              ...inputs,
-              ...viewControls.map((vc, i) => ({
-                key: `_view_${i}`,
-                type: "string" as const,
-                title: vc.title,
-                visibleExpression: vc.visibleExpression,
-                readOnly: true as const,
-                defaultValue: vc.data,
-              })),
-            ];
+      data.inputs = inputStep.inputs ?? [];
       data.permissions = inputStep.permissions ?? [];
       data.completeExpression = inputStep.completeExpression;
     }
@@ -91,12 +67,9 @@ export function templateToFlow(template: Template): {
       data.expression = auto.expression;
     }
     if (step.type === "slack_notify") {
-      const sn = step as SlackNotifyTemplateStep & { mentionUserIds?: string[] };
+      const sn = step as SlackNotifyTemplateStep;
       data.channelId = sn.channelId ?? "";
-      const legacy = Array.isArray(sn.mentionUserIds) ? sn.mentionUserIds : [];
-      const next = Array.isArray(sn.mentionUsers) ? sn.mentionUsers : [];
-      const merged = [...legacy, ...next].map((s) => String(s).trim()).filter(Boolean);
-      data.mentionUsers = [...new Set(merged)];
+      data.mentionUsers = [...new Set((sn.mentionUsers ?? []).map((s) => String(s).trim()).filter(Boolean))];
       data.messageExpression = sn.messageExpression ?? "";
     }
     const position =
