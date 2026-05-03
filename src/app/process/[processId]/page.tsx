@@ -51,7 +51,12 @@ function mergeLiveStepContextSlice(
   return { ...base, [stepKey]: { ...cur, ...slice } };
 }
 
-type ResultViewControl = { data: string; title: string; visibleExpression?: string };
+type ResultViewControl = {
+  data: string;
+  title: string;
+  visibleExpression?: string;
+  plainText?: boolean;
+};
 
 type ProcessState = {
   processId: string;
@@ -106,6 +111,19 @@ function contextValueToDisplayString(val: unknown): string {
   if (typeof val === "number") return Number.isFinite(val) ? String(val) : "";
   if (typeof val === "object") return JSON.stringify(val);
   return String(val);
+}
+
+/** If `text` is a safe http(s) URL, returns it for use in `href`; otherwise `null`. */
+function safeHttpOrHttpsUrl(text: string): string | null {
+  const t = text.trim();
+  if (!t) return null;
+  try {
+    const u = new URL(t);
+    if (u.protocol === "http:" || u.protocol === "https:") return u.href;
+  } catch {
+    return null;
+  }
+  return null;
 }
 
 /**
@@ -690,7 +708,6 @@ export default function ProcessStepPage() {
       );
     const showResultViewControls = resolvedResultViewControls.length > 0;
     const showFallbackResult = hasResult && !showResultViewControls;
-
     return (
       <main className="mx-auto max-w-2xl px-6 py-16">
         <Link href="/" className="text-surface-500 hover:text-surface-700">
@@ -723,12 +740,29 @@ export default function ProcessStepPage() {
                   key={`${vc.data}-${vc.title}-${i}`}
                   className="rounded-xl border border-surface-200 bg-surface-50 px-4 py-4"
                 >
-                  <div className="text-sm font-medium text-surface-600">{vc.title}</div>
-                  <div
-                    className="mt-2 text-surface-800 [&_a]:text-primary-600 [&_a:hover]:underline [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_p]:mb-2"
-                    aria-readonly
-                    dangerouslySetInnerHTML={{ __html: display }}
-                  />
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="text-sm font-medium text-surface-600">{vc.title}</div>
+                    {vc.plainText && (
+                      <button
+                        type="button"
+                        onClick={() => void navigator.clipboard.writeText(display)}
+                        className="shrink-0 rounded-lg border border-surface-300 bg-white px-3 py-1.5 text-xs font-medium text-surface-800 hover:bg-surface-100"
+                      >
+                        Copy
+                      </button>
+                    )}
+                  </div>
+                  {vc.plainText ? (
+                    <pre className="mt-2 max-h-[28rem] overflow-auto whitespace-pre-wrap font-mono text-xs leading-relaxed text-surface-900">
+                      {display}
+                    </pre>
+                  ) : (
+                    <div
+                      className="mt-2 text-surface-800 [&_a]:text-primary-600 [&_a:hover]:underline [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_p]:mb-2"
+                      aria-readonly
+                      dangerouslySetInnerHTML={{ __html: display }}
+                    />
+                  )}
                 </div>
               );
             })}
@@ -1061,17 +1095,33 @@ export default function ProcessStepPage() {
                             raw !== undefined && raw !== true && raw !== false
                               ? String(raw).trim()
                               : "";
+                          const lineHref = lineLabel ? safeHttpOrHttpsUrl(lineLabel) : null;
                           return (
                             <div
                               key={`rest-row-${rowIndex}`}
                               className="space-y-3 py-3 first:pt-0"
                             >
-                              <p
-                                className={`truncate text-sm font-medium ${lineLabel ? "text-surface-900" : "text-surface-500"}`}
+                              <div
+                                className="min-w-0 rounded-md border border-surface-200 border-l-4 border-l-primary-500 bg-surface-50 px-3 py-2"
                                 title={lineLabel || undefined}
                               >
-                                {lineLabel || `Row ${rowIndex + 1}`}
-                              </p>
+                                {lineHref ? (
+                                  <a
+                                    href={lineHref}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="block truncate text-base font-semibold leading-snug text-primary-700 underline decoration-primary-300 decoration-1 underline-offset-2 hover:text-primary-900 hover:decoration-primary-600"
+                                  >
+                                    {lineLabel}
+                                  </a>
+                                ) : (
+                                  <p
+                                    className={`truncate text-base font-semibold leading-snug text-surface-900 ${lineLabel ? "" : "italic text-surface-500"}`}
+                                  >
+                                    {lineLabel || `Row ${rowIndex + 1}`}
+                                  </p>
+                                )}
+                              </div>
                               {visibleOtherSubs.map((sub) => (
                                 <div key={`${rowIndex}-${sub.key}`} className="min-w-0">
                                   {renderSubControl(sub, rowIndex)}

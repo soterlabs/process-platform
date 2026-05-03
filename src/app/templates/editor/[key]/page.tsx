@@ -144,7 +144,7 @@ function TemplateEditorInner() {
   const [nodes, setNodes, onNodesChange] = useNodesState<Node<FlowNodeData>>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
   const [resultViewControls, setResultViewControls] = useState<
-    { data: string; title: string; visibleExpression?: string }[]
+    { data: string; title: string; visibleExpression?: string; plainText?: boolean }[]
   >([]);
   const [templatePermissions, setTemplatePermissions] = useState<string[]>([]);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);

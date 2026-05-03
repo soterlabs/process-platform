@@ -87,7 +87,7 @@ A **template** is a JSON-shaped object (`src/entities/template/template.ts`):
 | `firstStepKey` | Must match a `steps[].key`. |
 | `steps` | Discriminated union of step types (below). |
 | `permissions` | Template-level permission strings (authorization hooks). |
-| `resultViewControls` | Optional read-only completion UI snippets (`TemplateStepViewControl`: `title`, `data` with `${context…}` and `{{ expression }}` patterns). |
+| `resultViewControls` | Optional read-only completion UI snippets (`TemplateStepViewControl`: `title`, `data` with `${context…}` and `{{ expression }}` patterns; optional `plainText` to render as monospace text with copy instead of HTML). |
 | `updatedAt` | Optional ISO string. |
 
 Every **step** shares (`template-step.ts`): `key`, `title`, `type`, `nextStepKey` (`null` if terminal), optional `confirmationMessage`, optional `editorProperties` (e.g. flow editor X/Y).

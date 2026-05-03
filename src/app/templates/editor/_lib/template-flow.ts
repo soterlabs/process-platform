@@ -117,7 +117,12 @@ export function templateToFlow(template: Template): {
 }
 
 export type TemplateOverrides = {
-  resultViewControls?: { data: string; title: string; visibleExpression?: string }[];
+  resultViewControls?: {
+    data: string;
+    title: string;
+    visibleExpression?: string;
+    plainText?: boolean;
+  }[];
   permissions?: string[];
 };
 

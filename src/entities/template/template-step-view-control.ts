@@ -5,4 +5,6 @@ export type TemplateStepViewControl = {
   data: string;
   title: string;
   visibleExpression?: string;
+  /** When true, resolved `data` is shown as plain text (e.g. markdown) instead of HTML. */
+  plainText?: boolean;
 };

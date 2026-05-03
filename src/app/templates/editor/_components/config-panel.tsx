@@ -3,7 +3,12 @@
 import type { Node } from "@xyflow/react";
 import type { FlowNodeData } from "../_lib/template-flow";
 
-type ResultViewControl = { data: string; title: string; visibleExpression?: string };
+type ResultViewControl = {
+  data: string;
+  title: string;
+  visibleExpression?: string;
+  plainText?: boolean;
+};
 
 export function ConfigPanel({
   node,
@@ -89,6 +94,18 @@ export function ConfigPanel({
                     }}
                     className="w-full rounded border border-surface-200 bg-white px-2 py-1 text-xs text-surface-900"
                   />
+                  <label className="mt-1 flex cursor-pointer items-center gap-2 text-xs text-surface-700">
+                    <input
+                      type="checkbox"
+                      checked={Boolean(vc.plainText)}
+                      onChange={(e) => {
+                        const viewControls = [...(resultViewControls ?? [])];
+                        viewControls[i] = { ...vc, plainText: e.target.checked || undefined };
+                        onUpdateResultViewControls(viewControls);
+                      }}
+                    />
+                    Plain text (no HTML; use for markdown snippets)
+                  </label>
                   <button
                     type="button"
                     onClick={() => {
@@ -104,7 +121,10 @@ export function ConfigPanel({
               <button
                 type="button"
                 onClick={() => {
-                  const viewControls = [...(resultViewControls ?? []), { data: "", title: "View", visibleExpression: undefined }];
+                  const viewControls = [
+                    ...(resultViewControls ?? []),
+                    { data: "", title: "View", visibleExpression: undefined, plainText: undefined },
+                  ];
                   onUpdateResultViewControls(viewControls);
                 }}
                 className="text-xs text-primary-600 hover:text-primary-700"
