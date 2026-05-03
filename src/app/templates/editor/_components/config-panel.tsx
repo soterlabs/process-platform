@@ -359,8 +359,9 @@ export function ConfigPanel({
                         {input.type === "item_list" && (
                           <div className="mb-1 space-y-2 rounded border border-amber-200 bg-amber-50/50 p-2">
                             <p className="text-[10px] text-surface-600">
-                              Sub-fields repeat for each row. On the process form, an extra empty row is always
-                              shown so users can add the next item.
+                              Each row always stores a primary string at the fixed key <code className="font-mono">value</code> (edited
+                              under this list’s title). Sub-keys here must not be <code className="font-mono">value</code>. An extra
+                              empty row is always shown so users can add the next item.
                             </p>
                             <div className="text-[10px] font-medium text-surface-600">Sub-fields per row</div>
                             {(input.subInputs ?? []).map((sub, si) => (

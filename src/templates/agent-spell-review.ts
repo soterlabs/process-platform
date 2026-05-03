@@ -1,10 +1,5 @@
 import type { Template } from "@/entities/template";
 
-/**
- * One-step review: each row is a commit URL plus checkbox + comment.
- * Saved context: `spell_review.prs` = array of `{ commit_url, spelling_ok, comment }`, plus
- * `spell_review.solc_version_verified` (bool).
- */
 export const agentSpellReviewTemplate: Template = {
   key: "agent-spell-review",
   name: "Agent spell review",
@@ -21,17 +16,17 @@ export const agentSpellReviewTemplate: Template = {
         {
           key: "prs",
           type: "item_list",
-          title: "Commits",
+          title: "Github Commit URLs:",
           subInputs: [
             {
-              key: "commit_url",
-              type: "string",
-              title: "GitHub commit URL",
+              key: "content_matches_description",
+              type: "bool",
+              title: "Content matches description",
             },
             {
-              key: "spelling_ok",
+              key: "no_security_changes",
               type: "bool",
-              title: "Spelling / wording OK",
+              title: "No security-related changes are present in this commit.",
             },
             {
               key: "comment",

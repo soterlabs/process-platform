@@ -15,6 +15,7 @@ import {
 } from "@/lib/eth-expression-vm";
 import {
   buildInputStepContextPayload,
+  ITEM_LIST_PRIMARY_ROW_KEY,
   itemListFormKey,
   itemListRenderRowCount,
   itemListRowIsEmpty,
@@ -414,20 +415,34 @@ export default function ProcessStepPage() {
               next[inp.key] = inp.type === "bool" ? false : "";
             });
             step.inputs?.forEach((inp) => {
-              if (inp.type !== "item_list" || !inp.subInputs?.length) return;
+              if (inp.type !== "item_list") return;
               const saved = stepContext?.[inp.key];
               const rows = Array.isArray(saved) ? saved : [];
               const n = Math.max(rows.length, 1);
               for (let rowIndex = 0; rowIndex < n; rowIndex++) {
-                inp.subInputs.forEach((sub) => {
+                const rowObj =
+                  rows[rowIndex] && typeof rows[rowIndex] === "object" && !Array.isArray(rows[rowIndex])
+                    ? (rows[rowIndex] as Record<string, unknown>)
+                    : undefined;
+                const vfk = itemListFormKey(inp.key, rowIndex, ITEM_LIST_PRIMARY_ROW_KEY);
+                if (!(vfk in next)) {
+                  const legacy =
+                    rowObj?.[ITEM_LIST_PRIMARY_ROW_KEY] ?? rowObj?.commit_url ?? rowObj?.commitUrl;
+                  if (legacy !== undefined && legacy !== null) {
+                    next[vfk] = expansionFieldInitialFormValue(
+                      { key: ITEM_LIST_PRIMARY_ROW_KEY, type: "string", title: "" },
+                      legacy
+                    );
+                  } else {
+                    next[vfk] = "";
+                  }
+                }
+                inp.subInputs?.forEach((sub) => {
                   if (sub.readOnly || sub.type === "item_list") return;
+                  if (sub.key === ITEM_LIST_PRIMARY_ROW_KEY) return;
                   const fk = itemListFormKey(inp.key, rowIndex, sub.key);
                   if (fk in next) return;
-                  const rowObj = rows[rowIndex];
-                  const raw =
-                    rowObj && typeof rowObj === "object" && !Array.isArray(rowObj)
-                      ? (rowObj as Record<string, unknown>)[sub.key]
-                      : undefined;
+                  const raw = rowObj?.[sub.key];
                   if (raw !== undefined && raw !== null) {
                     next[fk] = expansionFieldInitialFormValue(sub, raw);
                     return;
@@ -871,19 +886,7 @@ export default function ProcessStepPage() {
             if (inp.type === "item_list" && !inp.readOnly) {
               const subInputs = inp.subInputs ?? [];
               const rowCount = itemListRenderRowCount(inp.key, subInputs, formValues);
-              if (subInputs.length === 0 || rowCount === 0) {
-                return (
-                  <div
-                    key={inp.key}
-                    className="rounded-xl border border-amber-200 bg-amber-50/40 px-4 py-4"
-                  >
-                    <div className="text-sm font-medium text-surface-800">{inp.title}</div>
-                    <p className="mt-1 text-xs text-surface-600">
-                      This item list has no sub-fields in the template.
-                    </p>
-                  </div>
-                );
-              }
+
               const visibleSubs = subInputs.filter(
                 (sub) =>
                   (!sub.visibleExpression ||
@@ -900,35 +903,23 @@ export default function ProcessStepPage() {
                       : true
                     : true)
               );
-              const primarySub =
-                visibleSubs.find((s) => !s.readOnly && s.type !== "item_list") ?? visibleSubs[0];
-              const otherSubs = primarySub
-                ? visibleSubs.filter((s) => s !== primarySub)
-                : visibleSubs;
 
-              if (visibleSubs.length === 0) {
-                return (
-                  <div
-                    key={inp.key}
-                    className="rounded-xl border border-amber-200 bg-amber-50/40 px-4 py-4"
-                  >
-                    <div className="text-sm font-medium text-surface-800">{inp.title}</div>
-                    <p className="mt-1 text-xs text-surface-600">
-                      No visible sub-fields for this list (check visibility expressions).
-                    </p>
-                  </div>
-                );
-              }
+              const visibleOtherSubs = visibleSubs.filter((s) => s.key !== ITEM_LIST_PRIMARY_ROW_KEY);
+
+              const lineControlInp: TemplateStepInput = {
+                key: ITEM_LIST_PRIMARY_ROW_KEY,
+                type: "string",
+                title: inp.title,
+              };
 
               const renderSubControl = (
                 sub: TemplateStepInput,
                 rowIndex: number,
-                j?: number,
-                hideFieldTitle?: boolean
+                opts?: { hideTitle?: boolean }
               ) =>
                 sub.readOnly ? (
                   <div
-                    key={`${inp.key}-${rowIndex}-${sub.key}-${j ?? "ro"}`}
+                    key={`${inp.key}-${rowIndex}-${sub.key}-ro`}
                     className="rounded-lg border border-surface-200 bg-surface-50 px-3 py-3"
                   >
                     <div className="text-sm font-medium text-surface-600">{sub.title}</div>
@@ -958,7 +949,7 @@ export default function ProcessStepPage() {
                       formKey={itemListFormKey(inp.key, rowIndex, sub.key)}
                       htmlId={`il-${inp.key}-${rowIndex}-${sub.key}`}
                       formValues={formValues}
-                      hideTitle={Boolean(hideFieldTitle)}
+                      hideTitle={Boolean(opts?.hideTitle)}
                       onValuesChange={(next) => {
                         setFormValues(next);
                         scheduleStepContextUpdate(next);
@@ -983,6 +974,69 @@ export default function ProcessStepPage() {
                 });
               };
 
+              const otherSubVisibleRowIndices =
+                visibleOtherSubs.length > 0
+                  ? Array.from({ length: rowCount }, (_, rowIndex) => rowIndex).filter(
+                      (rowIndex) =>
+                        !(
+                          rowIndex === rowCount - 1 &&
+                          itemListRowIsEmpty(inp.key, subInputs, rowIndex, formValues)
+                        )
+                    )
+                  : [];
+
+              const lineRows = (
+                <div className="space-y-2">
+                  {Array.from({ length: rowCount }, (_, rowIndex) => (
+                    <div
+                      key={`il-line-${inp.key}-${rowIndex}`}
+                      className="flex items-center gap-2 rounded-lg border border-surface-100 bg-surface-50/60 px-2 py-2"
+                      onDragOver={(e) => {
+                        e.preventDefault();
+                        e.dataTransfer.dropEffect = "move";
+                      }}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        const from = parseInt(e.dataTransfer.getData("text/plain"), 10);
+                        if (!Number.isInteger(from)) return;
+                        onReorderRow(from, rowIndex);
+                      }}
+                    >
+                      <button
+                        type="button"
+                        draggable
+                        onDragStart={(e) => {
+                          e.dataTransfer.setData("text/plain", String(rowIndex));
+                          e.dataTransfer.effectAllowed = "move";
+                        }}
+                        className="flex h-9 w-7 shrink-0 cursor-grab flex-col items-center justify-center rounded border border-transparent text-surface-400 hover:border-surface-200 hover:bg-white active:cursor-grabbing"
+                        aria-label="Drag to reorder row"
+                      >
+                        <span className="text-[10px] leading-none" aria-hidden>
+                          ⋮⋮
+                        </span>
+                      </button>
+                      <span className="w-6 shrink-0 text-right text-[11px] font-medium text-surface-400">
+                        {rowIndex + 1}
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        {renderSubControl(lineControlInp, rowIndex, { hideTitle: true })}
+                      </div>
+                      {!itemListRowIsEmpty(inp.key, subInputs, rowIndex, formValues) && (
+                        <button
+                          type="button"
+                          onClick={() => onRemoveRow(rowIndex)}
+                          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-transparent text-xl leading-none text-surface-400 hover:border-red-200 hover:bg-red-50 hover:text-red-700"
+                          aria-label="Remove row"
+                        >
+                          <span aria-hidden>×</span>
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              );
+
               return (
                 <section
                   key={inp.key}
@@ -993,94 +1047,32 @@ export default function ProcessStepPage() {
                     {inp.title}
                   </h2>
 
-                  {primarySub && (
-                    <div className="mt-4 rounded-lg border border-surface-200 bg-white px-3 py-4 shadow-sm">
-                      <div className="mb-3 text-xs font-semibold uppercase tracking-wide text-surface-500">
-                        {primarySub.title}
-                      </div>
-                      <div className="space-y-2">
-                        {Array.from({ length: rowCount }, (_, rowIndex) => (
-                          <div
-                            key={`pri-${rowIndex}`}
-                            className="flex items-center gap-2 rounded-lg border border-surface-100 bg-surface-50/60 px-2 py-2"
-                            onDragOver={(e) => {
-                              e.preventDefault();
-                              e.dataTransfer.dropEffect = "move";
-                            }}
-                            onDrop={(e) => {
-                              e.preventDefault();
-                              const from = parseInt(e.dataTransfer.getData("text/plain"), 10);
-                              if (!Number.isInteger(from)) return;
-                              onReorderRow(from, rowIndex);
-                            }}
-                          >
-                            <button
-                              type="button"
-                              draggable
-                              onDragStart={(e) => {
-                                e.dataTransfer.setData("text/plain", String(rowIndex));
-                                e.dataTransfer.effectAllowed = "move";
-                              }}
-                              className="flex h-9 w-7 shrink-0 cursor-grab flex-col items-center justify-center rounded border border-transparent text-surface-400 hover:border-surface-200 hover:bg-white active:cursor-grabbing"
-                              aria-label="Drag to reorder row"
-                            >
-                              <span className="text-[10px] leading-none" aria-hidden>
-                                ⋮⋮
-                              </span>
-                            </button>
-                            <span className="w-6 shrink-0 text-right text-[11px] font-medium text-surface-400">
-                              {rowIndex + 1}
-                            </span>
-                            <div className="min-w-0 flex-1">
-                              {renderSubControl(primarySub, rowIndex, 0, true)}
-                            </div>
-                            {!itemListRowIsEmpty(inp.key, subInputs, rowIndex, formValues) && (
-                              <button
-                                type="button"
-                                onClick={() => onRemoveRow(rowIndex)}
-                                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-transparent text-xl leading-none text-surface-400 hover:border-red-200 hover:bg-red-50 hover:text-red-700"
-                                aria-label="Remove row"
-                              >
-                                <span aria-hidden>×</span>
-                              </button>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
+                  <div className="mt-4 rounded-lg border border-surface-200 bg-white px-3 py-4 shadow-sm">
+                    {lineRows}
+                  </div>
 
-                  {otherSubs.length > 0 && (
+                  {visibleOtherSubs.length > 0 && otherSubVisibleRowIndices.length > 0 && (
                     <div className="mt-6 rounded-lg border border-surface-200 bg-white px-3 py-4 shadow-sm">
                       <div className="divide-y divide-surface-100">
-                        {Array.from({ length: rowCount }, (_, rowIndex) => {
-                          const primaryRaw = primarySub
-                            ? formValues[itemListFormKey(inp.key, rowIndex, primarySub.key)]
-                            : undefined;
-                          const primaryLabel =
-                            primarySub?.type === "bool"
-                              ? primaryRaw === true
-                                ? "Yes"
-                                : primaryRaw === false
-                                  ? "No"
-                                  : ""
-                              : primaryRaw !== undefined &&
-                                  primaryRaw !== true &&
-                                  primaryRaw !== false
-                                ? String(primaryRaw).trim()
-                                : "";
+                        {otherSubVisibleRowIndices.map((rowIndex) => {
+                          const vfk = itemListFormKey(inp.key, rowIndex, ITEM_LIST_PRIMARY_ROW_KEY);
+                          const raw = formValues[vfk];
+                          const lineLabel =
+                            raw !== undefined && raw !== true && raw !== false
+                              ? String(raw).trim()
+                              : "";
                           return (
                             <div
                               key={`rest-row-${rowIndex}`}
                               className="space-y-3 py-3 first:pt-0"
                             >
                               <p
-                                className={`truncate text-sm font-medium ${primaryLabel ? "text-surface-900" : "text-surface-500"}`}
-                                title={primaryLabel || undefined}
+                                className={`truncate text-sm font-medium ${lineLabel ? "text-surface-900" : "text-surface-500"}`}
+                                title={lineLabel || undefined}
                               >
-                                {primaryLabel || `Row ${rowIndex + 1}`}
+                                {lineLabel || `Row ${rowIndex + 1}`}
                               </p>
-                              {otherSubs.map((sub) => (
+                              {visibleOtherSubs.map((sub) => (
                                 <div key={`${rowIndex}-${sub.key}`} className="min-w-0">
                                   {renderSubControl(sub, rowIndex)}
                                 </div>

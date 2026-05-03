@@ -4,9 +4,10 @@ export type TemplateStepInput = {
    * `number`: stored as a JSON number (IEEE double). Use `decimal_string` when you need exact
    * decimal text without floating-point rounding.
    *
-   * `item_list`: repeating rows of `subInputs` (each row is an object in `context[stepKey][key]`).
-   * Rows are contiguous from index 0; serialization stops at the first fully empty row. The UI
-   * always shows one extra empty row so you can add the next item.
+   * `item_list`: repeating rows (each row is an object in `context[stepKey][key]`). Every row
+   * includes a string at the fixed key `value` (the list line, e.g. URL); `subInputs` are extra
+   * fields only — do not use sub key `value`. Rows are contiguous; serialization stops at the
+   * first fully empty row; the UI shows one extra empty row to add the next item.
    */
   type:
     | "bool"
@@ -24,6 +25,6 @@ export type TemplateStepInput = {
   readOnly?: boolean;
   /** For readOnly: template with ${path} and {{ expression }}. For editable: initial value (same syntax). */
   defaultValue?: string;
-  /** Required when `type === "item_list"`: fields per row (must not be `item_list`). */
+  /** When `type === "item_list"`: extra fields per row (must not be `item_list`; never use key `value`). */
   subInputs?: TemplateStepInput[];
 };
