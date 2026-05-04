@@ -6,8 +6,9 @@ export type TemplateStepInput = {
    *
    * `item_list`: repeating rows (each row is an object in `context[stepKey][key]`). Every row
    * includes a string at the fixed key `value` (the list line, e.g. URL); `subInputs` are extra
-   * fields only — do not use sub key `value`. Rows are contiguous; serialization stops at the
-   * first fully empty row; the UI shows one extra empty row to add the next item.
+   * fields — a sub may be another `item_list` (stored as a nested array of row objects). Do not
+   * use sub key `value`. Rows are contiguous; serialization stops at the first fully empty row;
+   * the UI shows one extra empty row to add the next item.
    */
   type:
     | "bool"
@@ -25,6 +26,6 @@ export type TemplateStepInput = {
   readOnly?: boolean;
   /** For readOnly: template with ${path} and {{ expression }}. For editable: initial value (same syntax). */
   defaultValue?: string;
-  /** When `type === "item_list"`: extra fields per row (must not be `item_list`; never use key `value`). */
+  /** When `type === "item_list"`: extra fields per row. Nested `item_list` is allowed; never use key `value`. */
   subInputs?: TemplateStepInput[];
 };

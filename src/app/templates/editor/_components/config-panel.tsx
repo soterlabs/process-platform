@@ -1,7 +1,147 @@
 "use client";
 
 import type { Node } from "@xyflow/react";
+import type { TemplateStepInput } from "@/entities/template";
 import type { FlowNodeData } from "../_lib/template-flow";
+
+function ItemListSubFieldsEditor({
+  columns,
+  onChange,
+}: {
+  columns: TemplateStepInput[];
+  onChange: (next: TemplateStepInput[]) => void;
+}) {
+  return (
+    <>
+      {columns.map((sub, si) => (
+        <div key={si} className="space-y-1 rounded border border-surface-200 bg-white p-2">
+          <input
+            placeholder="Sub key"
+            value={sub.key}
+            onChange={(e) => {
+              const subInputs = [...columns];
+              subInputs[si] = { ...sub, key: e.target.value };
+              onChange(subInputs);
+            }}
+            className="w-full rounded border border-surface-200 px-2 py-1 font-mono text-xs text-surface-900"
+          />
+          <select
+            value={sub.type}
+            onChange={(e) => {
+              const subInputs = [...columns];
+              const st = e.target.value as
+                | "bool"
+                | "string"
+                | "string-multiline"
+                | "number"
+                | "decimal_string"
+                | "datetime"
+                | "dropdown"
+                | "item_list";
+              if (st === "item_list") {
+                subInputs[si] = {
+                  key: sub.key,
+                  type: "item_list",
+                  title: sub.title,
+                  visibleExpression: sub.visibleExpression,
+                  readOnly: sub.readOnly,
+                  subInputs: [{ key: "item", type: "string", title: "Item" }],
+                };
+              } else if (sub.type === "item_list") {
+                const { subInputs: _nested, values: _v, ...rest } = sub as TemplateStepInput & {
+                  subInputs?: TemplateStepInput[];
+                };
+                subInputs[si] = {
+                  ...rest,
+                  type: st,
+                  values: st === "dropdown" ? [] : undefined,
+                };
+              } else {
+                subInputs[si] = {
+                  ...sub,
+                  type: st,
+                  values: st === "dropdown" ? sub.values ?? [] : undefined,
+                };
+              }
+              onChange(subInputs);
+            }}
+            className="w-full rounded border border-surface-200 px-2 py-1 text-xs text-surface-900"
+          >
+            <option value="string">string</option>
+            <option value="string-multiline">string-multiline</option>
+            <option value="datetime">datetime</option>
+            <option value="number">number</option>
+            <option value="decimal_string">decimal string</option>
+            <option value="bool">bool</option>
+            <option value="dropdown">dropdown</option>
+            <option value="item_list">Item list (nested)</option>
+          </select>
+          {sub.type === "dropdown" && (
+            <input
+              placeholder="Options (comma-separated)"
+              value={(sub.values ?? []).join(", ")}
+              onChange={(e) => {
+                const subInputs = [...columns];
+                subInputs[si] = {
+                  ...sub,
+                  values: e.target.value
+                    .split(",")
+                    .map((s) => s.trim())
+                    .filter(Boolean),
+                };
+                onChange(subInputs);
+              }}
+              className="w-full rounded border border-surface-200 px-2 py-1 text-xs text-surface-900"
+            />
+          )}
+          {sub.type === "item_list" && (
+            <div className="mt-2 space-y-2 rounded border border-amber-100 bg-amber-50/40 p-2">
+              <p className="text-[10px] text-surface-600">
+                Nested list: each parent row stores an array here. Rows use the same{" "}
+                <code className="font-mono">value</code> line plus the sub-keys below.
+              </p>
+              <ItemListSubFieldsEditor
+                columns={sub.subInputs ?? []}
+                onChange={(nextNested) => {
+                  const subInputs = [...columns];
+                  subInputs[si] = { ...(sub as TemplateStepInput & { type: "item_list" }), subInputs: nextNested };
+                  onChange(subInputs);
+                }}
+              />
+            </div>
+          )}
+          <input
+            placeholder="Title"
+            value={sub.title}
+            onChange={(e) => {
+              const subInputs = [...columns];
+              subInputs[si] = { ...sub, title: e.target.value };
+              onChange(subInputs);
+            }}
+            className="w-full rounded border border-surface-200 px-2 py-1 text-xs text-surface-900"
+          />
+          <button
+            type="button"
+            onClick={() => onChange(columns.filter((_, j) => j !== si))}
+            className="text-xs text-red-600 hover:text-red-700"
+          >
+            Remove sub-field
+          </button>
+        </div>
+      ))}
+      <button
+        type="button"
+        onClick={() => {
+          const n = columns.length + 1;
+          onChange([...columns, { key: `col_${n}`, type: "string", title: "Column" }]);
+        }}
+        className="text-xs text-primary-600 hover:text-primary-700"
+      >
+        + Add sub-field
+      </button>
+    </>
+  );
+}
 
 type ResultViewControl = {
   data: string;
@@ -381,118 +521,17 @@ export function ConfigPanel({
                             <p className="text-[10px] text-surface-600">
                               Each row always stores a primary string at the fixed key <code className="font-mono">value</code> (edited
                               under this list’s title). Sub-keys here must not be <code className="font-mono">value</code>. An extra
-                              empty row is always shown so users can add the next item.
+                              empty row is always shown so users can add the next item. Sub-fields may be nested item lists.
                             </p>
                             <div className="text-[10px] font-medium text-surface-600">Sub-fields per row</div>
-                            {(input.subInputs ?? []).map((sub, si) => (
-                              <div key={si} className="space-y-1 rounded border border-surface-200 bg-white p-2">
-                                <input
-                                  placeholder="Sub key"
-                                  value={sub.key}
-                                  onChange={(e) => {
-                                    const inputs = [...(d.inputs ?? [])];
-                                    const subInputs = [...(input.subInputs ?? [])];
-                                    subInputs[si] = { ...sub, key: e.target.value };
-                                    inputs[i] = { ...input, subInputs };
-                                    update({ inputs });
-                                  }}
-                                  className="w-full rounded border border-surface-200 px-2 py-1 font-mono text-xs text-surface-900"
-                                />
-                                <select
-                                  value={sub.type}
-                                  onChange={(e) => {
-                                    const inputs = [...(d.inputs ?? [])];
-                                    const subInputs = [...(input.subInputs ?? [])];
-                                    const st = e.target.value as
-                                      | "bool"
-                                      | "string"
-                                      | "string-multiline"
-                                      | "number"
-                                      | "decimal_string"
-                                      | "datetime"
-                                      | "dropdown";
-                                    subInputs[si] = {
-                                      ...sub,
-                                      type: st,
-                                      values: st === "dropdown" ? sub.values ?? [] : undefined,
-                                    };
-                                    inputs[i] = { ...input, subInputs };
-                                    update({ inputs });
-                                  }}
-                                  className="w-full rounded border border-surface-200 px-2 py-1 text-xs text-surface-900"
-                                >
-                                  <option value="string">string</option>
-                                  <option value="string-multiline">string-multiline</option>
-                                  <option value="datetime">datetime</option>
-                                  <option value="number">number</option>
-                                  <option value="decimal_string">decimal string</option>
-                                  <option value="bool">bool</option>
-                                  <option value="dropdown">dropdown</option>
-                                </select>
-                                {sub.type === "dropdown" && (
-                                  <input
-                                    placeholder="Options (comma-separated)"
-                                    value={(sub.values ?? []).join(", ")}
-                                    onChange={(e) => {
-                                      const inputs = [...(d.inputs ?? [])];
-                                      const subInputs = [...(input.subInputs ?? [])];
-                                      subInputs[si] = {
-                                        ...sub,
-                                        values: e.target.value
-                                          .split(",")
-                                          .map((s) => s.trim())
-                                          .filter(Boolean),
-                                      };
-                                      inputs[i] = { ...input, subInputs };
-                                      update({ inputs });
-                                    }}
-                                    className="w-full rounded border border-surface-200 px-2 py-1 text-xs text-surface-900"
-                                  />
-                                )}
-                                <input
-                                  placeholder="Title"
-                                  value={sub.title}
-                                  onChange={(e) => {
-                                    const inputs = [...(d.inputs ?? [])];
-                                    const subInputs = [...(input.subInputs ?? [])];
-                                    subInputs[si] = { ...sub, title: e.target.value };
-                                    inputs[i] = { ...input, subInputs };
-                                    update({ inputs });
-                                  }}
-                                  className="w-full rounded border border-surface-200 px-2 py-1 text-xs text-surface-900"
-                                />
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    const inputs = [...(d.inputs ?? [])];
-                                    const subInputs = (input.subInputs ?? []).filter((_, j) => j !== si);
-                                    inputs[i] = { ...input, subInputs };
-                                    update({ inputs });
-                                  }}
-                                  className="text-xs text-red-600 hover:text-red-700"
-                                >
-                                  Remove sub-field
-                                </button>
-                              </div>
-                            ))}
-                            <button
-                              type="button"
-                              onClick={() => {
+                            <ItemListSubFieldsEditor
+                              columns={input.subInputs ?? []}
+                              onChange={(subInputs) => {
                                 const inputs = [...(d.inputs ?? [])];
-                                const n = (input.subInputs?.length ?? 0) + 1;
-                                inputs[i] = {
-                                  ...input,
-                                  subInputs: [
-                                    ...(input.subInputs ?? []),
-                                    { key: `col_${n}`, type: "string", title: "Column" },
-                                  ],
-                                };
+                                inputs[i] = { ...input, subInputs };
                                 update({ inputs });
                               }}
-                              className="text-xs text-primary-600 hover:text-primary-700"
-                            >
-                              + Add sub-field
-                            </button>
+                            />
                           </div>
                         )}
                         {input.type === "dropdown" && (

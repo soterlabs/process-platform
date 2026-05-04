@@ -537,39 +537,23 @@ const AGENT_SPELL_REVIEW_HANDOFF_RESULT_DATA = [
   "    const pre = pick(spell_pre_deployment);",
   '    lines.push("- [" + (pre.pre_exec_sheet_matches_scope === true ? "x" : " ") + "] Actions listed in the [Executive Sheet](https://docs.google.com/spreadsheets/d/1w_z5WpqxzwreCcaveB2Ye1PP5B8QAHDglzyxKHG3CHw/edit) for this Star match the spell scope.");',
   "    pi2(pre, \"pre_exec_sheet_matches_scope_comment\");",
-  '    lines.push("  - [" + (pre.pre_exec_sheet_not_ready_alt === true ? "x" : " ") + "] IF Executive Sheet is not yet ready at the time of review, reference [the corresponding Atlas edit weekly proposal](https://forum.sky.money/tag/atlas-edit-weekly-proposal) and FORUM POST.");',
+  '    lines.push("  - [" + (pre.pre_exec_sheet_not_ready_alt === true ? "x" : " ") + "] IF Executive Sheet is not yet ready at the time of review, reference [the corresponding Atlas edit weekly proposal](https://forum.sky.money/tag/atlas-edit-weekly-proposal) and [FORUM POST](https://forum.skyeco.com/t/proposed-changes-to-pattern-for-upcoming-spell/27835).");',
   "    pi2(pre, \"pre_exec_sheet_not_ready_alt_comment\");",
   '    lines.push("- [" + (pre.pre_instruction_text_in_spell === true ? "x" : " ") + "] Every _Instruction text_ from the Executive Sheet is copied to the spell code as a comment.");',
   "    pi2(pre, \"pre_instruction_text_in_spell_comment\");",
-  '    lines.push("  - [" + (pre.pre_instruction_not_ready_alt === true ? "x" : " ") + "] IF Executive Sheet is not yet ready at the time of review, reference Atlas edit weekly proposal and FORUM POST.");',
+  '    lines.push("  - [" + (pre.pre_instruction_not_ready_alt === true ? "x" : " ") + "] IF Executive Sheet is not yet ready at the time of review, reference [the corresponding Atlas edit weekly proposal](https://forum.sky.money/tag/atlas-edit-weekly-proposal) and [FORUM POST](https://forum.skyeco.com/t/proposed-changes-to-pattern-for-upcoming-spell/27835).");',
   "    pi2(pre, \"pre_instruction_not_ready_alt_comment\");",
-  "    if (pre.pre_instruction_cannot_note_strike === true) {",
-  '      lines.push("- ~~[ ] IF an instruction cannot be taken, it should have an explanation under the instruction prefixed with " + bt + "// Note:" + bt + ".~~");',
-  "    } else {",
-  '      lines.push("- [" + (pre.pre_instruction_cannot_note_ok === true ? "x" : " ") + "] IF an instruction cannot be taken, it should have an explanation under the instruction prefixed with " + bt + "// Note:" + bt + ".");',
-  "    }",
+  '    lines.push("- [" + (pre.pre_instruction_cannot_note === true ? "x" : " ") + "] IF an instruction cannot be taken, it should have an explanation under the instruction prefixed with " + bt + "// Note:" + bt + ".");',
   "    pi2(pre, \"pre_instruction_cannot_note_comment\");",
-  "    if (pre.pre_unlisted_action_note_strike === true) {",
-  '      lines.push("- ~~[ ] IF an action in the spell doesn\'t have a relevant instruction, its necessity is explained in a comment prefixed with " + bt + "// Note:" + bt + ".~~");',
-  "    } else {",
-  '      lines.push("- [" + (pre.pre_unlisted_action_note_ok === true ? "x" : " ") + "] IF an action in the spell doesn\'t have a relevant instruction, its necessity is explained in a comment prefixed with " + bt + "// Note:" + bt + ".");',
-  "    }",
+  '    lines.push("- [" + (pre.pre_unlisted_action_note === true ? "x" : " ") + "] IF an action in the spell doesn\'t have a relevant instruction, its necessity is explained in a comment prefixed with " + bt + "// Note:" + bt + ".");',
   "    pi2(pre, \"pre_unlisted_action_note_comment\");",
-  "    if (pre.pre_sheet_actions_parity_strike === true) {",
-  '      lines.push("- ~~[ ] All actions present in the spell code are present in the final Executive Sheet.~~");',
-  "    } else {",
-  '      lines.push("- [" + (pre.pre_spell_in_exec_sheet === true ? "x" : " ") + "] All actions present in the spell code are present in the final Executive Sheet.");',
-  "    }",
+  '    lines.push("- [" + (pre.pre_spell_in_exec_sheet === true ? "x" : " ") + "] All actions present in the spell code are present in the final Executive Sheet.");',
   "    pi2(pre, \"pre_spell_in_exec_sheet_comment\");",
-  '    lines.push("  - [" + (pre.pre_spell_in_sheet_not_ready_alt === true ? "x" : " ") + "] IF Executive Sheet is not yet ready at the time of review, reference Atlas edit weekly proposal and FORUM POST.");',
+  '    lines.push("  - [" + (pre.pre_spell_in_sheet_not_ready_alt === true ? "x" : " ") + "] IF Executive Sheet is not yet ready at the time of review, reference [the corresponding Atlas edit weekly proposal](https://forum.sky.money/tag/atlas-edit-weekly-proposal) and [FORUM POST](https://forum.skyeco.com/t/proposed-changes-to-pattern-for-upcoming-spell/27835).");',
   "    pi2(pre, \"pre_spell_in_sheet_not_ready_alt_comment\");",
-  "    if (pre.pre_exec_sheet_in_spell_strike === true) {",
-  '      lines.push("- ~~[ ] All actions in the final Executive Sheet are present in the spell code.~~");',
-  "    } else {",
-  '      lines.push("- [" + (pre.pre_exec_sheet_in_spell === true ? "x" : " ") + "] All actions in the final Executive Sheet are present in the spell code.");',
-  "    }",
+  '    lines.push("- [" + (pre.pre_exec_sheet_in_spell === true ? "x" : " ") + "] All actions in the final Executive Sheet are present in the spell code.");',
   "    pi2(pre, \"pre_exec_sheet_in_spell_comment\");",
-  '    lines.push("  - [" + (pre.pre_exec_sheet_in_spell_not_ready_alt === true ? "x" : " ") + "] IF Executive Sheet is not yet ready at the time of review, reference Atlas edit weekly proposal and FORUM POST.");',
+  '    lines.push("  - [" + (pre.pre_exec_sheet_in_spell_not_ready_alt === true ? "x" : " ") + "] IF Executive Sheet is not yet ready at the time of review, reference [the corresponding Atlas edit weekly proposal](https://forum.sky.money/tag/atlas-edit-weekly-proposal) and [FORUM POST](https://forum.skyeco.com/t/proposed-changes-to-pattern-for-upcoming-spell/27835).");',
   "    pi2(pre, \"pre_exec_sheet_in_spell_not_ready_alt_comment\");",
   '    lines.push("- [" + (pre.pre_reverified_after_commits === true ? "x" : " ") + "] IF new commits were added after the initial review, the relevant checklist items have been re-verified.");',
   "    pi2(pre, \"pre_reverified_after_commits_comment\");",
@@ -587,20 +571,20 @@ const AGENT_SPELL_REVIEW_HANDOFF_RESULT_DATA = [
 export const agentSpellReviewTemplate: Template = {
   key: "agent-spell-review",
   name: "Agent spell review",
-  firstStepKey: "spell_review",
+  firstStepKey: "previous_commits",
   permissions: [],
   steps: [
     {
-      key: "spell_review",
+      key: "previous_commits",
       type: "input",
-      title: "Review commit messages",
+      title: "Review previous commits",
       permissions: [],
       nextStepKey: "spell_description_comments",
       inputs: [
         {
-          key: "prs",
+          key: "previous_commits",
           type: "item_list",
-          title: "Github Commit URLs:",
+          title: "List every commit since the last externally reviewed spell (e.g. https://github.com/grove-labs/grove-spells/commit/da4e38f113c55fcc083fdafe2e8dd39fc0e9f362):",
           subInputs: [
             {
               key: "content_matches_description",
@@ -697,7 +681,7 @@ export const agentSpellReviewTemplate: Template = {
     {
       key: "spell_proposed_changes",
       type: "input",
-      title: "Proposed changes (forum)",
+      title: "Proposed changes",
       permissions: [],
       nextStepKey: "spell_contract_structure",
       inputs: [
@@ -705,12 +689,12 @@ export const agentSpellReviewTemplate: Template = {
           key: "proposed_change_forum_posts",
           type: "item_list",
           title:
-            "Each row — primary line: forum post URL for this Star / target date.",
+            "List every forum post proposing changes for this particular Agent & target date (e.g. https://forum.skyeco.com/t/proposed-changes-to-pattern-for-upcoming-spell/27835):",
           subInputs: [
             {
               key: "post_title",
               type: "string",
-              title: "Post title / name (e.g. Proposed Changes to Pattern for Upcoming Spell)",
+              title: "Post title / name (e.g. Proposed Changes to Grove for Upcoming Spell)",
             },
             {
               key: "follows_known_template",
@@ -824,7 +808,7 @@ export const agentSpellReviewTemplate: Template = {
           key: "addresses_from_registry_or_constant",
           type: "bool",
           title:
-            "Addresses are from the protocol registry when listed there, otherwise `constant` with a trusted source.",
+            "Addresses must be fetched from the relevant protocol's address registry (e.g., grove-address-registry) if they are present there; otherwise they must be defined as constant and have a trusted source (e.g., when onboarding new contracts).",
         },
         {
           key: "addresses_from_registry_or_constant_comment",
@@ -834,7 +818,7 @@ export const agentSpellReviewTemplate: Template = {
         {
           key: "address_rows",
           type: "item_list",
-          title: "Each row — primary line: contract address (0x…).",
+          title: "List every address used in the spell (defined as constant or fetched from the registry repo (e.g. 0x80ac24aA929eaF5013f6436cdA2a7ba190f5Cc0b):",
           subInputs: [
             {
               key: "registry_label",
@@ -872,28 +856,28 @@ export const agentSpellReviewTemplate: Template = {
         key: "sg_onboarded",
         type: "bool",
         title:
-          "IF a StarGuard module is onboarded for this Star, the following additional checks are done (see handoff).",
+          "If a [StarGuard module](https://github.com/sky-ecosystem/star-guard) is onboarded for this Star, the following additional checks are done:",
       },
       { key: "sg_onboarded_comment", type: "string", title: "Notes (optional)" },
       {
         key: "sg_executable_view",
         type: "bool",
         title:
-          "Spell exposes view-only `function isExecutable() external view returns (bool result)`.",
+          "The spell exposes view-only interface `function isExecutable() external view returns (bool result)`",
       },
       { key: "sg_executable_view_comment", type: "string", title: "Notes (optional)" },
       {
         key: "sg_executable_logic_ok",
         type: "bool",
         title:
-          "`isExecutable` returns `true` or implements forum-communicated logic (e.g. earliest launch, office hours).",
+          "`isExecutable` either simply returns `true` or implements additional logic communicated via the relevant forum post (e.g., by describing \"earliest launch date\" or \"office hours\" logic, etc)",
       },
       { key: "sg_executable_logic_comment", type: "string", title: "Notes (optional)" },
       {
         key: "sg_test_executable_before_expiry",
         type: "bool",
         title:
-          "Tests ensure the spell is executable before expiration (`isExecutable` before `StarGuard.maxDelay()`).",
+          "The test ensures the spell is executable before expiration (i.e. `isExecutable` outputs `true` before `StarGuard.maxDelay()` is passed)",
       },
       {
         key: "sg_test_executable_before_expiry_comment",
@@ -904,14 +888,14 @@ export const agentSpellReviewTemplate: Template = {
         key: "sg_third_party_later_block",
         type: "bool",
         title:
-          "Third parties cannot abuse later-block execution vs Core spell; otherwise suggest `direct execution`.",
+          "Third-party actors can not take advantage of the fact that Spell will be executed in a later block than the Core spell, otherwise suggest `direct execution`",
       },
       { key: "sg_third_party_later_block_comment", type: "string", title: "Notes (optional)" },
       {
         key: "sg_sequential_forum_direct_exec",
         type: "bool",
         title:
-          "IF sequential / not later-block: `direct execution` is clearly explained in the forum post.",
+          "If the Agent spell can't be executed in a later block OR have to be executed sequentially to another Star spell, `direct execution` is clearly mentioned in the forum post together with elaborated explanation why it is needed",
       },
       {
         key: "sg_sequential_forum_direct_exec_comment",
@@ -919,23 +903,12 @@ export const agentSpellReviewTemplate: Template = {
         title: "Notes (optional)",
       },
       {
-        key: "sg_direct_exec_technical_strike",
+        key: "sg_direct_exec_explanation",
         type: "bool",
         title:
-          "Emit strikethrough unchecked line for `direct execution` technical explanation (N/A path).",
+          "The `direct execution` explanation makes sense on the technical level and can not be circumvented by the use of `isExecutable()` interface",
       },
-      {
-        key: "sg_direct_exec_technical_met",
-        type: "bool",
-        title:
-          "When not strikethrough: `direct execution` explanation is sound and cannot be circumvented via `isExecutable()`.",
-      },
-      { key: "sg_direct_exec_technical_comment", type: "string", title: "Notes (optional)" },
-      {
-        key: "sg_block_footer",
-        type: "string",
-        title: "Block footer (e.g. StarGuard address, SpellRunner notes) — multiline OK",
-      },
+      { key: "sg_direct_exec_explanation_comment", type: "string", title: "Notes (optional)" },
     ],
   },
   {
@@ -948,14 +921,13 @@ export const agentSpellReviewTemplate: Template = {
       {
         key: "new_contract_rows",
         type: "item_list",
-        title: "Each row — primary: block explorer URL for the contract.",
+        title: "List every new contract present in the spell (e.g. 0xbd34fc6AAa1d3F52B314CB9D78023dd23eAc3B0E):",
         subInputs: [
           {
             key: "contract_heading",
             type: "string",
             title: "Heading (e.g. [Ethereum] `ALLOCATOR_VAULT`)",
           },
-          { key: "address_hex", type: "string", title: "Contract address (0x…)" },
           {
             key: "source_explorer_verified",
             type: "bool",
@@ -971,16 +943,27 @@ export const agentSpellReviewTemplate: Template = {
           {
             key: "compilation_matches_repo",
             type: "bool",
-            title: "Compilation optimizations match repo deployment settings.",
+            title: "Compilation optimizations match deployment settings defined in the source code repo",
           },
           { key: "compilation_matches_repo_comment", type: "string", title: "Notes (optional)" },
           { key: "consistent_license", type: "bool", title: "Consistent license." },
           { key: "consistent_license_comment", type: "string", title: "Notes (optional)" },
           {
-            key: "constructor_and_access_markdown",
-            type: "string",
+            key: "constructor_parameters",
+            type: "item_list",
             title:
-              "Constructor args LIST, access-control bullets, etc. (paste markdown; lines emitted as-is)",
+              "List every constructor argument",
+              subInputs: [
+                {
+                  key: "argument_value",
+                  type: "string",
+                  title: "Argument value",
+                },
+                {
+                  key: "argument_value_valid_external_source",
+                  type: "string",
+                  title: "Argument value matches valid external source"
+                }]
           },
         ],
       },
@@ -994,39 +977,30 @@ export const agentSpellReviewTemplate: Template = {
     nextStepKey: "spell_interfaces",
     inputs: [
       {
-        key: "submodule_listing_block",
-        type: "string",
-        title: "Submodule listing (`git submodule` style) — multiline, goes in fenced block",
-      },
-      {
-        key: "dependency_rows",
+        key: "submodule_listing",
         type: "item_list",
-        title: "Each row — primary: dependency repo URL (trailing link).",
+        title: "List every submodule or any other imported code used in this spell (e.g. lib/dss-allocator): ",
         subInputs: [
           {
-            key: "dependency_lead",
+            key: "commit",
             type: "string",
-            title:
-              "Lead text (e.g. `` `lib/foo` imported at commit [`abc`](commit-url) `` before the repo URL)",
-          },
-          { key: "dep_audit_na", type: "bool", title: "N/A for “matches audited commit” line." },
-          {
-            key: "dep_matches_audited",
-            type: "bool",
-            title: "Dependency commit matches audited commit.",
-          },
-          { key: "dep_audited_comment", type: "string", title: "Notes (optional)" },
-          {
-            key: "dep_deploy_strike",
-            type: "bool",
-            title: "Strikethrough “matches deployed contracts” line.",
+            title: "Commit",
           },
           {
-            key: "dep_matches_deployed",
+            key: "commit_match",
             type: "bool",
-            title: "Dependency commit matches deployed contracts (when not strikethrough).",
+            title: "The dependency commit matches audited commit",
           },
-          { key: "comment", type: "string", title: "Notes (optional)" },
+          {
+            key: "commit_match_deployment",
+            type: "bool",
+            title: "The dependency commit matches the version of the deployed contracts",
+          },
+          {
+            key: "commit_match_deployment_comment",
+            type: "string",
+            title: "Notes (optional)",
+          },
         ],
       },
     ],
@@ -1083,12 +1057,17 @@ export const agentSpellReviewTemplate: Template = {
       {
         key: "precision_variable_rows",
         type: "item_list",
-        title: "Each row — primary: source URL; sub: description line (name + precision, before URL).",
+        title: "List every variable using precision (`e18`, `e6`, `e...`, `WAD`, `RAY`, `RAD`, etc):",
         subInputs: [
           {
-            key: "precision_row_text",
+            key: "precision_text",
             type: "string",
-            title: "Line before URL (e.g. `` `VAR` with precision `1e18` ``)",
+            title: "Precision (e.g. 100_000_000e18)",
+          },
+          {
+            key: "precision_url",
+            type: "string",
+            title: "Source URL",
           },
           {
             key: "precision_matches_source",
@@ -1203,14 +1182,9 @@ export const agentSpellReviewTemplate: Template = {
       },
       { key: "ac_no_frontrun_execution_comment", type: "string", title: "Notes (optional)" },
       {
-        key: "ac_privileged_strike",
-        type: "bool",
-        title: "Strikethrough line for “no privileged functions…” (N/A / waived).",
-      },
-      {
         key: "ac_no_unauthorized_privileged",
         type: "bool",
-        title: "No privileged functions accessible by unauthorized users (when not strikethrough).",
+        title: "No privileged functions accessible by unauthorized users.",
       },
       { key: "ac_privileged_comment", type: "string", title: "Notes (optional)" },
     ],
@@ -1272,18 +1246,18 @@ export const agentSpellReviewTemplate: Template = {
       {
         key: "spell_action_test_rows",
         type: "item_list",
-        title: "Each row — primary: spell action + tests line (markdown OK).",
+        title: "List each spell action (each line of code which changes a storage):",
         subInputs: [
           {
             key: "unit_test_value_changed",
             type: "bool",
-            title: "Unit test ensures the new value was changed in the spell.",
+            title: "The unit test ensures the new value was changed in the spell",
           },
           { key: "unit_test_comment", type: "string", title: "Notes (optional)" },
           {
             key: "e2e_test_sufficient",
             type: "bool",
-            title: "End-to-end test sufficient for high-level goal of this action.",
+            title: "The end-to-end test is sufficient to ensure correctness the high-level goal behind this spell action",
           },
           { key: "e2e_test_comment", type: "string", title: "Notes (optional)" },
         ],
@@ -1329,13 +1303,13 @@ export const agentSpellReviewTemplate: Template = {
       },
       {
         key: "test_local_output_block",
-        type: "string",
-        title: "Local test output — multiline, fenced in handoff",
+        type: "string-multiline",
+        title: "Local test output",
       },
       {
         key: "test_post_output_comment",
         type: "string",
-        title: "Notes after local output (e.g. compiler warnings) — multiline OK",
+        title: "Notes after local output (e.g. compiler warnings)",
       },
     ],
   },
@@ -1349,7 +1323,8 @@ export const agentSpellReviewTemplate: Template = {
       {
         key: "pre_exec_sheet_matches_scope",
         type: "bool",
-        title: "Executive Sheet actions match spell scope.",
+        title:
+          "Actions listed in the Executive Sheet for this Star match the spell scope.",
       },
       {
         key: "pre_exec_sheet_matches_scope_comment",
@@ -1359,7 +1334,8 @@ export const agentSpellReviewTemplate: Template = {
       {
         key: "pre_exec_sheet_not_ready_alt",
         type: "bool",
-        title: "IF Sheet not ready: reference Atlas edit weekly + forum (nested bullet).",
+        title:
+          "IF Executive Sheet is not yet ready at review, reference the corresponding Atlas edit weekly proposal and the forum post (nested checklist).",
       },
       {
         key: "pre_exec_sheet_not_ready_alt_comment",
@@ -1369,7 +1345,8 @@ export const agentSpellReviewTemplate: Template = {
       {
         key: "pre_instruction_text_in_spell",
         type: "bool",
-        title: "Every Instruction text from Executive Sheet copied into spell comments.",
+        title:
+          "Every Instruction text from the Executive Sheet is copied to the spell code as a comment.",
       },
       {
         key: "pre_instruction_text_in_spell_comment",
@@ -1379,7 +1356,8 @@ export const agentSpellReviewTemplate: Template = {
       {
         key: "pre_instruction_not_ready_alt",
         type: "bool",
-        title: "IF Sheet not ready for instruction copy: Atlas + forum alt.",
+        title:
+          "IF Executive Sheet is not yet ready at review, reference the corresponding Atlas edit weekly proposal and the forum post (nested checklist).",
       },
       {
         key: "pre_instruction_not_ready_alt_comment",
@@ -1387,14 +1365,10 @@ export const agentSpellReviewTemplate: Template = {
         title: "Notes (optional)",
       },
       {
-        key: "pre_instruction_cannot_note_strike",
+        key: "pre_instruction_cannot_note",
         type: "bool",
-        title: "Strikethrough: IF instruction cannot be taken → // Note (N/A).",
-      },
-      {
-        key: "pre_instruction_cannot_note_ok",
-        type: "bool",
-        title: "When not strikethrough: // Note for impossible instructions.",
+        title:
+          "IF an instruction cannot be taken, it has an explanation under the instruction prefixed with // Note:.",
       },
       {
         key: "pre_instruction_cannot_note_comment",
@@ -1402,14 +1376,10 @@ export const agentSpellReviewTemplate: Template = {
         title: "Notes (optional)",
       },
       {
-        key: "pre_unlisted_action_note_strike",
+        key: "pre_unlisted_action_note",
         type: "bool",
-        title: "Strikethrough: IF unlisted action → // Note (N/A).",
-      },
-      {
-        key: "pre_unlisted_action_note_ok",
-        type: "bool",
-        title: "When not strikethrough: // Note for actions without instruction.",
+        title:
+          "IF an action in the spell does not have a relevant instruction, its necessity is explained in a comment prefixed with // Note:.",
       },
       {
         key: "pre_unlisted_action_note_comment",
@@ -1417,14 +1387,10 @@ export const agentSpellReviewTemplate: Template = {
         title: "Notes (optional)",
       },
       {
-        key: "pre_sheet_actions_parity_strike",
-        type: "bool",
-        title: "Strikethrough: all spell actions in final Executive Sheet (N/A).",
-      },
-      {
         key: "pre_spell_in_exec_sheet",
         type: "bool",
-        title: "When not strikethrough: all spell actions appear on final Sheet.",
+        title:
+          "All actions present in the spell code are present in the final Executive Sheet.",
       },
       {
         key: "pre_spell_in_exec_sheet_comment",
@@ -1434,7 +1400,8 @@ export const agentSpellReviewTemplate: Template = {
       {
         key: "pre_spell_in_sheet_not_ready_alt",
         type: "bool",
-        title: "IF Sheet not ready: Atlas + forum for spell-in-sheet item.",
+        title:
+          "IF Executive Sheet is not yet ready at review, reference the corresponding Atlas edit weekly proposal and the forum post (nested checklist).",
       },
       {
         key: "pre_spell_in_sheet_not_ready_alt_comment",
@@ -1442,14 +1409,10 @@ export const agentSpellReviewTemplate: Template = {
         title: "Notes (optional)",
       },
       {
-        key: "pre_exec_sheet_in_spell_strike",
-        type: "bool",
-        title: "Strikethrough: all Sheet actions in spell code (N/A).",
-      },
-      {
         key: "pre_exec_sheet_in_spell",
         type: "bool",
-        title: "When not strikethrough: all Sheet actions present in spell.",
+        title:
+          "All actions in the final Executive Sheet are present in the spell code.",
       },
       {
         key: "pre_exec_sheet_in_spell_comment",
@@ -1459,7 +1422,8 @@ export const agentSpellReviewTemplate: Template = {
       {
         key: "pre_exec_sheet_in_spell_not_ready_alt",
         type: "bool",
-        title: "IF Sheet not ready: Atlas + forum for sheet-in-spell item.",
+        title:
+          "IF Executive Sheet is not yet ready at review, reference the corresponding Atlas edit weekly proposal and the forum post (nested checklist).",
       },
       {
         key: "pre_exec_sheet_in_spell_not_ready_alt_comment",
@@ -1469,7 +1433,8 @@ export const agentSpellReviewTemplate: Template = {
       {
         key: "pre_reverified_after_commits",
         type: "bool",
-        title: "IF new commits after review, checklist items re-verified.",
+        title:
+          "IF new commits were added after the initial review, the relevant checklist items have been re-verified.",
       },
       {
         key: "pre_reverified_after_commits_comment",
@@ -1479,7 +1444,8 @@ export const agentSpellReviewTemplate: Template = {
       {
         key: "pre_good_to_deploy_post",
         type: "bool",
-        title: "IF no blockers: post Development Stage checklist with “Good to deploy”.",
+        title:
+          "IF no blockers were found, post the completed Development Stage checklist with an explicit Good to deploy note on top.",
       },
       {
         key: "pre_good_to_deploy_post_comment",

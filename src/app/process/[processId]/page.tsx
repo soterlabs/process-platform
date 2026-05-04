@@ -13,20 +13,12 @@ import {
   LIMIT_SUBSCRIBE,
   makeAddressKey,
 } from "@/lib/eth-expression-vm";
-import {
-  buildInputStepContextPayload,
-  ITEM_LIST_PRIMARY_ROW_KEY,
-  itemListFormKey,
-  itemListRenderRowCount,
-  itemListRowIsEmpty,
-  numberContextToFormString,
-  removeItemListRow,
-  reorderItemListRows,
-} from "@/lib/input-step-payload";
+import { buildInputStepContextPayload, numberContextToFormString } from "@/lib/input-step-payload";
 import { buildCurrentProcessExpressionContext } from "@/lib/expression-process-context";
 import { evaluate, type EvaluateExpressionOptions } from "@/services/expression-service";
 import type { TemplateStepInput } from "@/entities/template";
-import { StepInputControl, expansionFieldInitialFormValue } from "./_components/StepInputControl";
+import { hydrateItemListFormState, ItemListEditor } from "./_components/ItemListEditor";
+import { StepInputControl } from "./_components/StepInputControl";
 
 type CurrentStep = {
   key: string;
@@ -111,19 +103,6 @@ function contextValueToDisplayString(val: unknown): string {
   if (typeof val === "number") return Number.isFinite(val) ? String(val) : "";
   if (typeof val === "object") return JSON.stringify(val);
   return String(val);
-}
-
-/** If `text` is a safe http(s) URL, returns it for use in `href`; otherwise `null`. */
-function safeHttpOrHttpsUrl(text: string): string | null {
-  const t = text.trim();
-  if (!t) return null;
-  try {
-    const u = new URL(t);
-    if (u.protocol === "http:" || u.protocol === "https:") return u.href;
-  } catch {
-    return null;
-  }
-  return null;
 }
 
 /**
@@ -436,52 +415,20 @@ export default function ProcessStepPage() {
               if (inp.type !== "item_list") return;
               const saved = stepContext?.[inp.key];
               const rows = Array.isArray(saved) ? saved : [];
-              const n = Math.max(rows.length, 1);
-              for (let rowIndex = 0; rowIndex < n; rowIndex++) {
-                const rowObj =
-                  rows[rowIndex] && typeof rows[rowIndex] === "object" && !Array.isArray(rows[rowIndex])
-                    ? (rows[rowIndex] as Record<string, unknown>)
-                    : undefined;
-                const vfk = itemListFormKey(inp.key, rowIndex, ITEM_LIST_PRIMARY_ROW_KEY);
-                if (!(vfk in next)) {
-                  const legacy =
-                    rowObj?.[ITEM_LIST_PRIMARY_ROW_KEY] ?? rowObj?.commit_url ?? rowObj?.commitUrl;
-                  if (legacy !== undefined && legacy !== null) {
-                    next[vfk] = expansionFieldInitialFormValue(
-                      { key: ITEM_LIST_PRIMARY_ROW_KEY, type: "string", title: "" },
-                      legacy
-                    );
-                  } else {
-                    next[vfk] = "";
-                  }
-                }
-                inp.subInputs?.forEach((sub) => {
-                  if (sub.readOnly || sub.type === "item_list") return;
-                  if (sub.key === ITEM_LIST_PRIMARY_ROW_KEY) return;
-                  const fk = itemListFormKey(inp.key, rowIndex, sub.key);
-                  if (fk in next) return;
-                  const raw = rowObj?.[sub.key];
-                  if (raw !== undefined && raw !== null) {
-                    next[fk] = expansionFieldInitialFormValue(sub, raw);
-                    return;
-                  }
-                  if (sub.defaultValue != null && sub.defaultValue !== "") {
-                    const resolved = resolveContextTemplate(
-                      sub.defaultValue,
-                      context,
-                      me?.permissions ?? [],
-                      clientExpressionProcessOptions(proc, proc.processId)
-                    );
-                    if (sub.type === "bool") {
-                      next[fk] = /^(yes|true|1)$/i.test(resolved.trim());
-                    } else {
-                      next[fk] = resolved;
-                    }
-                    return;
-                  }
-                  next[fk] = sub.type === "bool" ? false : "";
-                });
-              }
+              const resolveTemplate = (data: string) =>
+                resolveContextTemplate(
+                  data,
+                  context,
+                  me?.permissions ?? [],
+                  clientExpressionProcessOptions(proc, proc.processId)
+                );
+              hydrateItemListFormState(
+                inp as TemplateStepInput & { type: "item_list" },
+                [inp.key],
+                rows,
+                next,
+                resolveTemplate
+              );
             });
             return next;
           });
@@ -918,222 +865,23 @@ export default function ProcessStepPage() {
           )
           .map((inp, i) => {
             if (inp.type === "item_list" && !inp.readOnly) {
-              const subInputs = inp.subInputs ?? [];
-              const rowCount = itemListRenderRowCount(inp.key, subInputs, formValues);
-
-              const visibleSubs = subInputs.filter(
-                (sub) =>
-                  (!sub.visibleExpression ||
-                    Boolean(
-                      process &&
-                        evaluate(evaluationContext, sub.visibleExpression, {
-                          userPermissions: userPerms,
-                          ...clientExpressionProcessOptions(process, processId),
-                        })
-                    )) &&
-                  (sub.readOnly
-                    ? process
-                      ? shouldShowViewControl(sub.defaultValue ?? "", evaluationContext)
-                      : true
-                    : true)
-              );
-
-              const visibleOtherSubs = visibleSubs.filter((s) => s.key !== ITEM_LIST_PRIMARY_ROW_KEY);
-
-              const lineControlInp: TemplateStepInput = {
-                key: ITEM_LIST_PRIMARY_ROW_KEY,
-                type: "string",
-                title: inp.title,
-              };
-
-              const renderSubControl = (
-                sub: TemplateStepInput,
-                rowIndex: number,
-                opts?: { hideTitle?: boolean }
-              ) =>
-                sub.readOnly ? (
-                  <div
-                    key={`${inp.key}-${rowIndex}-${sub.key}-ro`}
-                    className="rounded-lg border border-surface-200 bg-surface-50 px-3 py-3"
-                  >
-                    <div className="text-sm font-medium text-surface-600">{sub.title}</div>
-                    <div
-                      className={
-                        sub.type === "string-multiline" || sub.type === "decimal_string"
-                          ? "mt-2 whitespace-pre-wrap break-all font-mono text-sm leading-relaxed text-surface-800 [&_a]:text-primary-600 [&_a:hover]:underline [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_p]:mb-2"
-                          : "mt-2 text-surface-800 [&_a]:text-primary-600 [&_a:hover]:underline [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_p]:mb-2"
-                      }
-                      aria-readonly
-                      dangerouslySetInnerHTML={{
-                        __html: process
-                          ? resolveContextTemplate(
-                              sub.defaultValue ?? "",
-                              evaluationContext,
-                              userPerms,
-                              clientExpressionProcessOptions(process, processId)
-                            )
-                          : sub.defaultValue ?? "",
-                      }}
-                    />
-                  </div>
-                ) : (
-                  <div key={`${inp.key}-${rowIndex}-${sub.key}`} className="min-w-0">
-                    <StepInputControl
-                      inp={sub}
-                      formKey={itemListFormKey(inp.key, rowIndex, sub.key)}
-                      htmlId={`il-${inp.key}-${rowIndex}-${sub.key}`}
-                      formValues={formValues}
-                      hideTitle={Boolean(opts?.hideTitle)}
-                      onValuesChange={(next) => {
-                        setFormValues(next);
-                        scheduleStepContextUpdate(next);
-                      }}
-                    />
-                  </div>
-                );
-
-              const onRemoveRow = (rowIndex: number) => {
-                setFormValues((prev) => {
-                  const next = removeItemListRow(inp.key, subInputs, rowIndex, prev);
-                  scheduleStepContextUpdate(next);
-                  return next;
-                });
-              };
-
-              const onReorderRow = (fromIndex: number, toIndex: number) => {
-                setFormValues((prev) => {
-                  const next = reorderItemListRows(inp.key, subInputs, fromIndex, toIndex, prev);
-                  scheduleStepContextUpdate(next);
-                  return next;
-                });
-              };
-
-              const otherSubVisibleRowIndices =
-                visibleOtherSubs.length > 0
-                  ? Array.from({ length: rowCount }, (_, rowIndex) => rowIndex).filter(
-                      (rowIndex) =>
-                        !(
-                          rowIndex === rowCount - 1 &&
-                          itemListRowIsEmpty(inp.key, subInputs, rowIndex, formValues)
-                        )
-                    )
-                  : [];
-
-              const lineRows = (
-                <div className="space-y-2">
-                  {Array.from({ length: rowCount }, (_, rowIndex) => (
-                    <div
-                      key={`il-line-${inp.key}-${rowIndex}`}
-                      className="flex items-center gap-2 rounded-lg border border-surface-100 bg-surface-50/60 px-2 py-2"
-                      onDragOver={(e) => {
-                        e.preventDefault();
-                        e.dataTransfer.dropEffect = "move";
-                      }}
-                      onDrop={(e) => {
-                        e.preventDefault();
-                        const from = parseInt(e.dataTransfer.getData("text/plain"), 10);
-                        if (!Number.isInteger(from)) return;
-                        onReorderRow(from, rowIndex);
-                      }}
-                    >
-                      <button
-                        type="button"
-                        draggable
-                        onDragStart={(e) => {
-                          e.dataTransfer.setData("text/plain", String(rowIndex));
-                          e.dataTransfer.effectAllowed = "move";
-                        }}
-                        className="flex h-9 w-7 shrink-0 cursor-grab flex-col items-center justify-center rounded border border-transparent text-surface-400 hover:border-surface-200 hover:bg-white active:cursor-grabbing"
-                        aria-label="Drag to reorder row"
-                      >
-                        <span className="text-[10px] leading-none" aria-hidden>
-                          ⋮⋮
-                        </span>
-                      </button>
-                      <span className="w-6 shrink-0 text-right text-[11px] font-medium text-surface-400">
-                        {rowIndex + 1}
-                      </span>
-                      <div className="min-w-0 flex-1">
-                        {renderSubControl(lineControlInp, rowIndex, { hideTitle: true })}
-                      </div>
-                      {!itemListRowIsEmpty(inp.key, subInputs, rowIndex, formValues) && (
-                        <button
-                          type="button"
-                          onClick={() => onRemoveRow(rowIndex)}
-                          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-transparent text-xl leading-none text-surface-400 hover:border-red-200 hover:bg-red-50 hover:text-red-700"
-                          aria-label="Remove row"
-                        >
-                          <span aria-hidden>×</span>
-                        </button>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              );
-
               return (
-                <section
+                <ItemListEditor
                   key={inp.key}
-                  className="rounded-xl border border-primary-200 bg-primary-50/50 px-4 py-4"
-                  aria-labelledby={`il-head-${inp.key}`}
-                >
-                  <h2 id={`il-head-${inp.key}`} className="text-sm font-medium text-primary-950">
-                    {inp.title}
-                  </h2>
-
-                  <div className="mt-4 rounded-lg border border-surface-200 bg-white px-3 py-4 shadow-sm">
-                    {lineRows}
-                  </div>
-
-                  {visibleOtherSubs.length > 0 && otherSubVisibleRowIndices.length > 0 && (
-                    <div className="mt-6 rounded-lg border border-surface-200 bg-white px-3 py-4 shadow-sm">
-                      <div className="divide-y divide-surface-100">
-                        {otherSubVisibleRowIndices.map((rowIndex) => {
-                          const vfk = itemListFormKey(inp.key, rowIndex, ITEM_LIST_PRIMARY_ROW_KEY);
-                          const raw = formValues[vfk];
-                          const lineLabel =
-                            raw !== undefined && raw !== true && raw !== false
-                              ? String(raw).trim()
-                              : "";
-                          const lineHref = lineLabel ? safeHttpOrHttpsUrl(lineLabel) : null;
-                          return (
-                            <div
-                              key={`rest-row-${rowIndex}`}
-                              className="space-y-3 py-3 first:pt-0"
-                            >
-                              <div
-                                className="min-w-0 rounded-md border border-surface-200 border-l-4 border-l-primary-500 bg-surface-50 px-3 py-2"
-                                title={lineLabel || undefined}
-                              >
-                                {lineHref ? (
-                                  <a
-                                    href={lineHref}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="block truncate text-base font-semibold leading-snug text-primary-700 underline decoration-primary-300 decoration-1 underline-offset-2 hover:text-primary-900 hover:decoration-primary-600"
-                                  >
-                                    {lineLabel}
-                                  </a>
-                                ) : (
-                                  <p
-                                    className={`truncate text-base font-semibold leading-snug text-surface-900 ${lineLabel ? "" : "italic text-surface-500"}`}
-                                  >
-                                    {lineLabel || `Row ${rowIndex + 1}`}
-                                  </p>
-                                )}
-                              </div>
-                              {visibleOtherSubs.map((sub) => (
-                                <div key={`${rowIndex}-${sub.key}`} className="min-w-0">
-                                  {renderSubControl(sub, rowIndex)}
-                                </div>
-                              ))}
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  )}
-                </section>
+                  listInput={inp as TemplateStepInput & { type: "item_list" }}
+                  listPath={[inp.key]}
+                  formValues={formValues}
+                  onFormValuesChange={(next) => {
+                    setFormValues(next);
+                    scheduleStepContextUpdate(next);
+                  }}
+                  evaluationContext={evaluationContext}
+                  userPermissions={userPerms}
+                  expressionProcessOptions={clientExpressionProcessOptions(process, processId)}
+                  process={process}
+                  shouldShowViewControl={shouldShowViewControl}
+                  resolveContextTemplate={resolveContextTemplate}
+                />
               );
             }
             if (inp.readOnly) {
