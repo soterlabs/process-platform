@@ -193,7 +193,10 @@ export const integrationBoostOnboardingTemplate: Template = {
     },
   ],
   resultViewControls: [
-    { data: "${input.name}", title: "Partner Name" },
-    { data: "${input.contractAddress}", title: "Contract Address" }
+    { data: "${input.name}", title: "Partner Project Name" },
+    { data: "${input.contractAddress}", title: "Address of the contract that holds USDS" },
+    { data: "${input.contact} (${input.contactPlatform})", title: "Contact", },
+    { data: "${input.agent}", title: "Sponsoring agent (Spark, Grove, Obex etc)" },
+    { data: "${input.wallet}", title: "Integration rewards recipient wallet" },
   ],
 };
