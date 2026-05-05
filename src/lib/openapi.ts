@@ -115,6 +115,21 @@ export const openApiSpec = {
         },
       },
     },
+    "/api/process/{id}/audit": {
+      get: {
+        summary: "Get full process state (audit)",
+        description:
+          "Returns persisted process instance JSON including audit fields (e.g. stepContextAudit). Requires Auth0 permission processes:audit.",
+        parameters: [{ name: "id", in: "path", required: true, schema: { type: "string" } }],
+        responses: {
+          "200": { description: "Full process state" },
+          "401": { description: "Unauthorized" },
+          "403": { description: "Missing processes:audit" },
+          "404": { description: "Process not found" },
+          "500": { description: "Server error" },
+        },
+      },
+    },
     "/api/process/{id}/steps/{stepId}": {
       put: {
         summary: "Update step state",

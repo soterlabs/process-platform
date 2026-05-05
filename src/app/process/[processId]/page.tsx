@@ -4,7 +4,7 @@ import { useParams } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { authFetch } from "@/lib/auth-client";
-import { hasPermission } from "@/lib/permissions";
+import { hasPermission, PERMISSIONS } from "@/lib/permissions";
 import { useMe } from "@/hooks/use-me";
 import {
   generatePayload,
@@ -670,6 +670,16 @@ export default function ProcessStepPage() {
         <p className="mt-1 text-surface-500">
           This process has finished.
         </p>
+        {hasPermission(me?.permissions, PERMISSIONS.PROCESSES_AUDIT) && (
+          <p className="mt-2">
+            <Link
+              href={`/process/${encodeURIComponent(process.processId)}/audit`}
+              className="text-xs text-primary-600 hover:text-primary-700 hover:underline"
+            >
+              View full process state
+            </Link>
+          </p>
+        )}
         {showResultViewControls && (
           <section className="mt-8 space-y-4">
             <h2 className="text-sm font-medium uppercase tracking-wider text-surface-500">

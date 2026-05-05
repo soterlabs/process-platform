@@ -8,6 +8,7 @@ export const PERMISSIONS = {
   PROCESSES_READ: "processes:read",
   PROCESSES_WRITE: "processes:write",
   PROCESSES_DELETE: "processes:delete",
+  PROCESSES_AUDIT: "processes:audit",
 } as const;
 
 export type Permission = (typeof PERMISSIONS)[keyof typeof PERMISSIONS];
