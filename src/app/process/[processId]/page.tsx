@@ -940,8 +940,7 @@ export default function ProcessStepPage() {
           </button>
         ) : (
           <p className="text-sm text-surface-600" role="status">
-            Continue or Finish is hidden because your account does not satisfy this step&apos;s
-            completion rule. You can still edit the fields above; changes are saved automatically.
+            This step must be complete before you can continue.
           </p>
         )}
       </form>
