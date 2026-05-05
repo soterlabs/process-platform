@@ -98,13 +98,18 @@ export const executionService = {
     if (!removed) throw new Error(`Process not found: ${processId}`);
   },
 
-  async startProcess(templateKey: string, triggeredBy?: string): Promise<Process> {
+  async startProcess(
+    templateKey: string,
+    options?: { triggeredBy?: string; ranByName?: string }
+  ): Promise<Process> {
     const template = await storageService.getTemplate(templateKey);
     if (!template) {
       throw new Error(`Template not found: ${templateKey}`);
     }
     const now = new Date().toISOString();
     const processId = randomUUID();
+    const triggeredBy = options?.triggeredBy;
+    const ranByName = options?.ranByName;
     const process: Process = {
       processId,
       template,
@@ -114,6 +119,7 @@ export const executionService = {
       stepContextAudit: [],
       result: {},
       ...(triggeredBy ? { triggeredBy } : {}),
+      ...(ranByName ? { ranByName } : {}),
       startedAt: now,
       updatedAt: now,
     };

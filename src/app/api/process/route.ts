@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getPrincipalFromRequest } from "@/lib/auth-request";
+import { principalDisplayName } from "@/lib/principal-display-name";
 import { PERMISSIONS } from "@/lib/permissions";
 import { requirePermission } from "@/lib/require-permission";
 import { executionService } from "@/services/execution-service";
@@ -33,10 +34,11 @@ export async function POST(request: NextRequest) {
     const principal = getPrincipalFromRequest(request);
     const { templateKey } = (await request.json()) as StartProcessBody;
     const triggeredBy = principal?.userId;
-    const result = await executionService.startProcess(
-      templateKey,
-      triggeredBy
-    );
+    const ranByName = principalDisplayName(principal);
+    const result = await executionService.startProcess(templateKey, {
+      triggeredBy,
+      ranByName,
+    });
     return NextResponse.json(result);
   } catch (err) {
     console.error(err);

@@ -9,6 +9,7 @@ export type AuthPrincipal = {
   userId: string;
   permissions: string[];
   email?: string;
+  name?: string;
 };
 
 export interface IAuthenticationService {

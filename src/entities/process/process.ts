@@ -12,6 +12,7 @@ export type Process = {
   stepContextAudit: StepContextAuditEntry[];
   result: Record<string, unknown>;
   triggeredBy?: string;
+  ranByName?: string;
   startedAt: string;
   updatedAt: string;
   error?: string;

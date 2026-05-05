@@ -64,12 +64,35 @@ function emailFromPayload(payload: jose.JWTPayload): string | undefined {
   return typeof emailRaw === "string" && emailRaw.trim() ? emailRaw.trim() : undefined;
 }
 
+/** Set this claim on the API access token (Auth0 Action) for “ran by” / display name. */
+const JWT_DISPLAY_NAME_CLAIM = "https://os.soterlabs.com/display_name";
+
+function nameFromPayload(payload: jose.JWTPayload): string | undefined {
+  const custom = payload[JWT_DISPLAY_NAME_CLAIM];
+  if (typeof custom === "string" && custom.trim()) return custom.trim();
+  const nameRaw = payload.name;
+  if (typeof nameRaw === "string" && nameRaw.trim()) return nameRaw.trim();
+  const nick = payload.nickname;
+  if (typeof nick === "string" && nick.trim()) return nick.trim();
+  const gn = payload.given_name;
+  const fn = payload.family_name;
+  if (typeof gn === "string" && gn.trim()) {
+    if (typeof fn === "string" && fn.trim()) return `${gn.trim()} ${fn.trim()}`;
+    return gn.trim();
+  }
+  return undefined;
+}
+
 function mapAuth0PayloadToPrincipal(payload: jose.JWTPayload): AuthPrincipal | null {
   const sub = payload.sub;
   if (typeof sub !== "string" || !sub.trim()) return null;
   const permissions = normalizePermissionsFromPayload(payload);
   const email = emailFromPayload(payload);
-  return email ? { userId: sub, permissions, email } : { userId: sub, permissions };
+  const name = nameFromPayload(payload);
+  const principal: AuthPrincipal = { userId: sub, permissions };
+  if (email) principal.email = email;
+  if (name) principal.name = name;
+  return principal;
 }
 
 async function verifyAuth0SessionToken(token: string): Promise<AuthPrincipal | null> {

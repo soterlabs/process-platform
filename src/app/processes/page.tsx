@@ -178,13 +178,13 @@ export default function ProcessesPage() {
       const pid = p.processId.toLowerCase();
       const cs = currentStepInfo(p);
       const stepText = cs?.title.toLowerCase() ?? "";
-      const triggeredByText = (p.triggeredBy ?? "").toLowerCase();
+      const ranBySearch = (p.ranByName ?? p.triggeredBy ?? "").toLowerCase();
       return (
         tName.includes(q) ||
         pid.includes(q) ||
         shortProcessId(p.processId).includes(q) ||
         stepText.includes(q) ||
-        triggeredByText.includes(q)
+        ranBySearch.includes(q)
       );
     });
 
@@ -404,7 +404,7 @@ export default function ProcessesPage() {
                   Progress
                 </th>
                 <th className="px-4 py-3 text-xs font-medium uppercase tracking-wide text-surface-500">
-                  Triggered by
+                  Ran by
                 </th>
                 <th className="px-4 py-3 text-xs font-medium uppercase tracking-wide text-surface-500">
                   Started
@@ -485,9 +485,16 @@ export default function ProcessesPage() {
                         </span>
                       </div>
                     </td>
-                    <td className="max-w-[220px] px-4 py-4 align-top font-mono text-sm text-surface-600">
-                      <span className="line-clamp-2" title={p.triggeredBy}>
-                        {p.triggeredBy ?? "—"}
+                    <td className="max-w-[220px] px-4 py-4 align-top text-sm text-surface-600">
+                      <span
+                        className={`line-clamp-2 ${p.ranByName ? "" : "font-mono"}`}
+                        title={
+                          p.triggeredBy && p.ranByName && p.ranByName !== p.triggeredBy
+                            ? p.triggeredBy
+                            : undefined
+                        }
+                      >
+                        {p.ranByName ?? p.triggeredBy ?? "—"}
                       </span>
                     </td>
                     <td className="whitespace-nowrap px-4 py-4 align-top text-surface-600">
