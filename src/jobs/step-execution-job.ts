@@ -1,6 +1,6 @@
 /**
  * Polling job: every second, finds running processes whose current step
- * is automatic, slack_notify, condition, or request and executes that step via the execution service.
+ * is automatic, slack_notify, script, condition, or request and executes that step via the execution service.
  * Start with startStepExecutionJob(); stop with the returned stop function.
  */
 import { executionService } from "@/services/execution-service";
@@ -25,6 +25,7 @@ async function tick(): Promise<void> {
       const shouldAutoRun =
         templateStep?.type === "automatic" ||
         templateStep?.type === "slack_notify" ||
+        templateStep?.type === "script" ||
         templateStep?.type === "condition" ||
         templateStep?.type === "request";
       if (shouldAutoRun) {

@@ -1,5 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import type { Template } from "@/entities/template";
+import {
+  templateHasScriptStep,
+  TEMPLATE_API_SCRIPT_STEP_MESSAGE,
+} from "@/lib/template-api-script-guard";
 import { PERMISSIONS } from "@/lib/permissions";
 import { requirePermission } from "@/lib/require-permission";
 import { storageService } from "@/services/storage";
@@ -46,6 +50,9 @@ export async function PUT(
         { error: "Template key in body must match URL" },
         { status: 400 }
       );
+    }
+    if (templateHasScriptStep(body)) {
+      return NextResponse.json({ error: TEMPLATE_API_SCRIPT_STEP_MESSAGE }, { status: 400 });
     }
     await storageService.setTemplate(key, body);
     return NextResponse.json({ ok: true });

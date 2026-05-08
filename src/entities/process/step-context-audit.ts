@@ -1,4 +1,4 @@
-/** User id used when step context is written by automation (automatic / slack_notify / request steps), not an API caller. */
+/** User id used when step context is written by automation (automatic / slack_notify / script / request steps), not an API caller. */
 export const SYSTEM_STEP_CONTEXT_USER_ID = "system" as const;
 
 export type StepContextAuditEntry = {

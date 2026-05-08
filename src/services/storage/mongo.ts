@@ -13,6 +13,7 @@ import type { IStorageService } from "./interface";
 import { nfatEnableFacilityForPrimeTemplate } from "@/templates/nfat-enable-facility-for-prime";
 import { integrationBoostOnboardingTemplate } from "@/templates/integrator-onboarding";
 import { agentSpellReviewTemplate } from "@/templates/agent-spell-review";
+import { freezeSolanaBridgeTemplate } from "@/templates/freeze-solana-bridge";
 
 const MONGO_URL = process.env.MONGO_URL ?? "";
 const DB_NAME = "process-platform";
@@ -51,6 +52,7 @@ const SEED_TEMPLATES: Template[] = [
   nfatSubscribeTemplate,
   integrationBoostOnboardingTemplate,
   agentSpellReviewTemplate,
+  freezeSolanaBridgeTemplate,
 ];
 
 async function ensureInitialTemplates(): Promise<void> {

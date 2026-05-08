@@ -1,7 +1,7 @@
 export type TemplateStep = {
   key: string;
   title: string;
-  type: "input" | "condition" | "request" | "automatic" | "slack_notify";
+  type: "input" | "condition" | "request" | "automatic" | "slack_notify" | "script";
   nextStepKey: string | null;
   confirmationMessage?: string;
   editorProperties?: {

@@ -4,6 +4,7 @@ import type {
   AutomaticTemplateStep,
   ConditionTemplateStep,
   RequestTemplateStep,
+  ScriptTemplateStep,
   SlackNotifyTemplateStep,
 } from "@/entities/template";
 import { agentService } from "@/services/agent-service";
@@ -16,6 +17,7 @@ import {
 } from "@/services/template-helpers";
 import { expressionEvaluateOptionsFromProcess } from "@/lib/expression-process-context";
 import { postSlackChannelNotification } from "@/services/slack-notify-service";
+import { runScriptTemplateStep } from "@/services/script-step-runner";
 import { storageService } from "@/services/storage";
 
 function pushStep(process: Process, stepKey: string): void {
@@ -280,6 +282,23 @@ export const executionService = {
       process.context[stepKey] = { ...existing, ...updates };
       appendStepContextAudit(process, SYSTEM_STEP_CONTEXT_USER_ID, stepKey, updates);
       const nextStepKey = slackStep.nextStepKey;
+      if (nextStepKey && getStepByKey(process.template, nextStepKey)) {
+        pushStep(process, nextStepKey);
+      } else {
+        await this.completeProcess(process);
+      }
+      await storageService.saveProcessState(process);
+      return;
+    }
+
+    if (templateStep.type === "script") {
+      const scriptStep = templateStep as ScriptTemplateStep;
+      const stepKey = currentStep.stepKey;
+      const updates = await runScriptTemplateStep(scriptStep, process.context, exprOpts);
+      const existing = (process.context[stepKey] as Record<string, unknown>) ?? {};
+      process.context[stepKey] = { ...existing, ...updates };
+      appendStepContextAudit(process, SYSTEM_STEP_CONTEXT_USER_ID, stepKey, updates);
+      const nextStepKey = scriptStep.nextStepKey;
       if (nextStepKey && getStepByKey(process.template, nextStepKey)) {
         pushStep(process, nextStepKey);
       } else {

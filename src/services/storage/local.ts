@@ -13,6 +13,7 @@ import { nfatSetupFacilityTemplate } from "@/templates/nfat-setup-facility";
 import { nfatEnableFacilityForPrimeTemplate } from "@/templates/nfat-enable-facility-for-prime";
 import { integrationBoostOnboardingTemplate } from "@/templates/integrator-onboarding";
 import { agentSpellReviewTemplate } from "@/templates/agent-spell-review";
+import { freezeSolanaBridgeTemplate } from "@/templates/freeze-solana-bridge";
 import type { IStorageService } from "./interface";
 
 const STORE_DIR = join(process.cwd(), ".process-platform");
@@ -36,6 +37,7 @@ function seedTemplatesRecord(): Record<string, Template> {
       updatedAt: now,
     },
     [agentSpellReviewTemplate.key]: { ...agentSpellReviewTemplate, updatedAt: now },
+    [freezeSolanaBridgeTemplate.key]: { ...freezeSolanaBridgeTemplate, updatedAt: now },
   };
 }
 

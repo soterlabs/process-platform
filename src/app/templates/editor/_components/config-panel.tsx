@@ -716,6 +716,29 @@ export function ConfigPanel({
           </>
         )}
 
+        {d.type === "script" && (
+          <>
+            <p className="text-xs text-surface-600">
+              Async JavaScript body (trusted). The runner wraps it as{" "}
+              <code className="rounded bg-surface-200 px-0.5">async (context) =&gt; {"{ ... }"}</code> — use{" "}
+              <code className="rounded bg-surface-200 px-0.5">context</code> (same shape as process context). Return a
+              plain object; its keys are merged into <code className="rounded bg-surface-200 px-0.5">context.&lt;stepKey&gt;</code>.
+              Prefer defining <code className="rounded bg-surface-200 px-0.5">source</code> in the template TS file and
+              paste here only when experimenting.
+            </p>
+            <label className="block">
+              <span className="text-xs text-surface-500">Source (async body)</span>
+              <textarea
+                value={d.source ?? ""}
+                onChange={(e) => update({ source: e.target.value })}
+                spellCheck={false}
+                rows={18}
+                className="mt-0.5 w-full rounded border border-surface-200 bg-white px-2 py-1.5 font-mono text-xs text-surface-900"
+              />
+            </label>
+          </>
+        )}
+
         {d.type === "request" && (
           <>
             <label className="block">

@@ -5,12 +5,13 @@ import type {
   ConditionTemplateStep,
   RequestTemplateStep,
   AutomaticTemplateStep,
+  ScriptTemplateStep,
   SlackNotifyTemplateStep,
 } from "@/entities/template";
 
 export type FlowNodeData = {
   stepKey: string;
-  type: "input" | "condition" | "request" | "automatic" | "slack_notify";
+  type: "input" | "condition" | "request" | "automatic" | "slack_notify" | "script";
   title: string;
   nextStepKey: string | null;
   confirmationMessage?: string;
@@ -31,6 +32,8 @@ export type FlowNodeData = {
   channelId?: string;
   mentionUsers?: string[];
   messageExpression?: string;
+  // script
+  source?: string;
 };
 
 export function templateToFlow(template: Template): {
@@ -71,6 +74,10 @@ export function templateToFlow(template: Template): {
       data.channelId = sn.channelId ?? "";
       data.mentionUsers = [...new Set((sn.mentionUsers ?? []).map((s) => String(s).trim()).filter(Boolean))];
       data.messageExpression = sn.messageExpression ?? "";
+    }
+    if (step.type === "script") {
+      const sc = step as ScriptTemplateStep;
+      data.source = sc.source ?? "";
     }
     const position =
       step.editorProperties != null
@@ -139,6 +146,7 @@ export function flowToTemplate(
     | RequestTemplateStep
     | AutomaticTemplateStep
     | SlackNotifyTemplateStep
+    | ScriptTemplateStep
   )[] = [];
   const nodeIds = new Set(nodes.map((n) => n.id));
   const incoming = new Map<string, number>();
@@ -207,6 +215,16 @@ export function flowToTemplate(
         channelId: d.channelId ?? "",
         mentionUsers: d.mentionUsers ?? [],
         messageExpression: d.messageExpression ?? "",
+        nextStepKey: nextEdge?.target ? (nextEdge.target as string) : null,
+        confirmationMessage: d.confirmationMessage,
+        editorProperties,
+      });
+    } else if (d.type === "script") {
+      steps.push({
+        key: d.stepKey,
+        type: "script",
+        title: d.title,
+        source: d.source ?? "",
         nextStepKey: nextEdge?.target ? (nextEdge.target as string) : null,
         confirmationMessage: d.confirmationMessage,
         editorProperties,
