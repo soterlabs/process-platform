@@ -1,4 +1,4 @@
-import type { Template } from "@/entities/template";
+import type { Template, TemplateStepInput } from "@/entities/template";
 
 const VERIFY_POST_FREEZE_SOURCE = `
 const SOLANA_RPC = "https://api.mainnet-beta.solana.com";
@@ -150,11 +150,89 @@ const PREPARE_NEXT_COMPLETE_EXPR =
   "prepare_next_freeze_tx.v_small_fee === true && " +
   "prepare_next_freeze_tx.v_rejected_approval === true";
 
-export const freezeSolanaBridgeTemplate: Template = {
-  key: "freeze-solana-bridge",
-  name: "Freeze Solana Bridge",
+const PREPARE_NEXT_FREEZE_INPUTS: TemplateStepInput[] = [
+  {
+    key: "ro_squads_build",
+    type: "string-multiline",
+    title: "Build the transaction",
+    readOnly: true,
+    defaultValue: RO_SQUADS_BUILD,
+  },
+  {
+    key: "v_program_id",
+    type: "bool",
+    title: "Verify: Program ID matches: SKYTAiJRkgexqQqFoqhXdCANyfziwrVrzjhBaCzdbKW",
+  },
+  {
+    key: "v_account_1",
+    type: "bool",
+    title:
+      "Verify: Account 1 is the pauser multisig: 5hARLsT1VA2AmuGL2AXUeSyyFG6o2Fcpb9S6aKXNsbeK [Signer, Writable]",
+  },
+  {
+    key: "v_account_2",
+    type: "bool",
+    title:
+      "Verify: Account 2 is the OFT Store PDA: BEvTHkTyXooyaJzP8egDUC7WQK8cyRrq5WvERZNWhuah [Writable]",
+  },
+  {
+    key: "v_ix_data",
+    type: "bool",
+    title:
+      "Verify: Instruction data is oc55b1rv7Bb6 (base58) = 3f209a0238674f2d01 (hex) = set_pause(true)",
+  },
+  {
+    key: "v_single_ix_two_accts",
+    type: "bool",
+    title: "Verify: Only 1 instruction, only 2 accounts — nothing extra",
+  },
+  {
+    key: "ro_after_simulate",
+    type: "string-multiline",
+    title: "Simulate",
+    readOnly: true,
+    defaultValue: RO_AFTER_SIMULATE,
+  },
+  {
+    key: "v_sim_success",
+    type: "bool",
+    title: 'Verify: Status shows "Success"',
+  },
+  {
+    key: "v_sim_logs",
+    type: "bool",
+    title: "Verify: Logs show Program SKYTAiJR… invoke [1] and Program SKYTAiJR… success",
+  },
+  {
+    key: "v_no_extra_transfers",
+    type: "bool",
+    title: "Verify: No unexpected token transfers or additional instructions",
+  },
+  {
+    key: "v_small_fee",
+    type: "bool",
+    title: "Verify: Only a small SOL transaction fee applies",
+  },
+  {
+    key: "ro_sign_reject",
+    type: "string-multiline",
+    title: "Sign then reject your approval",
+    readOnly: true,
+    defaultValue: RO_SIGN_REJECT,
+  },
+  {
+    key: "v_rejected_approval",
+    type: "bool",
+    title: "Verify: I have rejected my own approval on the transaction",
+  },
+];
+
+/** On-chain + optional finalized tx checks for the SKY OFT bridge pause state. */
+export const verifySolanaBridgeFrozenTemplate: Template = {
+  key: "freeze-solana-bridge-verify",
+  name: "Verify Solana bridge frozen",
   description:
-    "Record a set_pause(true) Solana transaction, verify on-chain and via RPC, then branch: retry the signature or follow Squads steps to queue the next freeze.",
+    "Confirm the OFT store is paused on Solana mainnet; optionally paste a set_pause transaction signature to validate logs via RPC. Use “Enqueue Solana freeze tx” when you need to queue the next Squads transaction.",
   firstStepKey: "record_freeze_tx",
   permissions: [],
   steps: [
@@ -168,127 +246,17 @@ export const freezeSolanaBridgeTemplate: Template = {
         {
           key: "transactionSignature",
           type: "string",
-          title: "Solana transaction signature (base58 from explorer or wallet, not 0x)",
+          title:
+            "Solana transaction hash (optional — leave empty to check on-chain state only)",
         },
       ],
     },
     {
       key: "verify_post_freeze",
       type: "script",
-      title: "Verifying bridge frozen by transaction",
+      title: "Verifying bridge frozen",
       source: VERIFY_POST_FREEZE_SOURCE,
-      nextStepKey: "view_verification_result",
-    },
-    {
-      key: "view_verification_result",
-      type: "input",
-      title: "Verification result",
-      permissions: [],
-      nextStepKey: "after_verification_branch",
-      inputs: [
-        {
-          key: "verification_summary",
-          type: "string-multiline",
-          title: "Outcome",
-          readOnly: true,
-          defaultValue: "${verify_post_freeze.message}",
-        },
-      ],
-    },
-    {
-      key: "after_verification_branch",
-      type: "condition",
-      title: "Post-verification checks",
-      expression: "verify_post_freeze.ok === true",
-      thenStepKey: "prepare_next_freeze_tx",
-      elseStepKey: "record_freeze_tx",
       nextStepKey: null,
-    },
-    {
-      key: "prepare_next_freeze_tx",
-      type: "input",
-      title: "Prepare next freeze (Squads)",
-      permissions: [],
-      nextStepKey: null,
-      completeExpression: PREPARE_NEXT_COMPLETE_EXPR,
-      inputs: [
-        {
-          key: "ro_squads_build",
-          type: "string-multiline",
-          title: "Build the transaction",
-          readOnly: true,
-          defaultValue: RO_SQUADS_BUILD,
-        },
-        {
-          key: "v_program_id",
-          type: "bool",
-          title:
-            "Verify: Program ID matches: SKYTAiJRkgexqQqFoqhXdCANyfziwrVrzjhBaCzdbKW",
-        },
-        {
-          key: "v_account_1",
-          type: "bool",
-          title:
-            "Verify: Account 1 is the pauser multisig: 5hARLsT1VA2AmuGL2AXUeSyyFG6o2Fcpb9S6aKXNsbeK [Signer, Writable]",
-        },
-        {
-          key: "v_account_2",
-          type: "bool",
-          title:
-            "Verify: Account 2 is the OFT Store PDA: BEvTHkTyXooyaJzP8egDUC7WQK8cyRrq5WvERZNWhuah [Writable]",
-        },
-        {
-          key: "v_ix_data",
-          type: "bool",
-          title:
-            "Verify: Instruction data is oc55b1rv7Bb6 (base58) = 3f209a0238674f2d01 (hex) = set_pause(true)",
-        },
-        {
-          key: "v_single_ix_two_accts",
-          type: "bool",
-          title: "Verify: Only 1 instruction, only 2 accounts — nothing extra",
-        },
-        {
-          key: "ro_after_simulate",
-          type: "string-multiline",
-          title: "Simulate",
-          readOnly: true,
-          defaultValue: RO_AFTER_SIMULATE,
-        },
-        {
-          key: "v_sim_success",
-          type: "bool",
-          title: 'Verify: Status shows "Success"',
-        },
-        {
-          key: "v_sim_logs",
-          type: "bool",
-          title:
-            "Verify: Logs show Program SKYTAiJR… invoke [1] and Program SKYTAiJR… success",
-        },
-        {
-          key: "v_no_extra_transfers",
-          type: "bool",
-          title: "Verify: No unexpected token transfers or additional instructions",
-        },
-        {
-          key: "v_small_fee",
-          type: "bool",
-          title: "Verify: Only a small SOL transaction fee applies",
-        },
-        {
-          key: "ro_sign_reject",
-          type: "string-multiline",
-          title: "Sign then reject your approval",
-          readOnly: true,
-          defaultValue: RO_SIGN_REJECT,
-        },
-        {
-          key: "v_rejected_approval",
-          type: "bool",
-          title: "Verify: I have rejected my own approval on the transaction",
-        },
-      ],
     },
   ],
   resultViewControls: [
@@ -296,6 +264,27 @@ export const freezeSolanaBridgeTemplate: Template = {
       title: "Verification",
       plainText: true,
       data: "${verify_post_freeze.message}",
+    },
+  ],
+};
+
+/** Squads tx builder checklist to queue the next set_pause(true) without re-running RPC verification. */
+export const enqueueSolanaFreezeTxTemplate: Template = {
+  key: "freeze-solana-bridge-enqueue-tx",
+  name: "Enqueue Solana freeze tx",
+  description:
+    "Follow Squads steps to build, simulate, sign, and reject approval so the next freeze transaction is queued. Run “Verify Solana bridge frozen” if you need RPC/on-chain confirmation first.",
+  firstStepKey: "prepare_next_freeze_tx",
+  permissions: [],
+  steps: [
+    {
+      key: "prepare_next_freeze_tx",
+      type: "input",
+      title: "Prepare next freeze (Squads)",
+      permissions: [],
+      nextStepKey: null,
+      completeExpression: PREPARE_NEXT_COMPLETE_EXPR,
+      inputs: PREPARE_NEXT_FREEZE_INPUTS,
     },
   ],
 };
