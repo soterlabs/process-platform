@@ -2,7 +2,6 @@ import type { Template } from "@/entities/template";
 
 const SAFE_UI_URL = "https://app.safe.global/transactions/queue?safe=eth:0xa7843f843D29Ca33BA48d9D1335b774eeCc328DC";
 const TX_KEEPER_URL = "https://tx-keeper-production.up.railway.app/";
-const STRATA_URL = "https://strata.amatsu.io/oea/integration-boost-payouts";
 const BA_LABS_URL = "https://observatory.data.blockanalitica.com/sky/integration-boost/";
 const CALLDATA_DECODER_URL = "https://calldata.swiss-knife.xyz/";
 const GAUGE_ADDRESS = "0x36c2abab95f9aacd4b05d65b89890e29d6382611";
@@ -39,7 +38,7 @@ export const curveTopupTemplate: Template = {
           type: "string",
           title: "Review target incentive rates",
           readOnly: true,
-          defaultValue: `Review target incentive rates from <a href="${STRATA_URL}" target="_blank" class="text-sky-400 hover:underline">Strata Dashboard</a> — Integration Boost Payouts (SSR Incentive). Can also check <a href="${BA_LABS_URL}" target="_blank" class="text-sky-400 hover:underline">BA Labs Observatory</a>. Compare both sources, take the higher amount. Enter the amount in the next step.`,
+          defaultValue: `Review target incentive rates from <a href="${BA_LABS_URL}" target="_blank" class="text-sky-400 hover:underline">BA Labs Observatory</a> — Integration Boost. Enter the amount in the next step.`,
         },
         { key: "reward_amount", type: "number", title: "Reward Amount" },
         {
@@ -171,7 +170,6 @@ export const curveTopupTemplate: Template = {
           type: "bool",
           title: "Communicate execution to Sky Internal Teams (TX Hash, new gauge balance, next epoch end)",
         },
-        { key: "prefill_next_checklist", type: "bool", title: "Pre-fill next checklist" },
       ],
     },
   ],
