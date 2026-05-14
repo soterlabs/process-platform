@@ -29,6 +29,61 @@ export function isSlackChannelId(id: string): boolean {
   return /^[CG][A-Z0-9]+$/i.test(id.trim());
 }
 
+/**
+ * Resolve a channel field value to a C…/G… id.
+ * Accepts raw channel ids or a channel name (with or without leading #); names are matched against
+ * `conversations.list` (public + private channels the token can see — bot must be in private channels).
+ */
+export async function resolveSlackChannelSpecifier(
+  spec: string,
+  token: string
+): Promise<{ ok: true; channelId: string } | { ok: false; error: string }> {
+  const raw = spec.trim();
+  if (!raw) {
+    return { ok: false, error: "Channel is empty" };
+  }
+  if (isSlackChannelId(raw)) {
+    return { ok: true, channelId: raw };
+  }
+
+  const normalizedName = raw.replace(/^#/, "").trim().toLowerCase();
+  if (!normalizedName) {
+    return { ok: false, error: "Channel name is empty" };
+  }
+
+  let cursor: string | undefined;
+  for (let page = 0; page < 100; page++) {
+    const data = await slackApiPost("conversations.list", token, {
+      types: "public_channel,private_channel",
+      exclude_archived: true,
+      limit: 200,
+      cursor,
+    });
+    if (!data.ok) {
+      return { ok: false, error: String(data.error ?? "conversations.list failed") };
+    }
+    const channels = data.channels as unknown;
+    if (Array.isArray(channels)) {
+      for (const ch of channels) {
+        if (!ch || typeof ch !== "object") continue;
+        const id = (ch as { id?: unknown }).id;
+        const name = (ch as { name?: unknown }).name;
+        if (typeof id === "string" && typeof name === "string" && name.toLowerCase() === normalizedName) {
+          return { ok: true, channelId: id };
+        }
+      }
+    }
+    const next = (data.response_metadata as { next_cursor?: string } | undefined)?.next_cursor;
+    if (!next || typeof next !== "string" || next === "") break;
+    cursor = next;
+  }
+
+  return {
+    ok: false,
+    error: `No channel named "${normalizedName}" found (check spelling; for private channels the bot must be a member)`,
+  };
+}
+
 function isSlackUserId(s: string): boolean {
   return /^U[A-Z0-9]+$/i.test(s.trim());
 }
@@ -134,6 +189,8 @@ export type PostSlackChannelNotificationResult = {
   ok: boolean;
   error?: string;
   ts?: string;
+  /** C…/G… id used for posting and member lookup (set after resolving names). */
+  resolvedChannelId?: string;
   /** User ids actually @-mentioned after channel filter */
   resolvedMentionUserIds: string[];
   resolveErrors: MentionResolveError[];
@@ -143,9 +200,11 @@ export type PostSlackChannelNotificationResult = {
 
 /**
  * Post in a channel: resolve emails → U…, keep only members of that channel, then `<@U…>` line + body.
- * Scopes: chat:write, users:read.email, channels:read or groups:read (for conversations.members).
+ * `channelId` may be a C…/G… id or a channel name (optional leading #); names are resolved with `conversations.list`.
+ * Scopes: chat:write, users:read.email, channels:read and/or groups:read (listing, members, private channels).
  */
 export async function postSlackChannelNotification(opts: {
+  /** Channel id (C…/G…) or channel name (e.g. `alerts` or `#alerts`). */
   channelId: string;
   mentionUsers: string[];
   bodyText: string;
@@ -162,13 +221,16 @@ export async function postSlackChannelNotification(opts: {
     return { ...emptyResult(), error: "SLACK_BOT_TOKEN is not configured" };
   }
 
-  const channel = opts.channelId.trim();
-  if (!channel) {
-    return { ...emptyResult(), error: "Channel id is empty" };
+  const channelSpec = opts.channelId.trim();
+  if (!channelSpec) {
+    return { ...emptyResult(), error: "Channel is empty" };
   }
-  if (!isSlackChannelId(channel)) {
-    return { ...emptyResult(), error: "Invalid channel id (use C… or G… from Slack)" };
+
+  const resolved = await resolveSlackChannelSpecifier(channelSpec, token);
+  if (!resolved.ok) {
+    return { ...emptyResult(), error: resolved.error };
   }
+  const channel = resolved.channelId;
 
   const specifiers = (opts.mentionUsers ?? []).map((x) => String(x).trim()).filter(Boolean);
   const { userIds: resolvedIds, errors: resolveErrors } = await resolveMentionUserIds(
@@ -215,6 +277,7 @@ export async function postSlackChannelNotification(opts: {
     return {
       ok: false,
       error: String(post.error ?? "chat.postMessage failed"),
+      resolvedChannelId: channel,
       resolvedMentionUserIds: finalIds,
       resolveErrors,
       skippedNotInChannel,
@@ -224,6 +287,7 @@ export async function postSlackChannelNotification(opts: {
   return {
     ok: true,
     ts: typeof post.ts === "string" ? post.ts : undefined,
+    resolvedChannelId: channel,
     resolvedMentionUserIds: finalIds,
     resolveErrors,
     skippedNotInChannel,

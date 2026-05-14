@@ -669,15 +669,18 @@ export function ConfigPanel({
               Only users who are members of this channel are @-mentioned. Message body uses the same expression rules
               as conditions. Bot needs <code className="rounded bg-surface-200 px-0.5">SLACK_BOT_TOKEN</code> with{" "}
               <code className="rounded bg-surface-200 px-0.5">users:read.email</code> for email lookup and read access
-              for <code className="rounded bg-surface-200 px-0.5">conversations.members</code>.
+              for <code className="rounded bg-surface-200 px-0.5">conversations.members</code>; channel names use{" "}
+              <code className="rounded bg-surface-200 px-0.5">conversations.list</code> (
+              <code className="rounded bg-surface-200 px-0.5">channels:read</code> /{" "}
+              <code className="rounded bg-surface-200 px-0.5">groups:read</code> as needed).
             </p>
             <label className="block">
-              <span className="text-xs text-surface-500">Channel id (C… or G…)</span>
+              <span className="text-xs text-surface-500">Channel (id or name)</span>
               <input
                 type="text"
                 value={d.channelId ?? ""}
                 onChange={(e) => update({ channelId: e.target.value })}
-                placeholder="e.g. C01234567"
+                placeholder="e.g. C01234567 or #eng-alerts or eng-alerts"
                 className="mt-0.5 w-full rounded border border-surface-200 bg-white px-2 py-1.5 font-mono text-sm text-surface-900"
               />
             </label>

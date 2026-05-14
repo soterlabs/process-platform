@@ -68,7 +68,7 @@ For scripts or local testing without the full OAuth UI, the repo includes `npm r
 3. **Background tick** (`step-execution-job.ts`, ~1s): For each running process whose **current** template step is `automatic`, `condition`, `slack_notify`, or `request`, calls `executeStep` so work proceeds without a manual complete:
    - **`automatic`**: Evaluates `expression`, writes result under `contextKey` into `context[stepKey]`, advances via `nextStepKey`.
    - **`condition`**: Evaluates `expression`, follows `thenStepKey` / `elseStepKey`, else falls back to `nextStepKey` / completion (same branching rules as `getNextStepKey`).
-   - **`slack_notify`**: Posts to Slack using `channelId`, `mentionUsers`, `messageExpression`; stores outcome under the step key; advances.
+   - **`slack_notify`**: Posts to Slack using `channelId` (id or channel name), `mentionUsers`, `messageExpression`; stores outcome (including resolved channel id when a name was used) under the step key; advances.
    - **`request`** (`requestType: "agent"`): Runs the configured agent with template `prompt` and current context; stores `response`; advances.
 
 Overlapping ticks are guarded so a slow step is not executed twice.
@@ -118,7 +118,8 @@ Every **step** shares (`template-step.ts`): `key`, `title`, `type`, `nextStepKey
 
 ### `slack_notify`
 
-- `channelId`, `mentionUsers` (emails / Slack user ids, per template semantics).
+- `channelId`: C…/G… id **or** channel name (optional `#`); names are resolved with Slack `conversations.list`.
+- `mentionUsers` (emails / Slack user ids, per template semantics).
 - `messageExpression`: evaluated to string body (mentions resolved server-side).
 
 ---

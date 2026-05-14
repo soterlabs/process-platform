@@ -66,6 +66,7 @@ async function runSlackNotifyStep(
       ok: result.ok,
       error: result.error,
       channelId: step.channelId,
+      resolvedChannelId: result.resolvedChannelId,
       mentionUsers: step.mentionUsers ?? [],
       resolvedMentionUserIds: result.resolvedMentionUserIds,
       mentionResolveErrors: result.resolveErrors,

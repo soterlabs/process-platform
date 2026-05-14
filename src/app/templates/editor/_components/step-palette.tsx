@@ -5,7 +5,7 @@ const STEP_TYPES = [
   { type: "condition" as const, label: "Condition", desc: "Branch on expression" },
   { type: "request" as const, label: "Request", desc: "Agent / LLM call" },
   { type: "automatic" as const, label: "Set context", desc: "Set context from expression (automatic)" },
-  { type: "slack_notify" as const, label: "Slack notify", desc: "Channel + emails/U… → @mentions; body from expression" },
+  { type: "slack_notify" as const, label: "Slack notify", desc: "Channel id or name + emails/U… → @mentions; body from expression" },
   { type: "script" as const, label: "Script", desc: "Async JS (context) → return object merged into step context" },
 ];
 
