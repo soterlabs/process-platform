@@ -34,7 +34,7 @@ export function StepInputControl({
   processId,
   currentStepId,
 }: Props) {
-  if (inp.type === "item_list") {
+  if (inp.type === "item_list" || inp.type === "header") {
     return null;
   }
   if (inp.type === "file-single" || inp.type === "file-multiple") {

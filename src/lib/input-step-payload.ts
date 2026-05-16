@@ -343,7 +343,11 @@ export function buildInputStepContextPayload(
     (i) => i.type === "file-single" || i.type === "file-multiple"
   );
   const scalars = inputs.filter(
-    (i) => i.type !== "item_list" && i.type !== "file-single" && i.type !== "file-multiple"
+    (i) =>
+      i.type !== "item_list" &&
+      i.type !== "file-single" &&
+      i.type !== "file-multiple" &&
+      i.type !== "header"
   );
 
   for (const inp of scalars) {

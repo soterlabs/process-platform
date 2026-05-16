@@ -473,7 +473,20 @@ export function ConfigPanel({
                               | "dropdown"
                               | "file-single"
                               | "file-multiple"
-                              | "item_list";
+                              | "item_list"
+                              | "header";
+                            if (newType === "header") {
+                              inputs[i] = {
+                                key: input.key,
+                                type: "header",
+                                title: input.title,
+                                defaultValue: input.defaultValue,
+                                visibleExpression: input.visibleExpression,
+                                headerLevel: input.headerLevel ?? "section",
+                              };
+                              update({ inputs });
+                              return;
+                            }
                             if (newType === "file-single" || newType === "file-multiple") {
                               const { subInputs: _s, values: _v, linesFromKey: _l, ...rest } =
                                 input as TemplateStepInput & {
@@ -530,7 +543,25 @@ export function ConfigPanel({
                           <option value="file-single">file (single)</option>
                           <option value="file-multiple">file (multiple)</option>
                           <option value="item_list">Item list (repeating rows)</option>
+                          <option value="header">header (section title)</option>
                         </select>
+                        {input.type === "header" && (
+                          <select
+                            value={input.headerLevel ?? "section"}
+                            onChange={(e) => {
+                              const inputs = [...(d.inputs ?? [])];
+                              inputs[i] = {
+                                ...input,
+                                headerLevel: e.target.value as "section" | "subsection",
+                              };
+                              update({ inputs });
+                            }}
+                            className="mt-1 w-full rounded border border-surface-200 bg-white px-2 py-1 text-xs text-surface-900"
+                          >
+                            <option value="section">section (main)</option>
+                            <option value="subsection">subsection</option>
+                          </select>
+                        )}
                         {input.type === "item_list" && (
                           <div className="mb-1 space-y-2 rounded border border-amber-200 bg-amber-50/50 p-2">
                             <p className="text-[10px] text-surface-600">
@@ -578,6 +609,18 @@ export function ConfigPanel({
                           }}
                           className="w-full rounded border border-surface-200 bg-white px-2 py-1 text-xs text-surface-900"
                         />
+                        {input.type === "header" && (
+                          <input
+                            placeholder="Description (optional HTML)"
+                            value={input.defaultValue ?? ""}
+                            onChange={(e) => {
+                              const inputs = [...(d.inputs ?? [])];
+                              inputs[i] = { ...input, defaultValue: e.target.value || undefined };
+                              update({ inputs });
+                            }}
+                            className="mt-1 w-full rounded border border-surface-200 bg-white px-2 py-1 text-xs text-surface-900"
+                          />
+                        )}
                         <input
                           placeholder="Visible when (e.g. context.step.field)"
                           value={input.visibleExpression ?? ""}

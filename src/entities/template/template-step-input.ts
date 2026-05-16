@@ -12,6 +12,9 @@ export type TemplateStepInput = {
    * fields — a sub may be another `item_list` (stored as a nested array of row objects). Do not
    * use sub key `value`. Rows are contiguous; serialization stops at the first fully empty row;
    * the UI shows one extra empty row to add the next item.
+   *
+   * `header`: display-only section heading; optional `defaultValue` is subtitle HTML. Not stored
+   * in process context. Use `headerLevel` for main sections vs subsections.
    */
   type:
     | "bool"
@@ -23,8 +26,11 @@ export type TemplateStepInput = {
     | "dropdown"
     | "file-single"
     | "file-multiple"
-    | "item_list";
+    | "item_list"
+    | "header";
   title: string;
+  /** When `type === "header"`: `section` (default) or `subsection`. */
+  headerLevel?: "section" | "subsection";
   visibleExpression?: string;
   values?: string[];
   /** When true, displayed as read-only text (resolved from defaultValue). Use for view controls. */

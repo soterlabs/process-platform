@@ -25,6 +25,7 @@ import { isProcessFileRef } from "@/entities/process";
 import type { TemplateStepInput } from "@/entities/template";
 import { hydrateItemListFormState, ItemListEditor } from "./_components/ItemListEditor";
 import { ReadOnlyProcessFileList } from "./_components/ReadOnlyProcessFileList";
+import { SectionHeader } from "./_components/SectionHeader";
 import { StepInputControl } from "./_components/StepInputControl";
 import { fileRefsForResultViewData, resolveReadOnlyFileRefs } from "@/lib/process-file-display";
 
@@ -411,7 +412,7 @@ export default function ProcessStepPage() {
           setFormValues((prev) => {
             const next = { ...prev };
             step.inputs?.forEach((inp) => {
-              if (inp.type === "item_list") return;
+              if (inp.type === "item_list" || inp.type === "header") return;
               if (inp.readOnly) return;
               if (inp.type === "file-single" || inp.type === "file-multiple") return;
               if (inp.key in next) return;
@@ -904,6 +905,36 @@ export default function ProcessStepPage() {
       })
     );
 
+  const visibleInputs =
+    step?.inputs?.filter(
+      (inp) =>
+        (!inp.visibleExpression ||
+          Boolean(
+            process &&
+              evaluate(evaluationContext, inp.visibleExpression, {
+                userPermissions: userPerms,
+                ...clientExpressionProcessOptions(process, processId),
+              })
+          )) &&
+        (inp.type === "header"
+          ? true
+          : inp.readOnly
+            ? inp.type === "file-single" || inp.type === "file-multiple"
+              ? process
+                ? inp.defaultValue
+                  ? shouldShowViewControl(inp.defaultValue, evaluationContext)
+                  : true
+                : false
+              : process
+                ? shouldShowViewControl(inp.defaultValue ?? "", evaluationContext)
+                : true
+            : true)
+    ) ?? [];
+
+  const firstSectionHeaderKey = visibleInputs.find(
+    (inp) => inp.type === "header" && (inp.headerLevel ?? "section") === "section"
+  )?.key;
+
   return (
     <main className="mx-auto max-w-2xl px-6 py-16">
       <Link href="/" className="text-surface-500 hover:text-surface-700">
@@ -918,30 +949,26 @@ export default function ProcessStepPage() {
       <h1 className="mt-6 text-2xl font-semibold text-surface-900">{step?.title}</h1>
       <StepRequiredPermissions permissions={step?.permissions} />
       <form onSubmit={handleSubmit} className="mt-8 space-y-6">
-        {step?.inputs
-          ?.filter(
-            (inp) =>
-              (!inp.visibleExpression ||
-                Boolean(
-                  process &&
-                    evaluate(evaluationContext, inp.visibleExpression, {
-                      userPermissions: userPerms,
-                      ...clientExpressionProcessOptions(process, processId),
-                    })
-                )) &&
-              (inp.readOnly
-                ? inp.type === "file-single" || inp.type === "file-multiple"
-                  ? process
-                    ? inp.defaultValue
-                      ? shouldShowViewControl(inp.defaultValue, evaluationContext)
-                      : true
-                    : false
-                  : process
-                    ? shouldShowViewControl(inp.defaultValue ?? "", evaluationContext)
-                    : true
-                : true)
-          )
-          .map((inp, i) => {
+        {visibleInputs.map((inp, i) => {
+            if (inp.type === "header") {
+              const descriptionHtml = process
+                ? resolveContextTemplate(
+                    inp.defaultValue ?? "",
+                    evaluationContext,
+                    userPerms,
+                    clientExpressionProcessOptions(process, processId)
+                  )
+                : (inp.defaultValue ?? "");
+              return (
+                <SectionHeader
+                  key={inp.key}
+                  title={inp.title}
+                  descriptionHtml={descriptionHtml || undefined}
+                  level={inp.headerLevel ?? "section"}
+                  isFirst={inp.key === firstSectionHeaderKey}
+                />
+              );
+            }
             if (inp.type === "item_list" && !inp.readOnly) {
               return (
                 <ItemListEditor

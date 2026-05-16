@@ -17,7 +17,7 @@ import {
   enqueueSolanaFreezeTxTemplate,
   verifySolanaBridgeFrozenTemplate,
 } from "@/templates/freeze-solana-bridge";
-import { fileUploadExampleTemplate } from "@/templates/file-upload-example";
+import { agentOnboardingIntakeTemplate } from "@/templates/agent-onboarding-intake";
 
 const MONGO_URL = process.env.MONGO_URL ?? "";
 const DB_NAME = "process-platform";
@@ -58,7 +58,7 @@ const SEED_TEMPLATES: Template[] = [
   agentSpellReviewTemplate,
   verifySolanaBridgeFrozenTemplate,
   enqueueSolanaFreezeTxTemplate,
-  fileUploadExampleTemplate,
+  agentOnboardingIntakeTemplate,
 ];
 
 async function ensureInitialTemplates(): Promise<void> {
