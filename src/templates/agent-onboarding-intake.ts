@@ -34,7 +34,7 @@ const COMPLETE = [
   "intake.emergencyResponseAck === true",
   "intake.signers && intake.signers[0] && trim(intake.signers[0].name).length > 0 && trim(intake.signers[0].walletAddress).length > 0",
   "trim(intake.freezerSignerContactName).length > 0",
-  "trim(intake.freezerSignerWalletAddresses).length > 0",
+  "intake.freezerSignerWalletAddresses && intake.freezerSignerWalletAddresses[0] && trim(intake.freezerSignerWalletAddresses[0].address).length > 0",
   "trim(intake.freezerSignerVerificationDetails).length > 0",
   "intake.emergencyContacts && intake.emergencyContacts[0] && trim(intake.emergencyContacts[0].fullName).length > 0 && trim(intake.emergencyContacts[0].email).length > 0 && trim(intake.emergencyContacts[0].telegramSignal).length > 0",
   "trim(intake.agentOrganizationName).length > 0",
@@ -504,8 +504,15 @@ export const agentOnboardingIntakeTemplate: Template = {
         },
         {
           key: "freezerSignerWalletAddresses",
-          type: "string-multiline",
+          type: "item_list",
           title: "Freezer signer wallet addresses (EVM: 0x + 40 hex characters each)",
+          subInputs: [
+            {
+              key: "address",
+              type: "string",
+              title: "Wallet address",
+            },
+          ],
         },
         {
           key: "freezerSignerVerificationDetails",
