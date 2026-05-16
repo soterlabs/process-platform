@@ -26,7 +26,7 @@ const AGENT_SPELL_REVIEW_HANDOFF_RESULT_DATA = [
   "    for (const row of prs) {",
   '      if (!row || typeof row !== "object") continue;',
   "      const r = row;",
-  '      const url = String(r.value ?? r.commit_url ?? "").trim();',
+  '      const url = String(r.commit_url ?? "").trim();',
   "      const has =",
   "        url ||",
   "        r.content_matches_description === true ||",
@@ -126,7 +126,7 @@ const AGENT_SPELL_REVIEW_HANDOFF_RESULT_DATA = [
   "      : [];",
   "    for (const fr of forumRows) {",
   '      if (!fr || typeof fr !== "object") continue;',
-  '      const fUrl = String(fr.value ?? "").trim();',
+      '      const fUrl = String(fr.forum_url ?? "").trim();',
   '      const fTitle = String(fr.post_title ?? "").trim();',
   "      const ft = fr.follows_known_template === true;",
   '      const fcom = String(fr.comment ?? "").trim();',
@@ -245,7 +245,7 @@ const AGENT_SPELL_REVIEW_HANDOFF_RESULT_DATA = [
   "    const addrRows = Array.isArray(cq.address_rows) ? cq.address_rows : [];",
   "    for (const ar of addrRows) {",
   '      if (!ar || typeof ar !== "object") continue;',
-  '      const addr = String(ar.value ?? "").trim();',
+  '      const addr = String(ar.address ?? "").trim();',
   '      const reg = String(ar.registry_label ?? "").trim();',
   '      const src = String(ar.source_url ?? "").trim();',
   "      const m = ar.matches_valid_external_source === true;",
@@ -335,9 +335,9 @@ const AGENT_SPELL_REVIEW_HANDOFF_RESULT_DATA = [
   "    const ncr = Array.isArray(ob.new_contract_rows) ? ob.new_contract_rows : [];",
   "    for (const cr of ncr) {",
   '      if (!cr || typeof cr !== "object") continue;',
-  '      const ex = String(cr.value ?? "").trim();',
+  '      const ex = String(cr.explorer_url ?? "").trim();',
   '      const hd = String(cr.contract_heading ?? "").trim();',
-  '      const hx = String(cr.address_hex ?? "").trim();',
+  '      const hx = String(cr.contract_address ?? "").trim();',
   "      const h = cr.source_explorer_verified === true;",
   "      const g = cr.source_matches_audited_repo === true;",
   "      const cmp = cr.compilation_matches_repo === true;",
@@ -385,7 +385,7 @@ const AGENT_SPELL_REVIEW_HANDOFF_RESULT_DATA = [
   '      lines.push("  ```");',
   "      for (const srow of subs) {",
   '        if (!srow || typeof srow !== "object") continue;',
-  '        const sp = String(srow.value ?? "").trim();',
+        '        const sp = String(srow.import_path ?? "").trim();',
   '        const sc = String(srow.commit ?? "").trim();',
   "        if (sp || sc) {",
   '          lines.push("  " + (sc && sp ? sc + " " + sp : sp || sc));',
@@ -394,7 +394,7 @@ const AGENT_SPELL_REVIEW_HANDOFF_RESULT_DATA = [
   '      lines.push("  ```");',
   "      for (const srow of subs) {",
   '        if (!srow || typeof srow !== "object") continue;',
-  '        const sp = String(srow.value ?? "").trim();',
+        '        const sp = String(srow.import_path ?? "").trim();',
   '        const cRaw = String(srow.commit ?? "").trim();',
   '        const depCom = String(srow.commit_match_deployment_comment ?? "").trim();',
   "        const aud = srow.commit_match === true;",
@@ -443,7 +443,7 @@ const AGENT_SPELL_REVIEW_HANDOFF_RESULT_DATA = [
   "      const drs = Array.isArray(dp.dependency_rows) ? dp.dependency_rows : [];",
   "      for (const dr of drs) {",
   '        if (!dr || typeof dr !== "object") continue;',
-  '        const u = String(dr.value ?? "").trim();',
+  '        const u = String(dr.source_url ?? "").trim();',
   '        const lead = String(dr.dependency_lead ?? "").trim();',
   "        const has = u || lead || dr.dep_matches_audited === true || dr.dep_audit_na === true || dr.dep_matches_deployed === true || dr.dep_deploy_strike === true;",
   '        const com = String(dr.comment ?? "").trim();',
@@ -485,7 +485,7 @@ const AGENT_SPELL_REVIEW_HANDOFF_RESULT_DATA = [
   "    const vdPrecRows = Array.isArray(vd.precision_variable_rows) ? vd.precision_variable_rows : [];",
   "    for (const pr of vdPrecRows) {",
   '      if (!pr || typeof pr !== "object") continue;',
-  '      const vName = String(pr.value ?? "").trim();',
+  '      const vName = String(pr.variable_name ?? "").trim();',
   '      const ptxt = String(pr.precision_text ?? "").trim();',
   '      const purl = String(pr.precision_url ?? "").trim();',
   "      const ok = pr.precision_matches_source === true;",
@@ -566,7 +566,7 @@ const AGENT_SPELL_REVIEW_HANDOFF_RESULT_DATA = [
   "    const trows = Array.isArray(tt.spell_action_test_rows) ? tt.spell_action_test_rows : [];",
   "    for (const tr of trows) {",
   '      if (!tr || typeof tr !== "object") continue;',
-  '      const act = String(tr.value ?? "").trim();',
+  '      const act = String(tr.action_description ?? "").trim();',
   "      const uok = tr.unit_test_value_changed === true;",
   "      const eok = tr.e2e_test_sufficient === true;",
   '      const uc = String(tr.unit_test_comment ?? "").trim();',
@@ -692,6 +692,11 @@ export const agentSpellReviewTemplate: Template = {
           title: "List every commit since the last externally reviewed spell (e.g. https://github.com/grove-labs/grove-spells/commit/da4e38f113c55fcc083fdafe2e8dd39fc0e9f362):",
           subInputs: [
             {
+              key: "commit_url",
+              type: "string",
+              title: "Commit URL",
+            },
+            {
               key: "content_matches_description",
               type: "bool",
               title: "Content matches description",
@@ -796,6 +801,11 @@ export const agentSpellReviewTemplate: Template = {
           title:
             "List every forum post proposing changes for this particular Agent & target date (e.g. https://forum.skyeco.com/t/proposed-changes-to-pattern-for-upcoming-spell/27835):",
           subInputs: [
+            {
+              key: "forum_url",
+              type: "string",
+              title: "Forum post URL",
+            },
             {
               key: "post_title",
               type: "string",
@@ -926,6 +936,11 @@ export const agentSpellReviewTemplate: Template = {
           title: "List every address used in the spell (defined as constant or fetched from the registry repo (e.g. 0x80ac24aA929eaF5013f6436cdA2a7ba190f5Cc0b):",
           subInputs: [
             {
+              key: "address",
+              type: "string",
+              title: "Address (e.g. 0x80ac24aA929eaF5013f6436cdA2a7ba190f5Cc0b)",
+            },
+            {
               key: "registry_label",
               type: "string",
               title: "Name (e.g. [Ethereum.SYRUP_USDC])",
@@ -1034,6 +1049,16 @@ export const agentSpellReviewTemplate: Template = {
             title: "Heading (e.g. [Ethereum] `ALLOCATOR_VAULT`)",
           },
           {
+            key: "contract_address",
+            type: "string",
+            title: "Contract address",
+          },
+          {
+            key: "explorer_url",
+            type: "string",
+            title: "Explorer URL",
+          },
+          {
             key: "source_explorer_verified",
             type: "bool",
             title: "Source verified on Etherscan / primary explorer.",
@@ -1086,6 +1111,11 @@ export const agentSpellReviewTemplate: Template = {
         type: "item_list",
         title: "List every submodule or any other imported code used in this spell (e.g. lib/dss-allocator): ",
         subInputs: [
+          {
+            key: "import_path",
+            type: "string",
+            title: "Import path (e.g. lib/dss-allocator)",
+          },
           {
             key: "commit",
             type: "string",
@@ -1164,6 +1194,11 @@ export const agentSpellReviewTemplate: Template = {
         type: "item_list",
         title: "List every variable using precision (`e18`, `e6`, `e...`, `WAD`, `RAY`, `RAD`, etc):",
         subInputs: [
+          {
+            key: "variable_name",
+            type: "string",
+            title: "Variable name",
+          },
           {
             key: "precision_text",
             type: "string",
@@ -1353,6 +1388,11 @@ export const agentSpellReviewTemplate: Template = {
         type: "item_list",
         title: "List each spell action (each line of code which changes a storage):",
         subInputs: [
+          {
+            key: "action_description",
+            type: "string",
+            title: "Spell action (line of code that changes storage)",
+          },
           {
             key: "unit_test_value_changed",
             type: "bool",

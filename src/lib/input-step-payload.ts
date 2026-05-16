@@ -1,10 +1,41 @@
 import { isProcessFileRef, type ProcessFileRef } from "@/entities/process";
 import type { TemplateStepInput } from "@/entities/template";
 
-/** Fixed JSON property for the item list’s primary string per row (e.g. commit URL). */
-export const ITEM_LIST_PRIMARY_ROW_KEY = "value";
-
 export type ItemListPath = readonly (string | number)[];
+
+/** Form-only meta: how many rows to render for a list at `listPath` (not persisted to process context). */
+export function formKeyForItemListRowCount(listPath: ItemListPath): string {
+  return JSON.stringify(["il-meta", ...listPath, "rowCount"]);
+}
+
+export function getItemListRowCount(
+  listPath: ItemListPath,
+  formValues: Record<string, boolean | string>
+): number {
+  const k = formKeyForItemListRowCount(listPath);
+  const raw = formValues[k];
+  if (raw === undefined || raw === true || raw === false) return 0;
+  const n = Number.parseInt(String(raw), 10);
+  return Number.isInteger(n) && n >= 0 ? n : 0;
+}
+
+function setItemListRowCount(
+  listPath: ItemListPath,
+  formValues: Record<string, boolean | string>,
+  count: number
+): Record<string, boolean | string> {
+  const k = formKeyForItemListRowCount(listPath);
+  return { ...formValues, [k]: String(Math.max(0, count)) };
+}
+
+/** Append one empty row at the end of the list. */
+export function addItemListRow(
+  listPath: ItemListPath,
+  formValues: Record<string, boolean | string>
+): Record<string, boolean | string> {
+  const count = getItemListRowCount(listPath, formValues);
+  return setItemListRowCount(listPath, formValues, count + 1);
+}
 
 function numberFromFormString(raw: string): number | null {
   const t = raw.trim();
@@ -115,12 +146,6 @@ function serializeInputValue(
   return raw ?? "";
 }
 
-const primaryLineField = (): TemplateStepInput => ({
-  key: ITEM_LIST_PRIMARY_ROW_KEY,
-  type: "string",
-  title: "",
-});
-
 function cellIsNonEmptyScalar(
   inp: TemplateStepInput,
   raw: boolean | string | undefined
@@ -135,8 +160,8 @@ function cellIsNonEmptyScalar(
 }
 
 /**
- * True when the primary line, every writable scalar sub-field, and every nested `item_list` column
- * (any row) are empty for this row.
+ * True when every writable scalar sub-field and every nested `item_list` column (any row) are
+ * empty for this row.
  */
 export function itemListRowIsEmpty(
   listInput: TemplateStepInput & { type: "item_list" },
@@ -145,15 +170,14 @@ export function itemListRowIsEmpty(
   formValues: Record<string, boolean | string>
 ): boolean {
   const subs = listInput.subInputs ?? [];
-  const pk = formKeyForItemListCell(listPath, rowIndex, ITEM_LIST_PRIMARY_ROW_KEY);
-  if (cellIsNonEmptyScalar(primaryLineField(), formValues[pk])) return false;
 
   for (const sub of subs) {
-    if (sub.readOnly || sub.key === ITEM_LIST_PRIMARY_ROW_KEY) continue;
+    if (sub.readOnly) continue;
     if (sub.type === "item_list") {
       const nested = sub as TemplateStepInput & { type: "item_list" };
       const nestedPath = [...listPath, rowIndex, sub.key];
-      for (let nr = 0; nr < 500; nr++) {
+      const nestedCount = getItemListRowCount(nestedPath, formValues);
+      for (let nr = 0; nr < nestedCount; nr++) {
         if (!itemListRowIsEmpty(nested, nestedPath, nr, formValues)) return false;
       }
       continue;
@@ -164,32 +188,13 @@ export function itemListRowIsEmpty(
   return true;
 }
 
-/**
- * How many rows to render: every non-empty row plus one trailing empty row for the next item
- * (minimum 1).
- */
+/** How many rows to render (explicit count from form meta). */
 export function itemListRenderRowCount(
-  listInput: TemplateStepInput & { type: "item_list" },
+  _listInput: TemplateStepInput & { type: "item_list" },
   listPath: ItemListPath,
   formValues: Record<string, boolean | string>
 ): number {
-  let lastNonEmpty = -1;
-  for (let r = 0; r < 500; r++) {
-    if (!itemListRowIsEmpty(listInput, listPath, r, formValues)) lastNonEmpty = r;
-  }
-  return Math.max(1, lastNonEmpty + 2);
-}
-
-function itemListLastFilledRowIndex(
-  listInput: TemplateStepInput & { type: "item_list" },
-  listPath: ItemListPath,
-  formValues: Record<string, boolean | string>
-): number {
-  let high = -1;
-  for (let r = 0; r < 500; r++) {
-    if (!itemListRowIsEmpty(listInput, listPath, r, formValues)) high = r;
-  }
-  return high;
+  return getItemListRowCount(listPath, formValues);
 }
 
 export function snapshotRowAtList(
@@ -241,24 +246,24 @@ function deleteRowSubtree(
  * Remove one item row: shift following rows up (including nested form keys).
  */
 export function removeItemListRow(
-  listInput: TemplateStepInput & { type: "item_list" },
+  _listInput: TemplateStepInput & { type: "item_list" },
   listPath: ItemListPath,
   removedIndex: number,
   formValues: Record<string, boolean | string>
 ): Record<string, boolean | string> {
-  const high = itemListLastFilledRowIndex(listInput, listPath, formValues);
-  if (removedIndex < 0 || removedIndex > high || high < 0) return { ...formValues };
+  const rowCount = getItemListRowCount(listPath, formValues);
+  if (removedIndex < 0 || removedIndex >= rowCount) return { ...formValues };
 
   const next = { ...formValues };
   deleteRowSubtree(next, listPath, removedIndex);
 
-  for (let r = removedIndex + 1; r <= high; r++) {
+  for (let r = removedIndex + 1; r < rowCount; r++) {
     const snap = snapshotRowAtList(next, listPath, r);
     deleteRowSubtree(next, listPath, r);
     applySnapshotToRow(next, listPath, r - 1, snap);
   }
 
-  return next;
+  return setItemListRowCount(listPath, next, rowCount - 1);
 }
 
 /**
@@ -302,18 +307,13 @@ function serializeItemListAtPath(
 ): unknown[] {
   const subs = list.subInputs ?? [];
   const out: Record<string, unknown>[] = [];
-  const lineInp = primaryLineField();
+  const rowCount = getItemListRowCount(listPath, formValues);
 
-  for (let rowIndex = 0; rowIndex < 500; rowIndex++) {
-    if (itemListRowIsEmpty(list, listPath, rowIndex, formValues)) break;
+  for (let rowIndex = 0; rowIndex < rowCount; rowIndex++) {
+    if (itemListRowIsEmpty(list, listPath, rowIndex, formValues)) continue;
     const row: Record<string, unknown> = {};
-    const vfk = formKeyForItemListCell(listPath, rowIndex, ITEM_LIST_PRIMARY_ROW_KEY);
-    row[ITEM_LIST_PRIMARY_ROW_KEY] = serializeInputValue(
-      lineInp,
-      vfk in formValues ? formValues[vfk] : undefined
-    );
     for (const sub of subs) {
-      if (sub.readOnly || sub.key === ITEM_LIST_PRIMARY_ROW_KEY) continue;
+      if (sub.readOnly) continue;
       if (sub.type === "item_list") {
         const nested = sub as TemplateStepInput & { type: "item_list" };
         row[sub.key] = serializeItemListAtPath(nested, [...listPath, rowIndex, sub.key], formValues);

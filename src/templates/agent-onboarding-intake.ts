@@ -344,16 +344,19 @@ export const agentOnboardingIntakeTemplate: Template = {
               key: "domain",
               type: "string",
               title: "Domain",
+              placeholder: "Ethereum Mainnet",
             },
             {
               key: "target",
               type: "string",
               title: "Target",
+              placeholder: "Maple Syrup USDC",
             },
             {
               key: "volumeUsdM",
               type: "number",
               title: "Volume ($M)",
+              placeholder: "100",
             },
           ],
         },
@@ -452,8 +455,7 @@ export const agentOnboardingIntakeTemplate: Template = {
           type: "header",
           title: "Signers and Wallets",
           headerLevel: "subsection",
-          defaultValue:
-            "Add one row per signer. Use the extra row at the bottom to add more signers.",
+          defaultValue: "Add one row per signer using the button below the list.",
         },
         {
           key: "signers",

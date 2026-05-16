@@ -143,6 +143,7 @@ export function StepInputControl({
           inputMode="decimal"
           autoComplete="off"
           pattern="[-0-9.]*"
+          placeholder={inp.placeholder}
           value={String(formValues[formKey] ?? "")}
           onChange={(e) => {
             const v = sanitizeNumericFormInput(e.target.value);
@@ -166,6 +167,7 @@ export function StepInputControl({
         <textarea
           id={htmlId}
           rows={4}
+          placeholder={inp.placeholder}
           value={String(formValues[formKey] ?? "")}
           onChange={(e) => {
             onValuesChange({ ...formValues, [formKey]: e.target.value });
@@ -219,6 +221,7 @@ export function StepInputControl({
       <input
         id={htmlId}
         type="text"
+        placeholder={inp.placeholder}
         value={String(formValues[formKey] ?? "")}
         onChange={(e) => {
           onValuesChange({ ...formValues, [formKey]: e.target.value });

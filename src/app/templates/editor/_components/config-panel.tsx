@@ -4,6 +4,37 @@ import type { Node } from "@xyflow/react";
 import type { TemplateStepInput } from "@/entities/template";
 import type { FlowNodeData } from "../_lib/template-flow";
 
+function inputTypeSupportsPlaceholder(type: TemplateStepInput["type"]): boolean {
+  return (
+    type === "string" ||
+    type === "string-multiline" ||
+    type === "number" ||
+    type === "decimal_string"
+  );
+}
+
+function PlaceholderFieldEditor({
+  value,
+  onChange,
+  className = "w-full rounded border border-surface-200 px-2 py-1 text-xs text-surface-900",
+}: {
+  value?: string;
+  onChange: (placeholder: string | undefined) => void;
+  className?: string;
+}) {
+  return (
+    <input
+      placeholder="Input placeholder (optional)"
+      value={value ?? ""}
+      onChange={(e) => {
+        const t = e.target.value;
+        onChange(t.trim() ? t : undefined);
+      }}
+      className={className}
+    />
+  );
+}
+
 function ItemListSubFieldsEditor({
   columns,
   onChange,
@@ -120,6 +151,16 @@ function ItemListSubFieldsEditor({
             }}
             className="w-full rounded border border-surface-200 px-2 py-1 text-xs text-surface-900"
           />
+          {inputTypeSupportsPlaceholder(sub.type) && (
+            <PlaceholderFieldEditor
+              value={sub.placeholder}
+              onChange={(placeholder) => {
+                const subInputs = [...columns];
+                subInputs[si] = { ...sub, placeholder };
+                onChange(subInputs);
+              }}
+            />
+          )}
           <button
             type="button"
             onClick={() => onChange(columns.filter((_, j) => j !== si))}
@@ -565,9 +606,8 @@ export function ConfigPanel({
                         {input.type === "item_list" && (
                           <div className="mb-1 space-y-2 rounded border border-amber-200 bg-amber-50/50 p-2">
                             <p className="text-[10px] text-surface-600">
-                              Each row always stores a primary string at the fixed key <code className="font-mono">value</code> (edited
-                              under this list’s title). Sub-keys here must not be <code className="font-mono">value</code>. An extra
-                              empty row is always shown so users can add the next item. Sub-fields may be nested item lists.
+                              Each row is an object with only the sub-field keys below. Users add rows with a button and
+                              remove them per row. Sub-fields may be nested item lists.
                             </p>
                             <div className="text-[10px] font-medium text-surface-600">Sub-fields per row</div>
                             <ItemListSubFieldsEditor
@@ -609,6 +649,17 @@ export function ConfigPanel({
                           }}
                           className="w-full rounded border border-surface-200 bg-white px-2 py-1 text-xs text-surface-900"
                         />
+                        {inputTypeSupportsPlaceholder(input.type) && (
+                          <PlaceholderFieldEditor
+                            value={input.placeholder}
+                            onChange={(placeholder) => {
+                              const inputs = [...(d.inputs ?? [])];
+                              inputs[i] = { ...input, placeholder };
+                              update({ inputs });
+                            }}
+                            className="mt-1 w-full rounded border border-surface-200 bg-white px-2 py-1 text-xs text-surface-900"
+                          />
+                        )}
                         {input.type === "header" && (
                           <input
                             placeholder="Description (optional HTML)"
