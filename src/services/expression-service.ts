@@ -107,13 +107,24 @@ function walkAndValidate(node: EstreeExpression): void {
       break;
     }
     case "BinaryExpression":
-    case "LogicalExpression":
-    case "ConditionalExpression": {
-      const n = node as Record<string, EstreeExpression>;
+    case "LogicalExpression": {
+      const n = node as EstreeExpression & {
+        left: EstreeExpression;
+        right: EstreeExpression;
+      };
       walkAndValidate(n.left);
-      if (n.right) walkAndValidate(n.right);
-      if (n.consequent) walkAndValidate(n.consequent);
-      if (n.alternate) walkAndValidate(n.alternate);
+      walkAndValidate(n.right);
+      break;
+    }
+    case "ConditionalExpression": {
+      const n = node as EstreeExpression & {
+        test: EstreeExpression;
+        consequent: EstreeExpression;
+        alternate: EstreeExpression;
+      };
+      walkAndValidate(n.test);
+      walkAndValidate(n.consequent);
+      walkAndValidate(n.alternate);
       break;
     }
     case "UnaryExpression":
