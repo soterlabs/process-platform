@@ -18,6 +18,7 @@ import {
 import { expressionEvaluateOptionsFromProcess } from "@/lib/expression-process-context";
 import { postSlackChannelNotification } from "@/services/slack-notify-service";
 import { runScriptTemplateStep } from "@/services/script-step-runner";
+import { processFileStorage } from "@/services/process-files";
 import { storageService } from "@/services/storage";
 
 function pushStep(process: Process, stepKey: string): void {
@@ -99,6 +100,11 @@ export const executionService = {
   async deleteProcessById(processId: string): Promise<void> {
     const removed = await storageService.deleteProcess(processId);
     if (!removed) throw new Error(`Process not found: ${processId}`);
+    try {
+      await processFileStorage.deleteAllForProcess(processId);
+    } catch (e) {
+      console.error("[execution] process file cleanup", e);
+    }
   },
 
   async startProcess(

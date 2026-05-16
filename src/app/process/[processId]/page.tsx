@@ -13,12 +13,20 @@ import {
   LIMIT_SUBSCRIBE,
   makeAddressKey,
 } from "@/lib/eth-expression-vm";
-import { buildInputStepContextPayload, numberContextToFormString } from "@/lib/input-step-payload";
+import {
+  buildInputStepContextPayload,
+  numberContextToFormString,
+  parseFileFieldFromContext,
+} from "@/lib/input-step-payload";
 import { buildCurrentProcessExpressionContext } from "@/lib/expression-process-context";
 import { evaluate, type EvaluateExpressionOptions } from "@/services/expression-service";
+import type { ProcessFileRef } from "@/entities/process";
+import { isProcessFileRef } from "@/entities/process";
 import type { TemplateStepInput } from "@/entities/template";
 import { hydrateItemListFormState, ItemListEditor } from "./_components/ItemListEditor";
+import { ReadOnlyProcessFileList } from "./_components/ReadOnlyProcessFileList";
 import { StepInputControl } from "./_components/StepInputControl";
+import { fileRefsForResultViewData, resolveReadOnlyFileRefs } from "@/lib/process-file-display";
 
 type CurrentStep = {
   key: string;
@@ -35,11 +43,12 @@ function mergeLiveStepContextSlice(
   processContext: Record<string, unknown>,
   stepKey: string,
   step: CurrentStep,
-  formValues: Record<string, boolean | string>
+  formValues: Record<string, boolean | string>,
+  fileFieldValues: Record<string, ProcessFileRef | ProcessFileRef[] | null>
 ): Record<string, unknown> {
   const base = { ...processContext };
   const cur = (base[stepKey] as Record<string, unknown>) ?? {};
-  const slice = buildInputStepContextPayload(step.inputs ?? [], formValues);
+  const slice = buildInputStepContextPayload(step.inputs ?? [], formValues, fileFieldValues);
   return { ...base, [stepKey]: { ...cur, ...slice } };
 }
 
@@ -101,6 +110,10 @@ function contextValueToDisplayString(val: unknown): string {
   if (typeof val === "string") return val;
   if (typeof val === "boolean") return val ? "Yes" : "No";
   if (typeof val === "number") return Number.isFinite(val) ? String(val) : "";
+  if (isProcessFileRef(val)) return val.name;
+  if (Array.isArray(val) && val.every(isProcessFileRef)) {
+    return val.map((f) => f.name).join(", ");
+  }
   if (typeof val === "object") return JSON.stringify(val);
   return String(val);
 }
@@ -341,9 +354,16 @@ export default function ProcessStepPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [formValues, setFormValues] = useState<Record<string, boolean | string>>({});
+  const [fileFieldValues, setFileFieldValues] = useState<
+    Record<string, ProcessFileRef | ProcessFileRef[] | null>
+  >({});
   const [submitting, setSubmitting] = useState(false);
   const [confirmationMessage, setConfirmationMessage] = useState<string | null>(null);
   const updateStepContextTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const formValuesRef = useRef(formValues);
+  const fileFieldValuesRef = useRef(fileFieldValues);
+  formValuesRef.current = formValues;
+  fileFieldValuesRef.current = fileFieldValues;
 
   const fetchProcess = useCallback(async () => {
     const res = await authFetch(`/api/process/${processId}`, {
@@ -369,6 +389,7 @@ export default function ProcessStepPage() {
         if ("error" in result) {
           setError(result.error ?? null);
           setProcess(null);
+          setFileFieldValues({});
           return;
         }
         const proc = result.process;
@@ -378,6 +399,13 @@ export default function ProcessStepPage() {
         const stepContext = currentProcessStep
           ? (proc.context[currentProcessStep.stepKey] as Record<string, unknown>)
           : undefined;
+        const fileInit: Record<string, ProcessFileRef | ProcessFileRef[] | null> = {};
+        step?.inputs?.forEach((inp) => {
+          if (inp.type !== "file-single" && inp.type !== "file-multiple") return;
+          const raw = stepContext?.[inp.key];
+          fileInit[inp.key] = parseFileFieldFromContext(inp, raw);
+        });
+        setFileFieldValues(fileInit);
         if (step?.inputs?.length) {
           const context = proc.context;
           setFormValues((prev) => {
@@ -385,6 +413,7 @@ export default function ProcessStepPage() {
             step.inputs?.forEach((inp) => {
               if (inp.type === "item_list") return;
               if (inp.readOnly) return;
+              if (inp.type === "file-single" || inp.type === "file-multiple") return;
               if (inp.key in next) return;
               const raw = stepContext?.[inp.key];
               if (raw !== undefined && raw !== null) {
@@ -466,10 +495,15 @@ export default function ProcessStepPage() {
       if (!process || !step || !currentProcessStep) return;
       const hasAnything = (step.inputs?.length ?? 0) > 0;
       if (!hasAnything) return;
+      formValuesRef.current = nextFormValues;
       if (updateStepContextTimerRef.current) clearTimeout(updateStepContextTimerRef.current);
       updateStepContextTimerRef.current = setTimeout(async () => {
         updateStepContextTimerRef.current = null;
-        const payload = buildInputStepContextPayload(step.inputs ?? [], nextFormValues);
+        const payload = buildInputStepContextPayload(
+          step.inputs ?? [],
+          formValuesRef.current,
+          fileFieldValuesRef.current
+        );
         if (Object.keys(payload).length === 0) return;
         try {
           const res = await authFetch(
@@ -521,7 +555,13 @@ export default function ProcessStepPage() {
     if (completeExpr) {
       const ctx = process
         ? step?.key
-          ? mergeLiveStepContextSlice(process.context, step.key, step, formValues)
+          ? mergeLiveStepContextSlice(
+              process.context,
+              step.key,
+              step,
+              formValues,
+              fileFieldValues
+            )
           : process.context
         : {};
       if (
@@ -536,7 +576,11 @@ export default function ProcessStepPage() {
     }
     setSubmitting(true);
     try {
-      const payload = buildInputStepContextPayload(step.inputs ?? [], formValues);
+      const payload = buildInputStepContextPayload(
+        step.inputs ?? [],
+        formValues,
+        fileFieldValues
+      );
       const res = await authFetch(
         `/api/process/${processId}/steps/${encodeURIComponent(currentProcessStep.id)}/complete`,
         {
@@ -686,6 +730,18 @@ export default function ProcessStepPage() {
               Result
             </h2>
             {resolvedResultViewControls.map((vc, i) => {
+              const fileRefs = fileRefsForResultViewData(vc.data, process.context);
+              if (fileRefs !== null) {
+                return (
+                  <div
+                    key={`${vc.data}-${vc.title}-${i}`}
+                    className="rounded-xl border border-surface-200 bg-surface-50 px-4 py-4"
+                  >
+                    <div className="text-sm font-medium text-surface-600">{vc.title}</div>
+                    <ReadOnlyProcessFileList processId={process.processId} refs={fileRefs} />
+                  </div>
+                );
+              }
               const display = resolveContextTemplate(
                 vc.data,
                 process.context,
@@ -827,7 +883,13 @@ export default function ProcessStepPage() {
   /** Merge live form values into the current step for expressions / readOnly views. */
   const evaluationContext = process
     ? step?.key
-      ? mergeLiveStepContextSlice(process.context, step.key, step, formValues)
+      ? mergeLiveStepContextSlice(
+          process.context,
+          step.key,
+          step,
+          formValues,
+          fileFieldValues
+        )
       : process.context
     : {};
 
@@ -868,9 +930,15 @@ export default function ProcessStepPage() {
                     })
                 )) &&
               (inp.readOnly
-                ? process
-                  ? shouldShowViewControl(inp.defaultValue ?? "", evaluationContext)
-                  : true
+                ? inp.type === "file-single" || inp.type === "file-multiple"
+                  ? process
+                    ? inp.defaultValue
+                      ? shouldShowViewControl(inp.defaultValue, evaluationContext)
+                      : true
+                    : false
+                  : process
+                    ? shouldShowViewControl(inp.defaultValue ?? "", evaluationContext)
+                    : true
                 : true)
           )
           .map((inp, i) => {
@@ -882,6 +950,7 @@ export default function ProcessStepPage() {
                   listPath={[inp.key]}
                   formValues={formValues}
                   onFormValuesChange={(next) => {
+                    formValuesRef.current = next;
                     setFormValues(next);
                     scheduleStepContextUpdate(next);
                   }}
@@ -895,6 +964,22 @@ export default function ProcessStepPage() {
               );
             }
             if (inp.readOnly) {
+              if (
+                (inp.type === "file-single" || inp.type === "file-multiple") &&
+                process &&
+                step
+              ) {
+                const refs = resolveReadOnlyFileRefs(inp, evaluationContext, step.key);
+                return (
+                  <div
+                    key={`${inp.key}-${i}`}
+                    className="rounded-xl border border-surface-200 bg-surface-50 px-4 py-4"
+                  >
+                    <div className="text-sm font-medium text-surface-600">{inp.title}</div>
+                    <ReadOnlyProcessFileList processId={process.processId} refs={refs} />
+                  </div>
+                );
+              }
               return (
                 <div
                   key={`${inp.key}-${i}`}
@@ -933,9 +1018,21 @@ export default function ProcessStepPage() {
                   htmlId={inp.key}
                   formValues={formValues}
                   onValuesChange={(next) => {
+                    formValuesRef.current = next;
                     setFormValues(next);
                     scheduleStepContextUpdate(next);
                   }}
+                  fileValues={fileFieldValues}
+                  onFileValuesChange={(fieldKey, next) => {
+                    setFileFieldValues((prev) => {
+                      const merged = { ...prev, [fieldKey]: next };
+                      fileFieldValuesRef.current = merged;
+                      return merged;
+                    });
+                    scheduleStepContextUpdate(formValuesRef.current);
+                  }}
+                  processId={process!.processId}
+                  currentStepId={getCurrentProcessStepFromState(process!)!.id}
                 />
               </div>
             );

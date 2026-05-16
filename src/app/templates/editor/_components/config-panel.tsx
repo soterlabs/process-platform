@@ -471,7 +471,20 @@ export function ConfigPanel({
                               | "decimal_string"
                               | "datetime"
                               | "dropdown"
+                              | "file-single"
+                              | "file-multiple"
                               | "item_list";
+                            if (newType === "file-single" || newType === "file-multiple") {
+                              const { subInputs: _s, values: _v, linesFromKey: _l, ...rest } =
+                                input as TemplateStepInput & {
+                                  subInputs?: unknown;
+                                  values?: unknown;
+                                  linesFromKey?: unknown;
+                                };
+                              inputs[i] = { ...rest, type: newType };
+                              update({ inputs });
+                              return;
+                            }
                             if (newType === "item_list") {
                               inputs[i] = {
                                 key: input.key,
@@ -514,6 +527,8 @@ export function ConfigPanel({
                           <option value="decimal_string">decimal string (exact text)</option>
                           <option value="bool">bool</option>
                           <option value="dropdown">dropdown</option>
+                          <option value="file-single">file (single)</option>
+                          <option value="file-multiple">file (multiple)</option>
                           <option value="item_list">Item list (repeating rows)</option>
                         </select>
                         {input.type === "item_list" && (

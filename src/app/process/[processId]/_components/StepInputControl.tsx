@@ -1,9 +1,12 @@
 "use client";
 
+import type { ProcessFileRef } from "@/entities/process";
+import { isProcessFileRef } from "@/entities/process";
 import type { TemplateStepInput } from "@/entities/template";
 import { numberContextToFormString } from "@/lib/input-step-payload";
 import { sanitizeNumericFormInput } from "@/lib/numeric-field";
 import { DateTimePicker } from "./DateTimePicker";
+import { ProcessFileField } from "./ProcessFileField";
 
 type Props = {
   inp: TemplateStepInput;
@@ -13,6 +16,10 @@ type Props = {
   onValuesChange: (next: Record<string, boolean | string>) => void;
   /** Omit visible field title (e.g. item-list rows where the title is shown once above the list). */
   hideTitle?: boolean;
+  fileValues?: Record<string, ProcessFileRef | ProcessFileRef[] | null>;
+  onFileValuesChange?: (fieldKey: string, next: ProcessFileRef | ProcessFileRef[] | null) => void;
+  processId?: string;
+  currentStepId?: string;
 };
 
 export function StepInputControl({
@@ -22,9 +29,42 @@ export function StepInputControl({
   formValues,
   onValuesChange,
   hideTitle = false,
+  fileValues,
+  onFileValuesChange,
+  processId,
+  currentStepId,
 }: Props) {
   if (inp.type === "item_list") {
     return null;
+  }
+  if (inp.type === "file-single" || inp.type === "file-multiple") {
+    if (!processId || !currentStepId || !onFileValuesChange) {
+      return (
+        <p className="text-sm text-red-600">
+          File fields require process and step context (configuration error).
+        </p>
+      );
+    }
+    const raw = fileValues?.[formKey];
+    const singleValue =
+      inp.type === "file-single"
+        ? isProcessFileRef(raw)
+          ? raw
+          : null
+        : null;
+    const multiValue = inp.type === "file-multiple" ? (Array.isArray(raw) ? raw : []) : [];
+    return (
+      <ProcessFileField
+        kind={inp.type}
+        title={inp.title}
+        htmlId={htmlId}
+        hideTitle={hideTitle}
+        processId={processId}
+        stepId={currentStepId}
+        value={inp.type === "file-single" ? singleValue : multiValue}
+        onChange={(next) => onFileValuesChange(formKey, next)}
+      />
+    );
   }
   if (inp.type === "bool") {
     return (
@@ -199,6 +239,7 @@ export function seedFormValueToString(v: unknown): string {
 }
 
 export function expansionFieldInitialFormValue(inp: TemplateStepInput, raw: unknown): boolean | string {
+  if (inp.type === "file-single" || inp.type === "file-multiple") return "";
   if (inp.type === "bool") return Boolean(raw);
   if (inp.type === "number") return numberContextToFormString(raw);
   if (inp.type === "decimal_string") return typeof raw === "string" ? raw : "";

@@ -17,6 +17,7 @@ import {
   enqueueSolanaFreezeTxTemplate,
   verifySolanaBridgeFrozenTemplate,
 } from "@/templates/freeze-solana-bridge";
+import { fileUploadExampleTemplate } from "@/templates/file-upload-example";
 import type { IStorageService } from "./interface";
 
 const STORE_DIR = join(process.cwd(), ".process-platform");
@@ -42,6 +43,7 @@ function seedTemplatesRecord(): Record<string, Template> {
     [agentSpellReviewTemplate.key]: { ...agentSpellReviewTemplate, updatedAt: now },
     [verifySolanaBridgeFrozenTemplate.key]: { ...verifySolanaBridgeFrozenTemplate, updatedAt: now },
     [enqueueSolanaFreezeTxTemplate.key]: { ...enqueueSolanaFreezeTxTemplate, updatedAt: now },
+    [fileUploadExampleTemplate.key]: { ...fileUploadExampleTemplate, updatedAt: now },
   };
 }
 

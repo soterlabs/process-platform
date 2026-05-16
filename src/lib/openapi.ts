@@ -237,5 +237,66 @@ export const openApiSpec = {
         },
       },
     },
+    "/api/process/{id}/files": {
+      post: {
+        summary: "Upload process file",
+        description:
+          "Multipart form field `file`. Requires processes:write and authorization for `stepId`. Response JSON includes `file` metadata (kind process_file) to store in step context.",
+        parameters: [
+          { name: "id", in: "path", required: true, schema: { type: "string" } },
+          { name: "stepId", in: "query", required: true, schema: { type: "string" } },
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            "multipart/form-data": {
+              schema: {
+                type: "object",
+                properties: { file: { type: "string", format: "binary" } },
+              },
+            },
+          },
+        },
+        responses: {
+          "200": { description: "JSON body with file ref" },
+          "400": { description: "Bad request" },
+          "401": { description: "Unauthorized" },
+          "403": { description: "Forbidden" },
+          "413": { description: "File too large" },
+          "500": { description: "Server error" },
+        },
+      },
+    },
+    "/api/process/{id}/files/{fileId}": {
+      get: {
+        summary: "Download process file",
+        description:
+          "Requires processes:read. Succeeds only if the file id is referenced somewhere in the process context JSON.",
+        parameters: [
+          { name: "id", in: "path", required: true, schema: { type: "string" } },
+          { name: "fileId", in: "path", required: true, schema: { type: "string" } },
+        ],
+        responses: {
+          "200": { description: "File bytes" },
+          "404": { description: "Process or file not found" },
+          "401": { description: "Unauthorized" },
+          "403": { description: "Forbidden" },
+        },
+      },
+      delete: {
+        summary: "Delete uploaded file",
+        description: "Requires processes:write, `stepId` query, and step authorization.",
+        parameters: [
+          { name: "id", in: "path", required: true, schema: { type: "string" } },
+          { name: "fileId", in: "path", required: true, schema: { type: "string" } },
+          { name: "stepId", in: "query", required: true, schema: { type: "string" } },
+        ],
+        responses: {
+          "200": { description: "Deleted" },
+          "401": { description: "Unauthorized" },
+          "403": { description: "Forbidden" },
+        },
+      },
+    },
   },
 } as const;

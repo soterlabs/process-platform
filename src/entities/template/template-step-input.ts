@@ -4,6 +4,9 @@ export type TemplateStepInput = {
    * `number`: stored as a JSON number (IEEE double). Use `decimal_string` when you need exact
    * decimal text without floating-point rounding.
    *
+   * `file-single` / `file-multiple`: context stores only `ProcessFileRef`-shaped metadata; file bytes
+   * are stored separately keyed by process id.
+   *
    * `item_list`: repeating rows (each row is an object in `context[stepKey][key]`). Every row
    * includes a string at the fixed key `value` (the list line, e.g. URL); `subInputs` are extra
    * fields — a sub may be another `item_list` (stored as a nested array of row objects). Do not
@@ -18,6 +21,8 @@ export type TemplateStepInput = {
     | "decimal_string"
     | "datetime"
     | "dropdown"
+    | "file-single"
+    | "file-multiple"
     | "item_list";
   title: string;
   visibleExpression?: string;

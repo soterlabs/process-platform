@@ -1,3 +1,4 @@
+import { isProcessFileRef, type ProcessFileRef } from "@/entities/process";
 import type { TemplateStepInput } from "@/entities/template";
 
 /** Fixed JSON property for the item list’s primary string per row (e.g. commit URL). */
@@ -79,6 +80,21 @@ export function belongsToRowAtListLevel(
   if (!segmentsMatchListPathPrefix(segments, listPath)) return false;
   if (segments.length <= listPath.length) return false;
   return segments[listPath.length] === rowIndex;
+}
+
+export function parseFileFieldFromContext(
+  inp: TemplateStepInput,
+  raw: unknown
+): ProcessFileRef | ProcessFileRef[] | null {
+  if (inp.type === "file-single") {
+    if (raw === undefined || raw === null) return null;
+    return isProcessFileRef(raw) ? raw : null;
+  }
+  if (inp.type === "file-multiple") {
+    if (!Array.isArray(raw)) return [];
+    return raw.filter(isProcessFileRef);
+  }
+  return null;
 }
 
 function serializeInputValue(
@@ -313,19 +329,39 @@ function serializeItemListAtPath(
 
 /**
  * Payload merged into `process.context[stepKey]` from form state (scalar inputs + `item_list` arrays).
+ * When `fileFieldValues` is omitted, file inputs are left out of the payload (caller should pass an
+ * explicit map whenever the step defines file fields).
  */
 export function buildInputStepContextPayload(
   inputs: TemplateStepInput[],
-  formValues: Record<string, boolean | string>
+  formValues: Record<string, boolean | string>,
+  fileFieldValues?: Record<string, ProcessFileRef | ProcessFileRef[] | null>
 ): Record<string, unknown> {
   const payload: Record<string, unknown> = {};
   const itemLists = inputs.filter((i): i is TemplateStepInput & { type: "item_list" } => i.type === "item_list");
-  const scalars = inputs.filter((i) => i.type !== "item_list");
+  const fileInputs = inputs.filter(
+    (i) => i.type === "file-single" || i.type === "file-multiple"
+  );
+  const scalars = inputs.filter(
+    (i) => i.type !== "item_list" && i.type !== "file-single" && i.type !== "file-multiple"
+  );
 
   for (const inp of scalars) {
     if (inp.readOnly) continue;
     if (!(inp.key in formValues)) continue;
     payload[inp.key] = serializeInputValue(inp, formValues[inp.key]);
+  }
+  if (fileFieldValues) {
+    for (const inp of fileInputs) {
+      if (inp.readOnly) continue;
+      if (!(inp.key in fileFieldValues)) continue;
+      const v = fileFieldValues[inp.key];
+      if (inp.type === "file-single") {
+        payload[inp.key] = v === null || v === undefined ? null : v;
+      } else {
+        payload[inp.key] = Array.isArray(v) ? v : [];
+      }
+    }
   }
   for (const list of itemLists) {
     if (list.readOnly) continue;
